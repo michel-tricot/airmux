@@ -4,7 +4,6 @@ import contextlib
 import json
 import os
 import signal
-import socket
 import subprocess
 import sys
 import time
@@ -17,6 +16,7 @@ import httpx
 import pytest
 import yaml
 from pydantic import TypeAdapter
+from tests.acceptance.process_harness import uvicorn_port
 from upstream import UPSTREAM_KEY, Family, Upstream
 
 from contract import UsageEvent, uuid7
@@ -24,7 +24,7 @@ from contract import UsageEvent, uuid7
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
-Dialect = Literal["canonical", "openai_native", "openai_responses", "anthropic"]
+Dialect = Literal["openai_chat_completions", "openai_responses", "anthropic"]
 PROTOCOLS = json.loads((Path(__file__).parent / "protocols.json").read_text())
 DIALECTS = tuple(PROTOCOLS["ingress"])
 FAMILIES = tuple(PROTOCOLS["egress"])
@@ -32,14 +32,12 @@ INFERENCE_KEY = "sk-inf-integration-first"
 SECOND_KEY = "sk-inf-integration-second"
 LOCAL_WORKSPACE = str(UUID(int=0))
 REQUEST_INPUTS: dict[Dialect, dict[str, object]] = {
-    "canonical": {"messages": [{"role": "user", "content": "hi"}]},
-    "openai_native": {"messages": [{"role": "user", "content": "hi"}]},
+    "openai_chat_completions": {"messages": [{"role": "user", "content": "hi"}]},
     "openai_responses": {"input": "hi"},
-    "anthropic": {"messages": [{"role": "user", "content": "hi"}]},
+    "anthropic": {"messages": [{"role": "user", "content": "hi"}], "max_tokens": 128},
 }
 ERROR_FIELDS: dict[Dialect, str] = {
-    "canonical": "code",
-    "openai_native": "code",
+    "openai_chat_completions": "code",
     "openai_responses": "code",
     "anthropic": "type",
 }
@@ -61,7 +59,7 @@ def request_body(dialect: Dialect, model: str = "model-a", **parameters: object)
 
 def text_of(dialect: Dialect, response: httpx.Response) -> str:
     body = response.json()
-    if dialect == "openai_native":
+    if dialect == "openai_chat_completions":
         return body["choices"][0]["message"]["content"]
     if dialect == "openai_responses":
         return "".join(part["text"] for item in body["output"] if item["type"] == "message" for part in item["content"])
@@ -74,9 +72,7 @@ def stream_payloads(response: httpx.Response) -> list[dict]:
 
 def streamed_text(dialect: Dialect, response: httpx.Response) -> str:
     payloads = stream_payloads(response)
-    if dialect == "canonical":
-        return "".join(event["delta"]["text"] for event in payloads if event.get("delta", {}).get("type") == "text")
-    if dialect == "openai_native":
+    if dialect == "openai_chat_completions":
         return "".join(choice["delta"].get("content", "") for event in payloads for choice in event.get("choices", []))
     if dialect == "openai_responses":
         return "".join(event["delta"] for event in payloads if event.get("type") == "response.output_text.delta")
@@ -98,7 +94,6 @@ class GatewayKey(TypedDict):
 class GatewayBundle(TypedDict):
     keys: list[GatewayKey]
     taxonomy: str
-    rules: list[dict[str, object]]
     policies: list[dict[str, object]]
 
 
@@ -112,6 +107,7 @@ class Gateway:
         self.bundle_path = directory / "bundle.yml"
         self.events_path = directory / "usage/events.jsonl"
         self.reload_interval_s = 0.05
+        self.dev = False
         self.executable = os.environ.get("AIRMUX_GATEWAY_BIN", str(Path(sys.executable).parent / "airmux"))
         self.environment = {**os.environ, "STUB_API_KEY": UPSTREAM_KEY, "BACKUP_API_KEY": UPSTREAM_KEY, "DOCKER_HOST": "unix:///no-docker.sock"}
         self.providers: list[Upstream] = []
@@ -120,15 +116,12 @@ class Gateway:
         self.bundle: GatewayBundle = {
             "keys": [{"token": INFERENCE_KEY, "user_id": str(uuid7())}, {"token": SECOND_KEY, "user_id": str(uuid7())}],
             "taxonomy": "taxonomy.yml",
-            "rules": [],
             "policies": [],
         }
         self.process: subprocess.Popen[bytes] | None = None
         self.log = (directory / "gateway.log").open("a", encoding="utf-8")
-        with socket.socket() as listener:
-            listener.bind(("127.0.0.1", 0))
-            self.port = listener.getsockname()[1]
-        self.url = f"http://127.0.0.1:{self.port}"
+        self.port: int | None = None
+        self.url = ""
 
     def add_provider(self, family: Family = "openai_compatible", name: str = "stub", models: tuple[str, ...] = ("model-a", "model-b")) -> Upstream:
         provider = Upstream(family, self.directory / f"upstream-{name}.json")
@@ -140,10 +133,10 @@ class Gateway:
                     "model_id": model,
                     "provider_id": name,
                     "upstream_model": f"upstream-{model}",
-                    "input_price_per_mtok": 2,
-                    "output_price_per_mtok": 5,
-                    "cache_read_price_per_mtok": 0.25,
-                    "cache_write_price_per_mtok": 2.5,
+                    "input_price_per_mtok": "2",
+                    "output_price_per_mtok": "5",
+                    "cache_read_price_per_mtok": "0.25",
+                    "cache_write_price_per_mtok": "2.5",
                     "context_window": 128000,
                     "max_output_tokens": 4096,
                     "input_modalities": ["text", "image", "pdf"],
@@ -163,16 +156,7 @@ class Gateway:
         target: dict[str, object] | None = None,
         priority: int = 100,
     ) -> None:
-        rules: list[dict[str, object]] = [
-            {
-                "id": str(uuid7()),
-                "workspace_id": LOCAL_WORKSPACE,
-                "name": f"Rule {index}",
-                "definition": {"match": match or {"kind": "all_requests"}, "action": action},
-            }
-            for index, action in enumerate(actions)
-        ]
-        self.bundle["rules"] = [*self.bundle["rules"], *rules]
+        rules = [{"match": match or {"kind": "all_requests"}, "action": action} for action in actions]
         self.bundle["policies"] = [
             *self.bundle["policies"],
             {
@@ -180,7 +164,7 @@ class Gateway:
                 "workspace_id": LOCAL_WORKSPACE,
                 "name": f"Policy {priority}",
                 "priority": priority,
-                "definition": {"target": target or {"kind": "workspace"}, "rule_ids": [rule["id"] for rule in rules]},
+                "definition": {"target": target or {"kind": "workspace"}, "rules": rules},
             },
         ]
 
@@ -210,11 +194,27 @@ class Gateway:
     def ready(self) -> bool:
         assert self.process is not None
         assert self.process.poll() is None, (self.directory / "gateway.log").read_text()
+        if self.port is None:
+            self.port = uvicorn_port(self.directory / "gateway.log")
+            if self.port is None:
+                return False
+            self.url = f"http://127.0.0.1:{self.port}"
         return httpx.get(f"{self.url}/readyz", timeout=1).status_code == 200
 
     def launch(self, workers: int = 1) -> None:
         self.process = subprocess.Popen(  # noqa: S603 executable is the installed gateway supplied by the test environment
-            [self.executable, "gateway", "serve", "--config", str(self.config_path), "--port", str(self.port), "--workers", str(workers)],
+            [
+                self.executable,
+                "gateway",
+                "serve",
+                "--config",
+                str(self.config_path),
+                "--port",
+                str(self.port or 0),
+                "--workers",
+                str(workers),
+                *(["--dev"] if self.dev else []),
+            ],
             cwd=self.directory.parent,
             env=self.environment,
             stdout=self.log,
@@ -230,12 +230,12 @@ class Gateway:
                 self.process.kill()
                 self.process.wait(timeout=5)
 
-    def headers(self, dialect: Dialect = "canonical", key: str = INFERENCE_KEY) -> dict[str, str]:
-        return {"Authorization": f"Bearer {key}", "X-airmux-Dialect": dialect}
+    def headers(self, _dialect: Dialect = "openai_chat_completions", key: str = INFERENCE_KEY) -> dict[str, str]:
+        return {"Authorization": f"Bearer {key}"}
 
     def request(
         self,
-        dialect: Dialect = "canonical",
+        dialect: Dialect = "openai_chat_completions",
         *,
         model: str = "model-a",
         body: dict[str, object] | None = None,
@@ -262,7 +262,7 @@ class Gateway:
         assert len({event.event_id for event in events}) == count
         assert all(event.event_id.version == 7 and event.request_id.version == 7 for event in events)
         assert all(event.org_id == UUID(int=0) and event.workspace_id == UUID(int=0) for event in events)
-        assert all(event.cost_usd == pytest.approx(event.cost_input_usd + event.cost_output_usd, rel=1e-12, abs=1e-15) for event in events)
+        assert all(event.cost_usd == event.cost_input_usd + event.cost_output_usd for event in events)
         assert all(secret not in contents for secret in (UPSTREAM_KEY, INFERENCE_KEY, SECOND_KEY))
         return events
 

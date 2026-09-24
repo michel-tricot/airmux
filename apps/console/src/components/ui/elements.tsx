@@ -137,6 +137,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({ className, step
       className={cn(
         'rounded bg-background/50 text-sm font-mono placeholder:text-muted-foreground/50 focus-visible:border-primary focus-visible:ring-primary',
         type === 'number' && 'pr-8',
+        type === 'date' &&
+          'relative [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:top-1/2 [&::-webkit-calendar-picker-indicator]:-translate-y-1/2 [&::-webkit-calendar-picker-indicator]:cursor-pointer',
         className,
       )}
       {...props}
@@ -234,7 +236,7 @@ export const Dropdown = ({
       id={id}
       aria-label={ariaLabel}
       className={cn(
-        'flex h-9 w-full items-center justify-between gap-2 rounded border border-input bg-background/50 px-3 text-[13px] font-mono leading-none shadow-sm transition-colors hover:border-primary/50 hover:bg-primary/5 focus:outline-none focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50 data-[placeholder]:text-muted-foreground',
+        'flex h-9 w-full items-center justify-between gap-2 rounded border border-input bg-background/50 px-3 text-[13px] font-mono leading-normal shadow-sm transition-colors hover:border-primary/50 hover:bg-primary/5 focus:outline-none focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50 data-[placeholder]:text-muted-foreground',
         className,
       )}
     >
@@ -243,7 +245,7 @@ export const Dropdown = ({
     <SelectContent
       position="popper"
       sideOffset={6}
-      className="z-50 min-w-[var(--radix-select-trigger-width)] border-border bg-card text-card-foreground shadow-xl shadow-black/50 [&_[data-radix-select-viewport]]:h-auto [&_[data-radix-select-viewport]]:max-h-72"
+      className="z-50 min-w-[var(--radix-select-trigger-width)] border-border bg-card text-card-foreground shadow-xl shadow-black/50 [&_[data-radix-select-viewport]]:h-auto [&_[data-radix-select-viewport]]:max-h-96"
     >
       {options.map((option) => (
         <SelectItem

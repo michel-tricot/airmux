@@ -16,6 +16,7 @@ import {
 } from '@/features/users/hooks';
 import { LoadingState, ErrorState } from '@/components/shared/states';
 import { DataTable } from '@/components/shared/data-table';
+import { TableLink } from '@/components/shared/table-link';
 import { RoleSelect } from '@/components/shared/role-select';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -60,8 +61,9 @@ export default function UserDetail() {
   if (userQuery.isError) return <ErrorState error={userQuery.error} resource="user" onRetry={() => userQuery.refetch()} />;
   if (!user) return <ErrorState message="User not found" />;
 
-  const memberships = orgs?.filter((o) => user.orgs.includes(o.id));
-  const available = orgs?.filter((o) => !user.orgs.includes(o.id));
+  const memberOrgIds = new Set(user.orgs);
+  const memberships = orgs?.filter((org) => memberOrgIds.has(org.id));
+  const available = orgs?.filter((org) => !memberOrgIds.has(org.id));
   return (
     <PageShell>
       <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
@@ -149,11 +151,7 @@ export default function UserDetail() {
                 key: 'org',
                 header: 'Organization',
                 cellClassName: 'font-medium',
-                cell: (org) => (
-                  <Link href={`/instance/organizations/${org.id}`} className="hover:text-primary">
-                    {org.name}
-                  </Link>
-                ),
+                cell: (org) => <TableLink href={`/instance/organizations/${org.id}`}>{org.name}</TableLink>,
               },
               { key: 'id', header: 'ID', cellClassName: 'font-mono text-xs text-muted-foreground', cell: (org) => org.id },
               { key: 'created', header: 'Created', cellClassName: 'text-muted-foreground text-sm', cell: (org) => formatDate(org.created_at) },
@@ -167,7 +165,7 @@ export default function UserDetail() {
                       cell: (org: OrgOut) => (
                         <ConfirmButton
                           title={`Remove ${user.name} from ${org.name}?`}
-                          description="They lose access to this organization and all of its workspaces."
+                          description="They lose access to this organization, and their inference keys and playground sessions across it stop working immediately."
                           confirmLabel="Remove membership"
                           pending={removeMember.isPending}
                           aria-label="Remove membership"

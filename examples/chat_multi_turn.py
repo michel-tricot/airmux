@@ -50,21 +50,22 @@ def run_turn(gateway: str, api_key: str, model: str, messages: list[dict]) -> st
             if not line.startswith("data: ") or line == "data: [DONE]":
                 continue
             event = json.loads(line[len("data: ") :])
-            delta = event.get("delta", {})
-            if delta.get("type") == "reasoning":
+            choices = event.get("choices", [])
+            delta = choices[0]["delta"] if choices else {}
+            if delta.get("reasoning_content"):
                 if not in_reasoning:
                     print(f"{DIM}reasoning> ", end="", flush=True)
                     in_reasoning = True
-                print(delta["text"].replace("\n", f"\n{DIM}reasoning> "), end="", flush=True)
-            elif delta.get("type") == "text":
+                print(delta["reasoning_content"].replace("\n", f"\n{DIM}reasoning> "), end="", flush=True)
+            elif delta.get("content"):
                 if in_reasoning:
                     print(f"{RESET}\n", flush=True)
                     in_reasoning = False
-                answer_parts.append(delta["text"])
-                print(delta["text"], end="", flush=True)
+                answer_parts.append(delta["content"])
+                print(delta["content"], end="", flush=True)
             elif "usage" in event:
                 usage = event["usage"]
-                print(f"\n{DIM}[{usage['input_tokens']} in / {usage['output_tokens']} out]{RESET}")
+                print(f"\n{DIM}[{usage['prompt_tokens']} in / {usage['completion_tokens']} out]{RESET}")
     return "".join(answer_parts)
 
 

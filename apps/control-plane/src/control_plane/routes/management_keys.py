@@ -5,10 +5,9 @@ from typing import Annotated
 from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at runtime
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import col
 
 from control_plane.authority import ensure_management_key_permissions, management_key_parent
-from control_plane.authz import Actor, Permission, Scope, ScopeLevel
+from control_plane.authz import Actor, Permission, Scope
 from control_plane.deps import ActorDep, OrgDep, WorkspaceDep, instance_scope, org_scope, require, workspace_scope
 from control_plane.keys import ManagementKeyGrant, create_management_key
 from control_plane.models import ManagementKey
@@ -43,14 +42,7 @@ def _out(key: ManagementKey, now: datetime) -> ManagementKeyOut:
 
 
 async def _list_management_keys(scope: Scope, user_id: UUID | None) -> Envelope[list[ManagementKeyOut]]:
-    conditions = []
-    if scope.level is ScopeLevel.org:
-        conditions.append(ManagementKey.org_id == scope.org_id)
-    elif scope.level is ScopeLevel.workspace:
-        conditions.extend((ManagementKey.org_id == scope.org_id, ManagementKey.workspace_id == scope.workspace_id))
-    if user_id is not None:
-        conditions.append(ManagementKey.user_id == user_id)
-    keys = await ManagementKey.find(*conditions, order_by=col(ManagementKey.id))
+    keys = await ManagementKey.for_scope(scope, user_id)
     now = datetime.now(tz=UTC)
     return Envelope(data=[_out(key, now) for key in keys])
 

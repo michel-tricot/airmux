@@ -7,7 +7,7 @@ from click import unstyle
 from typer.testing import CliRunner
 
 from model_audit.catalog_ops import provider_sources
-from model_audit.cli import _sync_steps, app
+from model_audit.cli import app
 
 
 def test_cases_have_machine_readable_coverage():
@@ -194,11 +194,3 @@ def test_unknown_provider_sync_component_is_rejected_before_acquisition():
 
     assert result.exit_code == 2
     assert "unknown sync component unknown" in result.output
-
-
-def test_model_and_pricing_sync_rebuild_enrichment_from_current_provider_data():
-    pricing_steps = _sync_steps("stub", ("pricing",))
-    model_steps = _sync_steps("stub", ("models",))
-
-    assert [task for _, task, _ in pricing_steps] == ["fetch_models", "enrich"]
-    assert [task for _, task, _ in model_steps] == ["fetch_models", "enrich", "discover_parameters"]

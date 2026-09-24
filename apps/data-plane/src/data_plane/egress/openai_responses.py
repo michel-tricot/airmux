@@ -44,14 +44,14 @@ class ResponsesOutputDraft:
     type: str = ""
     id: str = ""
     name: str = ""
-    arguments: str = ""
+    arguments: list[str] = field(default_factory=list)
     ordinal: int | None = None
 
 
 @dataclass
 class ResponsesReasoningDraft:
     id: str = ""
-    text: str = ""
+    text: list[str] = field(default_factory=list)
     signature: str = ""
 
 
@@ -61,7 +61,7 @@ class ResponsesStreamState(StreamState):
     response_id: str | None = None
     output: dict[int, ResponsesOutputDraft] = field(default_factory=dict)
     reasoning: dict[int, ResponsesReasoningDraft] = field(default_factory=dict)
-    text: dict[int, str] = field(default_factory=dict)
+    text: dict[int, list[str]] = field(default_factory=dict)
     usage: fmt.UpstreamUsage | None = None
     tool_count: int = 0
     terminal_seen: bool = False
@@ -175,7 +175,7 @@ class OpenAIResponsesAdapter(EgressAdapter[ResponsesStreamState]):
                     output = _tool_draft(state, index)
                     output.id = item.call_id
                     output.name = item.name
-                    output.arguments = item.arguments
+                    output.arguments = [item.arguments]
                     return [
                         CanonicalChunk(
                             id=state.chunk_id,
@@ -186,17 +186,17 @@ class OpenAIResponsesAdapter(EgressAdapter[ResponsesStreamState]):
             return []
         if kind == "response.output_text.delta":
             delta = event.delta
-            state.text[index] = state.text.get(index, "") + delta
+            state.text.setdefault(index, []).append(delta)
             return [CanonicalChunk(id=state.chunk_id, delta=CanonicalTextDelta(text=delta))] if delta else []
         if kind in {"response.reasoning_summary_text.delta", "response.reasoning_text.delta"}:
             delta = event.delta
             draft = state.reasoning.setdefault(index, ResponsesReasoningDraft())
-            draft.text += delta
+            draft.text.append(delta)
             return [CanonicalChunk(id=state.chunk_id, delta=CanonicalReasoningDelta(text=delta))] if delta else []
         if kind == "response.function_call_arguments.delta":
             delta = event.delta
             draft = _tool_draft(state, index)
-            draft.arguments += delta
+            draft.arguments.append(delta)
             return [CanonicalChunk(id=state.chunk_id, delta=CanonicalToolCallDelta(index=draft.ordinal or 0, arguments=delta))] if delta else []
         return []
 
@@ -209,12 +209,12 @@ class OpenAIResponsesAdapter(EgressAdapter[ResponsesStreamState]):
         for index in sorted(set(state.output) | set(state.text) | set(state.reasoning)):
             if index in state.reasoning:
                 draft = state.reasoning[index]
-                parts.append(CanonicalReasoningPart(id=draft.id or None, text=draft.text, signature=draft.signature or None))
-            if text := state.text.get(index):
+                parts.append(CanonicalReasoningPart(id=draft.id or None, text="".join(draft.text), signature=draft.signature or None))
+            if text := "".join(state.text.get(index, ())):
                 parts.append(CanonicalTextPart(text=text))
             output = state.output.get(index)
             if output and output.type == "function_call":
-                parts.append(CanonicalToolCallPart(id=output.id, name=output.name, arguments=output.arguments))
+                parts.append(CanonicalToolCallPart(id=output.id, name=output.name, arguments="".join(output.arguments)))
         finish = (
             "length"
             if state.incomplete

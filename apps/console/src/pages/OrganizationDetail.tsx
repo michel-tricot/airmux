@@ -1,6 +1,3 @@
-import { BundleHistory } from '@/components/shared/bundle-history';
-import { useBundles, useRepublishBundleMutation } from '@/features/telemetry/hooks';
-import { telemetryAccess } from '@/features/telemetry/policy';
 import { useState } from 'react';
 import * as z from 'zod';
 import { Card, Button, Input, Badge, ConfirmButton, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
@@ -14,6 +11,7 @@ import { useOrgManagementKeys, useRevokeOrgManagementKeyMutation } from '@/featu
 import { useOrgMembers } from '@/features/members/hooks';
 import { LoadingState, ErrorState } from '@/components/shared/states';
 import { DataTable } from '@/components/shared/data-table';
+import { TableLink } from '@/components/shared/table-link';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { MembersPanel } from '@/components/shared/members-panel';
 import { ManagementKeysTable } from '@/components/shared/management-keys-table';
@@ -35,10 +33,6 @@ export default function OrganizationDetail() {
 
   const instanceAuthorization = useAuthorization('instance');
   const authorization = useScopedAuthorization({ level: 'org', orgId });
-  const canReadBundles = authorization.can(telemetryAccess.bundles.read);
-  const canPublishBundles = authorization.can(telemetryAccess.bundles.publish);
-  const bundlesQuery = useBundles(orgId, { enabled: canReadBundles });
-  const republish = useRepublishBundleMutation(orgId);
   const canReadOrg = authorization.can(orgAccess.read);
   const orgQuery = useOrg(orgId, { enabled: canReadOrg });
   const org = orgQuery.data;
@@ -73,7 +67,7 @@ export default function OrganizationDetail() {
   const removeMember = useRemoveUserFromOrgMutation();
   const rename = useRenameOrgMutation();
   const deleteOrg = useDeleteOrgMutation();
-  const defaultTab = canListWorkspaces ? 'workspaces' : canReadKeys ? 'keys' : canReadMembers ? 'members' : 'bundles';
+  const defaultTab = canListWorkspaces ? 'workspaces' : canReadKeys ? 'keys' : 'members';
 
   if (authorization.isLoading) return <LoadingState label="Loading organization permissions..." />;
   if (authorization.isError) {
@@ -145,7 +139,6 @@ export default function OrganizationDetail() {
               <Users className="w-4 h-4" /> Members
             </TabsTrigger>
           )}
-          {canReadBundles && <TabsTrigger value="bundles">Configuration bundles</TabsTrigger>}
         </TabsList>
 
         {canListWorkspaces && (
@@ -173,11 +166,7 @@ export default function OrganizationDetail() {
                     key: 'name',
                     header: 'Name',
                     cellClassName: 'font-medium',
-                    cell: (ws) => (
-                      <Link href={`/instance/organizations/${org.id}/workspaces/${ws.slug}`} className="hover:text-primary transition-colors">
-                        {ws.name}
-                      </Link>
-                    ),
+                    cell: (ws) => <TableLink href={`/instance/organizations/${org.id}/workspaces/${ws.slug}`}>{ws.name}</TableLink>,
                   },
                   { key: 'slug', header: 'Slug', cell: (ws) => <Badge variant="mono">{ws.slug}</Badge> },
                   { key: 'id', header: 'Technical ID', cellClassName: 'font-mono text-xs text-muted-foreground', cell: (ws) => ws.id },
@@ -236,11 +225,7 @@ export default function OrganizationDetail() {
               error={membersQuery.error}
               onRetry={() => membersQuery.refetch()}
               emptyText="No members yet."
-              renderName={(member) => (
-                <Link href={`/instance/users/${member.user_id}`} className="hover:text-primary">
-                  {member.name}
-                </Link>
-              )}
+              renderName={(member) => <TableLink href={`/instance/users/${member.user_id}`}>{member.name}</TableLink>}
               add={
                 canAddMembers && !usersQuery.isError
                   ? {
@@ -258,7 +243,8 @@ export default function OrganizationDetail() {
                 canRemoveMembers
                   ? {
                       title: (member) => `Remove ${member.name} from the organization?`,
-                      description: 'They lose access to this organization and all of its workspaces.',
+                      description:
+                        'They lose access to this organization, and their inference keys and playground sessions across it stop working immediately.',
                       onRemove: (member) => removeMember.mutateAsync({ userId: member.user_id, orgId: org.id }),
                       pending: removeMember.isPending,
                     }
@@ -273,30 +259,6 @@ export default function OrganizationDetail() {
                 className="p-0"
               />
             )}
-          </TabsContent>
-        )}
-        {canReadBundles && (
-          <TabsContent value="bundles" className="space-y-4 mt-0">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold">Configuration bundles</h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Generated automatically from organization configuration. Republish to send a fresh snapshot to the data planes.
-                </p>
-              </div>
-              {canPublishBundles && (
-                <Button disabled={republish.isPending} onClick={() => republish.mutate({ orgId })}>
-                  {republish.isPending ? 'Republishing...' : 'Republish configuration'}
-                </Button>
-              )}
-            </div>
-            <BundleHistory
-              bundles={bundlesQuery.data}
-              isLoading={bundlesQuery.isLoading}
-              isError={bundlesQuery.isError}
-              error={bundlesQuery.error}
-              onRetry={() => bundlesQuery.refetch()}
-            />
           </TabsContent>
         )}
       </Tabs>

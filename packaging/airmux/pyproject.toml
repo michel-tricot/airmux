@@ -1,17 +1,25 @@
 [project]
 name = "airmux"
-version = "0.1.1"
+version = "0.1.2"
 description = "Self-hosted LLM gateway and management CLI"
 readme = "README.md"
 license = "Elastic-2.0"
 requires-python = ">=3.13"
 dependencies = [
   "alembic",
+  "anyio",
   "argon2-cffi>=23.1",
   "asyncpg",
   "fastapi",
-  "httpx[http2]",
+  "httpx",
+  "aiohttp>=3.14.3",
+  "opentelemetry-exporter-otlp-proto-http",
+  "opentelemetry-exporter-prometheus",
+  "opentelemetry-sdk",
   "pydantic>=2",
+  "uuid-utils>=1.0,<2",
+  "prometheus-client",
+  "pyreqwest>=0.13,<0.14",
   "python-dotenv",
   "pyyaml",
   "rich",
@@ -39,6 +47,7 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = [
   "src/api_models",
+  "src/airmux_runtime",
   "src/cli",
   "src/contract",
   "src/control_plane",

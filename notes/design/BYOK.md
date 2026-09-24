@@ -79,9 +79,8 @@ Consequences worth stating, because they delete design surface rather than add i
 - A store maps a ref to its own address in its own module. Hierarchical stores use `path_segments`,
   purpose first and fixed depth, so families stay separable and an org secret and a workspace secret
   can never resolve to the same place. A flat store flattens however it likes and nothing else knows
-- Read-only stores implement `get` and inherit the refusals, so a backend declares what it can do by
-  what it overrides. The control plane checks `writable` at startup, so an env-backed instance
-  refuses BYOK as a misconfiguration instead of failing a credential creation at runtime
+- The data plane depends on `SecretReader`; control-plane and setup paths that manage values depend
+  on `SecretStore`
 
 Each backend also brings its own config, so there is no shared settings object accumulating every
 backend's fields and no factory with a branch per kind:
@@ -90,13 +89,13 @@ backend's fields and no factory with a branch per kind:
 class SecretStoreConfig(BaseModel, ABC):  # frozen, extra="forbid"
     kind: str
 
-    def build(self) -> SecretStore: ...
+    def build(self) -> SecretAdapter: ...
 
 
-SecretsConfig = Annotated[MemoryStoreConfig | FileStoreConfig | EnvStoreConfig, Field(discriminator="kind")]
+SecretsConfig = Annotated[FileStoreConfig | EnvStoreConfig | InsecureDatabaseStoreConfig, Field(discriminator="kind")]
 ```
 
-- `kind` selects which backend parses the settings, so `root` is the file store's business and
+- `kind` selects which backend parses the settings, so `path` is the file store's business and
   nobody else's
 - Extra keys are refused. A setting meant for another backend, or a misspelled one, means the store
   is not configured the way whoever wrote it believes, and a store quietly running on defaults is
@@ -107,10 +106,11 @@ SecretsConfig = Annotated[MemoryStoreConfig | FileStoreConfig | EnvStoreConfig, 
 Both planes read their own copy of this section and must name the same store, because one writes what
 the other reads.
 
-Shipped: `memory` (tests and single-process dev), `file` (one 0600 file per secret under a root,
-which is a real single-host deployment), `env` (read only, quickstart and single-tenant instances
+The memory adapter is available only to tests and cannot be selected by deployment configuration.
+Shipped deployment backends are `file` (one 0600 file per secret under a path), `env` (quickstart and single-tenant instances
 whose provider keys already arrive as environment variables), and `insecure_database` (plaintext
-in PostgreSQL for deployments that accept the security tradeoff).
+in PostgreSQL for deployments that accept the security tradeoff). The PostgreSQL driver is supplied
+by the optional `airmux-runtime[insecure-database]` extra.
 
 The insecure database store takes one PostgreSQL URL, configured identically in both planes:
 
@@ -372,8 +372,9 @@ account.
 
 Each lands its failing test in the same commit.
 
-1. **Done.** `contract/secrets/`: `Secret`, `SecretRef`, `SecretPurpose`, the `SecretStore` facade, the
-   per-backend config union, the `memory`, `file` and `env` backends, conformance suite. No wiring
+1. **Done.** `contract` owns `SecretRef` and `SecretPurpose`; `airmux_runtime.secrets` owns the
+   read/write protocols, deployable `file`, `env`, and `insecure_database` adapters, test-only
+   `memory` adapter, and conformance suite
 2. **Done.** Control plane end to end: `ProviderCredential` model and migration, scopes, CRUD with
    store writes, and the bundle emitting `catalog.credentials`. Merged with what was milestone 4,
    because a credential resource without its value is not a resource: the create route has to write

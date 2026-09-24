@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 
+import pytest
 from anthropic.types import Message
 
 from data_plane.canonical import (
@@ -11,8 +12,25 @@ from data_plane.canonical import (
     CanonicalUsage,
 )
 from data_plane.formats.openai_responses import ResponseMetadata, json_response
+from data_plane.ingress import REGISTRY
 from data_plane.ingress.anthropic import AnthropicIngress
-from data_plane.ingress.openai_native import OpenAINativeIngress
+from data_plane.ingress.openai_chat_completions import OpenAIChatCompletionsIngress
+
+
+@pytest.mark.parametrize("dialect", REGISTRY)
+def test_buffered_rendering_returns_utf8_json_bytes(dialect):
+    final = CanonicalResponse(
+        id="response-1",
+        model="gpt-test",
+        content=[CanonicalTextPart(text="héllo 世界")],
+        finish_reason="stop",
+        usage=CanonicalUsage(input_tokens=3, output_tokens=2),
+    )
+    response = REGISTRY[dialect].render_response(final)
+    assert isinstance(response.body, bytes)
+    assert response.headers["content-type"] == "application/json"
+    assert int(response.headers["content-length"]) == len(response.body)
+    assert "héllo 世界" in json.dumps(json.loads(response.body), ensure_ascii=False)
 
 
 def test_openai_buffered_chat_preserves_an_empty_reasoning_part():
@@ -24,7 +42,7 @@ def test_openai_buffered_chat_preserves_an_empty_reasoning_part():
         usage=CanonicalUsage(input_tokens=3, output_tokens=2),
     )
 
-    payload = json.loads(bytes(OpenAINativeIngress().render_response(final).body))
+    payload = json.loads(bytes(OpenAIChatCompletionsIngress().render_response(final).body))
 
     assert payload["choices"][0]["message"]["reasoning_content"] == ""
 

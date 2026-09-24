@@ -19,7 +19,7 @@ providers:
   - bearer
   env_var: OPENAI_API_KEY
   param_aliases:
-    max_tokens: max_completion_tokens
+    max_output_tokens: max_completion_tokens
   schema:
     completion:
       oai:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
@@ -18,14 +19,14 @@ if TYPE_CHECKING:
 
 from pg import TEMPLATE_DB, db_name_for, db_url_for, ensure_database
 
-from contract import MemoryStoreConfig
+from airmux_runtime.secrets import FileStoreConfig
 from control_plane.app import create_app
 from control_plane.authority import principal_permissions
 from control_plane.authz import ALL_PERMISSIONS, InstanceRole, Permission, Scope
 from control_plane.config import DatabaseConfig, Settings
-from control_plane.db import standalone_transaction
+from control_plane.db import standalone_engine, standalone_transaction, transaction
 from control_plane.keys import ManagementKeyGrant, create_management_key
-from control_plane.models import User, set_actor
+from control_plane.models import BundleState, User, set_actor
 from control_plane.throttling import ThrottleConfig
 
 PROVIDER = {
@@ -37,10 +38,10 @@ MODEL = {
     "model_id": "gpt-test",
     "provider_id": "openai",
     "upstream_model": "gpt-real",
-    "input_price_per_mtok": 1.0,
-    "output_price_per_mtok": 2.0,
-    "cache_read_price_per_mtok": 0.1,
-    "cache_write_price_per_mtok": 1.25,
+    "input_price_per_mtok": "1.0",
+    "output_price_per_mtok": "2.0",
+    "cache_read_price_per_mtok": "0.1",
+    "cache_write_price_per_mtok": "1.25",
     "input_modalities": ["text"],
     "output_modalities": ["text"],
     "parameter_support": {"temperature": "unsupported"},
@@ -152,6 +153,46 @@ def make_workspace(client, headers: dict[str, str], name: str = "ws-test") -> UU
     return UUID(response.json()["data"]["id"])
 
 
+def wait_for_publication(client, org_id: UUID, headers: dict[str, str], after: UUID | str | None = None, timeout: float = 5.0) -> dict:
+    deadline = time.monotonic() + timeout
+    after_id = UUID(str(after)) if after is not None else None
+
+    async def current_bundle_id() -> UUID:
+        async with standalone_engine(client.app.state.settings.database.url) as factory:
+            while True:
+                async with transaction(factory):
+                    state = await BundleState.get(org_id)
+                    current = (
+                        state is not None
+                        and state.current_bundle_id is not None
+                        and state.current_bundle_id != after_id
+                        and state.published_global_generation == await BundleState.global_generation()
+                        and state.published_org_generation == state.desired_generation
+                    )
+                if current:
+                    return state.current_bundle_id
+                if time.monotonic() >= deadline:
+                    message = f"bundle was not published after {after}"
+                    raise AssertionError(message)
+                await asyncio.sleep(0.02)
+
+    bundle_id = asyncio.run(current_bundle_id())
+    manifest_response = client.get("/api/v1/bundles/manifest", headers=headers)
+    assert manifest_response.status_code == 200, manifest_response.text
+    references = manifest_response.json()["data"]["bundles"]
+    reference = next((reference for reference in references if reference["org_id"] == str(org_id)), None)
+    assert reference == {"org_id": str(org_id), "bundle_id": str(bundle_id)}
+    bundle_response = client.get(f"/api/v1/bundles/{bundle_id}", headers=headers)
+    assert bundle_response.status_code == 200, bundle_response.text
+    return bundle_response.json()["data"]
+
+
+def inference_key_body(client, headers: dict[str, str], label: str) -> dict[str, str]:
+    response = client.get("/api/v1/auth/me", headers=headers)
+    assert response.status_code == 200, response.text
+    return {"label": label, "user_id": response.json()["data"]["user_id"]}
+
+
 def run_in_db(tmp_path, action):
     """Run one fat-model call against the test database: tests are non-request code, so they open their own transaction."""
 
@@ -209,7 +250,7 @@ def setup_control_plane(tmp_path, secrets=None, *, public_signup: bool = True, t
     url = setup_db(tmp_path)
     settings = Settings(
         database=DatabaseConfig(url=url),
-        secrets=secrets if secrets is not None else MemoryStoreConfig(),
+        secrets=secrets if secrets is not None else FileStoreConfig(path=tmp_path / "secrets"),
         public_signup=public_signup,
         throttling=throttling if throttling is not None else ThrottleConfig(),
     )

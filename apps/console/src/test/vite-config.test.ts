@@ -16,6 +16,15 @@ function configuredAllowedHosts({ allowedHosts, replId }: { allowedHosts?: strin
   return JSON.parse(output) as { server: string[] | true; preview: string[] | true };
 }
 
+function configuredTestLimits() {
+  const configUrl = pathToFileURL(path.resolve(import.meta.dirname, '../../vitest.config.ts')).href;
+  const source = `
+    const { default: config } = await import(${JSON.stringify(configUrl)});
+    process.stdout.write(JSON.stringify({ maxWorkers: config.test?.maxWorkers ?? null, testTimeout: config.test?.testTimeout ?? null }));
+  `;
+  return JSON.parse(execFileSync('bun', ['-e', source], { encoding: 'utf8' })) as { maxWorkers: number | string | null; testTimeout: number | null };
+}
+
 describe('Vite host allowlist', () => {
   it('uses Vite host validation defaults outside Replit', () => {
     expect(configuredAllowedHosts()).toEqual({
@@ -34,4 +43,8 @@ describe('Vite host allowlist', () => {
       preview: ['console.example.com', 'api.example.com'],
     });
   });
+});
+
+it('uses every host worker with contention-safe test deadlines', () => {
+  expect(configuredTestLimits()).toEqual({ maxWorkers: '100%', testTimeout: 30_000 });
 });

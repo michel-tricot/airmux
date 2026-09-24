@@ -39,6 +39,7 @@ from data_plane.canonical.completion import (
     CanonicalUserPart,
     json_schemas,
 )
+from data_plane.canonical.error import CanonicalError, GatewayDenyCode, GatewayErrorCode, ProviderErrorCode
 
 __all__ = [
     "CanonicalAdjustment",
@@ -48,6 +49,7 @@ __all__ = [
     "CanonicalContentPart",
     "CanonicalDelta",
     "CanonicalDocumentPart",
+    "CanonicalError",
     "CanonicalFinishReason",
     "CanonicalGatewayInfo",
     "CanonicalImagePart",
@@ -75,5 +77,8 @@ __all__ = [
     "CanonicalUsage",
     "CanonicalUserMessage",
     "CanonicalUserPart",
+    "GatewayDenyCode",
+    "GatewayErrorCode",
+    "ProviderErrorCode",
     "json_schemas",
 ]

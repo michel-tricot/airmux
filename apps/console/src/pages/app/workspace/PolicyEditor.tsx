@@ -6,37 +6,23 @@ import type {
   InferenceKeyOut,
   PolicyCreate,
   PolicyOut,
-  RuleCreate,
-  RuleOut,
+  RuleDefinitionInput,
   TaxonomyOut,
   WorkspaceMemberCandidateOut,
 } from '@workspace/api-client-react';
-import { SearchPicker } from '@/components/shared/search-picker';
-import { Alert, AlertDescription, Badge, Button, CheckboxDropdown, Dropdown, Input, Modal, Switch } from '@/components/ui/elements';
+import { Button, CheckboxDropdown, Dropdown, Input, Modal, Switch } from '@/components/ui/elements';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { policyDefaults, policyForm, policyFormSchema, policyPayload, type PolicyForm } from '@/features/policies/form';
-import { RuleActionSummary } from '@/features/rules/presentation';
+import { RuleActionSummary, RuleMatchSummary } from '@/features/rules/presentation';
 import { ruleType, type RuleKind } from '@/features/rules/types';
 import { RuleFormContent } from './RuleEditor';
 import { RuleTypeChoices } from './RuleTypePicker';
 
-interface PolicyRuleComposer {
-  catalog: TaxonomyOut;
-  usageByRuleId: ReadonlyMap<string, number> | null;
-  createPending: boolean;
-  updatePending: boolean;
-  create: (payload: RuleCreate) => Promise<RuleOut>;
-  update: (rule: RuleOut, payload: RuleCreate) => Promise<RuleOut>;
-}
-
 type PolicyEditorStep =
-  { kind: 'policy' } | { kind: 'choose_rule_type' } | { kind: 'create_rule'; ruleKind: RuleKind } | { kind: 'edit_rule'; rule: RuleOut };
-
-function ruleUsageLabel(usageByRuleId: ReadonlyMap<string, number> | null, ruleId: string) {
-  if (usageByRuleId === null) return 'Policy usage is unavailable';
-  const usage = usageByRuleId.get(ruleId) ?? 0;
-  return `Used by ${usage} ${usage === 1 ? 'policy' : 'policies'}`;
-}
+  | { kind: 'policy' }
+  | { kind: 'choose_rule_type' }
+  | { kind: 'create_rule'; ruleKind: RuleKind }
+  | { kind: 'edit_rule'; index: number; rule: RuleDefinitionInput };
 
 function TextField({ form, label }: { form: UseFormReturn<PolicyForm>; label: string }) {
   return (
@@ -60,31 +46,17 @@ function PolicyFields({
   form,
   keys,
   users,
-  rules,
-  newRuleIds,
-  ruleNotice,
-  canComposeRules,
   onCreateRule,
   onEditRule,
 }: {
   form: UseFormReturn<PolicyForm>;
   keys: InferenceKeyOut[];
   users: WorkspaceMemberCandidateOut[];
-  rules: RuleOut[];
-  newRuleIds: readonly string[];
-  ruleNotice: string | null;
-  canComposeRules: boolean;
   onCreateRule: () => void;
-  onEditRule: (rule: RuleOut) => void;
+  onEditRule: (index: number, rule: RuleDefinitionInput) => void;
 }) {
-  const targetKind = form.watch('targetKind');
-  const selectedRuleIds = form.watch('ruleIds');
-  const selectedRules = selectedRuleIds
-    .map((ruleId) => ({ ruleId, rule: rules.find((candidate) => candidate.id === ruleId) }))
-    .sort((left, right) => (left.rule?.name ?? '').localeCompare(right.rule?.name ?? ''));
-  const hasFallback = selectedRules.some(({ rule }) => rule?.definition.action.kind === 'fallback');
-  const availableRules = rules.filter((rule) => !selectedRuleIds.includes(rule.id) && (!hasFallback || rule.definition.action.kind !== 'fallback'));
-  const attachRule = (ruleId: string) => form.setValue('ruleIds', [...selectedRuleIds, ruleId], { shouldDirty: true, shouldValidate: true });
+  const targetKind = useWatch({ control: form.control, name: 'targetKind' });
+  const rules = useWatch({ control: form.control, name: 'rules' });
 
   return (
     <>
@@ -179,50 +151,42 @@ function PolicyFields({
       )}
       <FormField
         control={form.control}
-        name="ruleIds"
+        name="rules"
         render={() => (
           <FormItem>
-            <FormLabel>Rules</FormLabel>
-            {ruleNotice && (
-              <Alert>
-                <AlertDescription>{ruleNotice}</AlertDescription>
-              </Alert>
-            )}
+            <div className="flex items-center justify-between gap-2">
+              <FormLabel>Rules</FormLabel>
+              <Button type="button" variant="outline" size="sm" onClick={onCreateRule}>
+                <Plus className="h-4 w-4" />
+                Add rule
+              </Button>
+            </div>
             <div className="space-y-2">
-              {selectedRules.map(({ ruleId, rule }) => (
-                <div key={ruleId} className="flex min-h-14 items-center gap-2 rounded border border-border bg-background/40 px-3 py-2">
+              {rules.map((rule, index) => (
+                <div
+                  key={`${index}:${JSON.stringify(rule)}`}
+                  className="flex min-h-16 items-center gap-2 rounded border border-border bg-background/40 px-3 py-2"
+                >
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="truncate text-sm font-medium">{rule?.name ?? 'Unavailable rule'}</p>
-                      {newRuleIds.includes(ruleId) && <Badge variant="success">New</Badge>}
+                    <div className="text-sm font-medium">
+                      <RuleActionSummary definition={rule} />
                     </div>
-                    {rule && (
-                      <div className="text-xs text-muted-foreground">
-                        <RuleActionSummary rule={rule} />
-                      </div>
-                    )}
+                    <div className="text-xs text-muted-foreground">
+                      When: <RuleMatchSummary definition={rule} />
+                    </div>
                   </div>
-                  {rule && (
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      aria-label={`Edit ${rule.name}`}
-                      disabled={!canComposeRules}
-                      onClick={() => onEditRule(rule)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  )}
+                  <Button type="button" size="icon" variant="ghost" aria-label={`Edit rule ${index + 1}`} onClick={() => onEditRule(index, rule)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
                   <Button
                     type="button"
                     size="icon"
                     variant="ghost"
-                    aria-label={`Remove ${rule?.name ?? 'rule'}`}
+                    aria-label={`Remove rule ${index + 1}`}
                     onClick={() =>
                       form.setValue(
-                        'ruleIds',
-                        selectedRuleIds.filter((id) => id !== ruleId),
+                        'rules',
+                        rules.filter((_, ruleIndex) => ruleIndex !== index),
                         { shouldDirty: true, shouldValidate: true },
                       )
                     }
@@ -231,40 +195,12 @@ function PolicyFields({
                   </Button>
                 </div>
               ))}
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <SearchPicker
-                value=""
-                onValueChange={attachRule}
-                options={availableRules.map((rule) => ({
-                  value: rule.id,
-                  searchText: rule.name,
-                  label: (
-                    <span className="flex min-w-0 flex-col items-start">
-                      <span className="truncate text-sm font-medium">{rule.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        <RuleActionSummary rule={rule} />
-                      </span>
-                    </span>
-                  ),
-                }))}
-                placeholder={availableRules.length ? 'Search or add an existing rule…' : 'All available rules selected'}
-                disabled={!availableRules.length}
-                aria-label="Add existing rule"
-                title="Add existing rule"
-                description="Search reusable Rules from this workspace."
-                searchLabel="Search shared rules"
-                searchPlaceholder="Search rules..."
-                emptyMessage="No matching rules"
-                className="sm:flex-1"
-              />
-              <Button type="button" variant="outline" disabled={!canComposeRules} onClick={onCreateRule}>
-                <Plus className="h-4 w-4" />
-                Create rule
-              </Button>
+              {rules.length === 0 && (
+                <p className="rounded border border-dashed border-border p-4 text-sm text-muted-foreground">Add at least one rule.</p>
+              )}
             </div>
             <FormMessage />
-            <p className="text-sm text-muted-foreground">Rules are shared. Editing one updates every policy that uses it.</p>
+            <p className="text-sm text-muted-foreground">Rule changes are saved only when you save this policy.</p>
           </FormItem>
         )}
       />
@@ -280,8 +216,7 @@ export function PolicyEditor({
   pending,
   keys,
   users,
-  rules,
-  ruleComposer,
+  catalog,
 }: {
   policy: PolicyOut | null;
   open: boolean;
@@ -290,8 +225,7 @@ export function PolicyEditor({
   pending: boolean;
   keys: InferenceKeyOut[];
   users: WorkspaceMemberCandidateOut[];
-  rules: RuleOut[];
-  ruleComposer?: PolicyRuleComposer;
+  catalog: TaxonomyOut;
 }) {
   const defaultValues = policy ? policyForm(policy) : policyDefaults;
   const form = useForm<PolicyForm>({
@@ -299,26 +233,17 @@ export function PolicyEditor({
     defaultValues,
   });
   const [step, setStep] = useState<PolicyEditorStep>({ kind: 'policy' });
-  const [ruleOverrides, setRuleOverrides] = useState<RuleOut[]>([]);
-  const [newRuleIds, setNewRuleIds] = useState<string[]>([]);
-  const [ruleNotice, setRuleNotice] = useState<string | null>(null);
-  const rulesById = new Map([...rules, ...ruleOverrides].map((rule) => [rule.id, rule]));
-  const visibleRules = Array.from(rulesById.values());
-  const selectedRuleIds = useWatch({ control: form.control, name: 'ruleIds' });
-  const hasFallback = selectedRuleIds.some((ruleId) => rulesById.get(ruleId)?.definition.action.kind === 'fallback');
+  const rules = useWatch({ control: form.control, name: 'rules' });
+  const hasFallback = rules.some((rule) => rule.action.kind === 'fallback');
 
   const resetEditor = () => {
     form.reset(defaultValues);
     setStep({ kind: 'policy' });
-    setRuleOverrides([]);
-    setNewRuleIds([]);
-    setRuleNotice(null);
   };
   const closeEditor = () => {
     resetEditor();
     onOpenChange(false);
   };
-
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen && step.kind !== 'policy') {
       setStep({ kind: 'policy' });
@@ -335,22 +260,16 @@ export function PolicyEditor({
       return;
     }
   });
-  const storeRule = (rule: RuleOut) => setRuleOverrides((current) => [...current.filter((candidate) => candidate.id !== rule.id), rule]);
-  const createRule = async (payload: RuleCreate) => {
-    if (!ruleComposer) return;
-    const rule = await ruleComposer.create(payload);
-    storeRule(rule);
-    const selectedRuleIds = form.getValues('ruleIds');
-    form.setValue('ruleIds', [...selectedRuleIds, rule.id], { shouldDirty: true, shouldValidate: true });
-    setNewRuleIds((current) => [...current, rule.id]);
-    setRuleNotice(`${rule.name} was created in the Rule library and added to this policy.`);
+  const createRule = async (rule: RuleDefinitionInput) => {
+    form.setValue('rules', [...form.getValues('rules'), rule], { shouldDirty: true, shouldValidate: true });
     setStep({ kind: 'policy' });
   };
-  const updateRule = async (rule: RuleOut, payload: RuleCreate) => {
-    if (!ruleComposer) return;
-    const updatedRule = await ruleComposer.update(rule, payload);
-    storeRule(updatedRule);
-    setRuleNotice(`${updatedRule.name} was updated everywhere it is used.`);
+  const updateRule = async (index: number, rule: RuleDefinitionInput) => {
+    form.setValue(
+      'rules',
+      form.getValues('rules').map((current, ruleIndex) => (ruleIndex === index ? rule : current)),
+      { shouldDirty: true, shouldValidate: true },
+    );
     setStep({ kind: 'policy' });
   };
 
@@ -362,17 +281,16 @@ export function PolicyEditor({
       : step.kind === 'choose_rule_type'
         ? 'Choose a rule type'
         : step.kind === 'create_rule'
-          ? `Create and add ${ruleType(step.ruleKind).formName}`
-          : `Edit ${ruleType(step.rule.definition.action.kind).formName}`;
+          ? `Add ${ruleType(step.ruleKind).formName}`
+          : `Edit ${ruleType(step.rule.action.kind).formName}`;
   const description =
     step.kind === 'policy'
-      ? 'Choose which keys this policy covers, then attach reusable rules.'
+      ? 'Choose who this policy covers and define its restrictions and fallbacks.'
       : step.kind === 'choose_rule_type'
-        ? 'Start with the control you want to apply. Each rule type has its own focused form.'
+        ? 'Start with the control you want to apply.'
         : step.kind === 'create_rule'
-          ? `${ruleType(step.ruleKind).description} This Rule will be shared across policies.`
-          : `${ruleType(step.rule.definition.action.kind).description} This Rule is shared across policies.`;
-  const editingUsage = step.kind === 'edit_rule' && ruleComposer ? ruleUsageLabel(ruleComposer.usageByRuleId, step.rule.id) : null;
+          ? ruleType(step.ruleKind).description
+          : ruleType(step.rule.action.kind).description;
 
   return (
     <Modal open={open} onOpenChange={handleOpenChange} title={title} description={description} contentClassName="sm:max-w-xl">
@@ -383,12 +301,8 @@ export function PolicyEditor({
               form={form}
               keys={keys}
               users={users}
-              rules={visibleRules}
-              newRuleIds={newRuleIds}
-              ruleNotice={ruleNotice}
-              canComposeRules={ruleComposer !== undefined}
               onCreateRule={() => setStep({ kind: 'choose_rule_type' })}
-              onEditRule={(rule) => setStep({ kind: 'edit_rule', rule })}
+              onEditRule={(index, rule) => setStep({ kind: 'edit_rule', index, rule })}
             />
             <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={closeEditor}>
@@ -410,41 +324,26 @@ export function PolicyEditor({
           </Button>
         </div>
       )}
-      {step.kind === 'create_rule' && ruleComposer && (
+      {step.kind === 'create_rule' && (
         <RuleFormContent
           rule={null}
           kind={step.ruleKind}
-          catalog={ruleComposer.catalog}
-          pending={ruleComposer.createPending}
-          submitLabel="Create and add rule"
+          catalog={catalog}
+          pending={false}
+          submitLabel="Add rule"
           onSubmit={createRule}
           onBack={() => setStep({ kind: 'policy' })}
-          intro={
-            <Alert>
-              <AlertDescription>
-                This Rule is saved to the Rule library immediately and can be reused by other Policies. It remains there if you cancel this Policy.
-              </AlertDescription>
-            </Alert>
-          }
         />
       )}
-      {step.kind === 'edit_rule' && ruleComposer && (
+      {step.kind === 'edit_rule' && (
         <RuleFormContent
           rule={step.rule}
-          kind={step.rule.definition.action.kind}
-          catalog={ruleComposer.catalog}
-          pending={ruleComposer.updatePending}
-          submitLabel="Save rule"
-          onSubmit={(payload) => updateRule(step.rule, payload)}
+          kind={step.rule.action.kind}
+          catalog={catalog}
+          pending={false}
+          submitLabel="Update rule"
+          onSubmit={(rule) => updateRule(step.index, rule)}
           onBack={() => setStep({ kind: 'policy' })}
-          intro={
-            <Alert>
-              <AlertDescription className="space-y-1">
-                <p className="font-medium">{editingUsage}</p>
-                <p>Saving this Rule updates every policy that uses it.</p>
-              </AlertDescription>
-            </Alert>
-          }
         />
       )}
     </Modal>

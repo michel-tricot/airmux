@@ -45,7 +45,7 @@ describe('CLI device sign-in approval', () => {
     expect(await screen.findByRole('heading', { name: 'Authorize CLI login' })).toBeInTheDocument();
     expect(await screen.findByText(REQUEST.client_name)).toBeInTheDocument();
     expect(screen.getByText(REQUEST.requester)).toBeInTheDocument();
-    expect(screen.getByLabelText('Access scope')).toHaveTextContent(`Organization: ${ORG.name}`);
+    expect(await screen.findByLabelText('Access scope')).toHaveTextContent(`Organization: ${ORG.name}`);
     expect(screen.getByRole('button', { name: 'Authorize' })).toBeEnabled();
   });
 
@@ -123,7 +123,7 @@ describe('CLI device sign-in approval', () => {
   it('does not treat routes that merely start with cli as approval routes', async () => {
     window.localStorage.setItem('airmux_org_id', ORG.id);
     renderAt('/client');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
-    expect(window.location.pathname).toBe('/org/workspaces/production');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Usage' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/org');
   });
 });

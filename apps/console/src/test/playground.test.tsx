@@ -8,48 +8,6 @@ import { ORG, WORKSPACES, server } from './msw';
 import { now, taxonomyProvider } from './fixtures';
 beforeEach(() => window.localStorage.setItem('airmux_org_id', ORG.id));
 describe('playground', () => {
-  it('labels playground sessions in recent activity without exposing their ids', async () => {
-    const playgroundSessionId = '01941f29-7c00-7000-8000-000000000001';
-    server.use(
-      http.get(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACES[0].slug}/events`, () =>
-        HttpResponse.json<{ data: Api.UsageEventOut[] }>({
-          data: [
-            {
-              event_id: '01941f29-7c00-7000-8000-000000000002',
-              request_id: '01941f29-7c00-7000-8000-000000000003',
-              occurred_at: now,
-              org_id: ORG.id,
-              workspace_id: WORKSPACES[0].id,
-              key_id: playgroundSessionId,
-              model_id: 'openai/gpt-test',
-              provider_id: 'provider-1',
-              bundle_id: '01941f29-7c00-7000-8000-000000000004',
-              input_tokens: 12,
-              output_tokens: 4,
-              cost_usd: 0.001,
-              cost_input_usd: 0.0005,
-              cost_output_usd: 0.0005,
-              cache_read_tokens: 0,
-              cache_write_tokens: 0,
-              latency_ms: 100,
-              status: 'ok',
-              stream: true,
-              credential_id: null,
-              credential_scope: null,
-            },
-          ],
-        }),
-      ),
-    );
-    window.history.replaceState(null, '', `/org/workspaces/${WORKSPACES[0].slug}`);
-    render(<App />);
-
-    const activity = await screen.findByRole('row', { name: /openai\/gpt-test Playground/ });
-
-    expect(within(activity).getByText('Playground')).toBeInTheDocument();
-    expect(within(activity).queryByText(playgroundSessionId)).not.toBeInTheDocument();
-  });
-
   it('starts a session automatically and streams a response through the inference prefix', async () => {
     const provider = taxonomyProvider('provider-1', 'openai');
     const model = {
@@ -61,18 +19,16 @@ describe('playground', () => {
       name: 'openai/gpt-test',
       provider_id: provider.id,
       upstream_model: 'gpt-test',
-      input_price_per_mtok: 1,
-      output_price_per_mtok: 2,
-      cache_read_price_per_mtok: 0,
-      cache_write_price_per_mtok: 0,
+      input_price_per_mtok: '1',
+      output_price_per_mtok: '2',
+      cache_read_price_per_mtok: '0',
+      cache_write_price_per_mtok: '0',
       context_window: 128000,
       max_output_tokens: 4096,
       capabilities: ['streaming'],
       created_at: now,
       updated_at: now,
-      deleted_at: null,
     } satisfies Api.ModelOut;
-    let dialect = '';
     let requestedWith = '';
     let requestBody: Record<string, unknown> = {};
     let sessions = 0;
@@ -87,14 +43,15 @@ describe('playground', () => {
         });
       }),
       http.post('/inf/v1/chat/completions', async ({ request }) => {
-        dialect = request.headers.get('x-airmux-dialect') ?? '';
         requestedWith = request.headers.get('x-requested-with') ?? '';
         requestBody = (await request.json()) as Record<string, unknown>;
         return HttpResponse.text(
           [
-            'data: {"id":"reply","delta":{"type":"text","text":"hello from the gateway"}}',
+            'data: {"id":"reply","object":"chat.completion.chunk","created":1,"model":"model-1","choices":[{"index":0,"delta":{"content":"hello from the gateway"}}]}',
             '',
-            'data: {"id":"reply","finish_reason":"stop","usage":{"input_tokens":12,"output_tokens":4,"cache_read_tokens":2,"cache_write_tokens":0,"estimated":false},"gateway":{"adjustments":[]}}',
+            'data: {"id":"reply","object":"chat.completion.chunk","created":1,"model":"model-1","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}',
+            '',
+            'data: {"id":"reply","object":"chat.completion.chunk","created":1,"model":"model-1","choices":[],"usage":{"prompt_tokens":12,"completion_tokens":4,"total_tokens":16,"prompt_tokens_details":{"cached_tokens":2}},"gateway":{"adjustments":[]}}',
             '',
             'data: [DONE]',
             '',
@@ -109,7 +66,6 @@ describe('playground', () => {
 
     const composer = await screen.findByPlaceholderText('Send a message... (Shift+Enter for newline)');
     expect(document.querySelector('[data-playground-scroll-anchor]')).not.toBeInTheDocument();
-    expect(screen.queryByRole('combobox', { name: 'API surface' })).not.toBeInTheDocument();
     const maxTokens = screen.getByLabelText('Max tokens');
     await user.click(screen.getByRole('button', { name: 'Increase Max tokens' }));
     expect(maxTokens).toHaveValue(1);
@@ -136,22 +92,18 @@ describe('playground', () => {
     const curlDialog = screen.getByRole('dialog', { name: 'Replicate request' });
     expect(curlDialog).toHaveTextContent('/inf/v1/chat/completions');
     expect(curlDialog).toHaveTextContent('Authorization: Bearer $AIRMUX_INFERENCE_KEY');
-    expect(curlDialog).not.toHaveTextContent('x-airmux-dialect');
     expect(curlDialog).toHaveTextContent('openai/gpt-test');
-    expect(curlDialog).toHaveTextContent('"text": "hello"');
+    expect(curlDialog).toHaveTextContent('"content": "hello"');
     expect(curlDialog).toHaveTextContent('"temperature": 1');
     expect(curlDialog).toHaveTextContent('"stream": true');
     const copyCurl = within(curlDialog).getByRole('button', { name: 'Copy cURL' });
     await user.click(copyCurl);
     expect(await navigator.clipboard.readText()).toContain('/inf/v1/chat/completions');
-    expect(await navigator.clipboard.readText()).not.toContain('x-airmux-dialect');
     expect(await within(curlDialog).findByRole('button', { name: 'Copied cURL' })).toBeInTheDocument();
     await user.click(within(curlDialog).getByRole('button', { name: 'Close' }));
-    expect(screen.queryByRole('button', { name: 'Generate playground key' })).not.toBeInTheDocument();
     expect(sessions).toBe(1);
-    expect(dialect).toBe('canonical');
     expect(requestedWith).toBe('fetch');
-    expect(requestBody.messages).toEqual([{ role: 'user', content: [{ type: 'text', text: 'hello' }] }]);
+    expect(requestBody.messages).toEqual([{ role: 'user', content: 'hello' }]);
 
     const workspaceNavigation = screen.getByRole('navigation', { name: 'Workspace navigation' });
     const workspaceOverview = within(workspaceNavigation)
@@ -174,10 +126,10 @@ describe('playground', () => {
       name: 'anthropic/claude-test',
       provider_id: provider.id,
       upstream_model: 'claude-test',
-      input_price_per_mtok: 1,
-      output_price_per_mtok: 2,
-      cache_read_price_per_mtok: 0,
-      cache_write_price_per_mtok: 0,
+      input_price_per_mtok: '1',
+      output_price_per_mtok: '2',
+      cache_read_price_per_mtok: '0',
+      cache_write_price_per_mtok: '0',
       context_window: 128000,
       max_output_tokens: 4096,
       input_modalities: ['text'],
@@ -185,7 +137,6 @@ describe('playground', () => {
       capabilities: ['streaming'],
       created_at: now,
       updated_at: now,
-      deleted_at: null,
     } satisfies Api.ModelOut;
     server.use(
       http.get(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACES[0].slug}/taxonomy`, () =>
@@ -198,7 +149,7 @@ describe('playground', () => {
       ),
       http.post('/inf/v1/chat/completions', () =>
         HttpResponse.text(
-          'data: {"id":"reply","finish_reason":"content_filter","usage":{"input_tokens":0,"output_tokens":0,"cache_read_tokens":0,"cache_write_tokens":0,"estimated":false},"gateway":{"adjustments":[]}}\n\ndata: [DONE]\n\n',
+          'data: {"id":"reply","object":"chat.completion.chunk","created":1,"model":"model-1","choices":[{"index":0,"delta":{},"finish_reason":"content_filter"}]}\n\ndata: {"id":"reply","object":"chat.completion.chunk","created":1,"model":"model-1","choices":[],"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0,"prompt_tokens_details":{"cached_tokens":0}},"gateway":{"adjustments":[]}}\n\ndata: [DONE]\n\n',
           {
             headers: { 'content-type': 'text/event-stream' },
           },
@@ -230,16 +181,15 @@ describe('playground', () => {
         name: 'openai/gpt-test',
         provider_id: firstProvider.id,
         upstream_model: 'gpt-test',
-        input_price_per_mtok: 1,
-        output_price_per_mtok: 2,
-        cache_read_price_per_mtok: 0,
-        cache_write_price_per_mtok: 0,
+        input_price_per_mtok: '1',
+        output_price_per_mtok: '2',
+        cache_read_price_per_mtok: '0',
+        cache_write_price_per_mtok: '0',
         context_window: 128000,
         max_output_tokens: 4096,
         capabilities: ['streaming'],
         created_at: now,
         updated_at: now,
-        deleted_at: null,
       } satisfies Api.ModelOut,
       {
         egress_kind: null,
@@ -250,16 +200,15 @@ describe('playground', () => {
         name: 'anthropic/claude-test',
         provider_id: secondProvider.id,
         upstream_model: 'claude-test',
-        input_price_per_mtok: 1,
-        output_price_per_mtok: 2,
-        cache_read_price_per_mtok: 0,
-        cache_write_price_per_mtok: 0,
+        input_price_per_mtok: '1',
+        output_price_per_mtok: '2',
+        cache_read_price_per_mtok: '0',
+        cache_write_price_per_mtok: '0',
         context_window: 128000,
         max_output_tokens: 4096,
         capabilities: ['streaming'],
         created_at: now,
         updated_at: now,
-        deleted_at: null,
       } satisfies Api.ModelOut,
     ];
     server.use(
@@ -291,17 +240,16 @@ describe('playground', () => {
       name: 'openai/gpt-5-nano',
       provider_id: provider.id,
       upstream_model: 'gpt-5-nano',
-      input_price_per_mtok: 1,
-      output_price_per_mtok: 2,
-      cache_read_price_per_mtok: 0,
-      cache_write_price_per_mtok: 0,
+      input_price_per_mtok: '1',
+      output_price_per_mtok: '2',
+      cache_read_price_per_mtok: '0',
+      cache_write_price_per_mtok: '0',
       context_window: 128000,
       max_output_tokens: 4096,
       capabilities: ['streaming'],
       parameter_support: { temperature: 'unsupported' },
       created_at: now,
       updated_at: now,
-      deleted_at: null,
     } satisfies Api.ModelOut;
     let requestBody: Record<string, unknown> = {};
     server.use(
@@ -316,7 +264,7 @@ describe('playground', () => {
       http.post('/inf/v1/chat/completions', async ({ request }) => {
         requestBody = (await request.json()) as Record<string, unknown>;
         return HttpResponse.text(
-          'data: {"id":"reply","delta":{"type":"text","text":"ok"}}\n\ndata: {"id":"reply","finish_reason":"stop","usage":{"input_tokens":0,"output_tokens":0,"cache_read_tokens":0,"cache_write_tokens":0,"estimated":false},"gateway":{"adjustments":[]}}\n\ndata: [DONE]\n\n',
+          'data: {"id":"reply","object":"chat.completion.chunk","created":1,"model":"model-1","choices":[{"index":0,"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\ndata: {"id":"reply","object":"chat.completion.chunk","created":1,"model":"model-1","choices":[],"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0,"prompt_tokens_details":{"cached_tokens":0}},"gateway":{"adjustments":[]}}\n\ndata: [DONE]\n\n',
           {
             headers: { 'content-type': 'text/event-stream' },
           },

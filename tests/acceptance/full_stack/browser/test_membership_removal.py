@@ -25,6 +25,7 @@ def test_membership_removal_blocks_requests_and_reload_clears_private_state(stac
         user_id = invite_member(admin, member, org_path, workspace["id"])
         console.login("browser-member@acceptance.test", "browser-member-password")
         page = console.page
+        console.select_workspace(workspace["name"])
         page.get_by_role("link", name="Playground", exact=True).click()
         page.get_by_placeholder("Send a message... (Shift+Enter for newline)").fill("private conversation marker")
         page.get_by_role("button", name="Send message", exact=True).click()

@@ -7,13 +7,13 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from sqlmodel import col
 
 from contract import PLAYGROUND_COOKIE, token_hash
-from control_plane.authority import readable_workspaces
-from control_plane.authz import Permission, WorkspaceRole
+from control_plane.authority import ensure_inference_key_owner, is_allowed, readable_workspaces
+from control_plane.authz import Permission, Scope, WorkspaceRole
 from control_plane.deps import ActorDep, OrgDep, PlaygroundCookie, WorkspaceDep, org_scope, require, workspace_scope
 from control_plane.keys import PLAYGROUND_SESSION_TTL, create_inference_key_for_workspace, rotate_playground_session
 from control_plane.models import InferenceKey, Org, OrgMembership, PlaygroundSession, User, Workspace, WorkspaceMembership
 from control_plane.models.common.wire import DeletedOut, Envelope
-from control_plane.models.inference_key import InferenceKeyCreatedOut, InferenceKeyIn, InferenceKeyOut, InferenceKeyRevokedOut
+from control_plane.models.inference_key import InferenceKeyCreatedOut, InferenceKeyIn, InferenceKeyOut, InferenceKeyOwnerOut, InferenceKeyRevokedOut
 from control_plane.models.playground_session import PlaygroundSessionEndedOut, PlaygroundSessionReadyOut
 from control_plane.models.workspace import WorkspaceCreate, WorkspaceOut, WorkspaceUpdate
 from control_plane.models.workspace_membership import WorkspaceMemberCandidateOut, WorkspaceMembershipIn, WorkspaceMembershipOut
@@ -119,12 +119,9 @@ async def list_members(workspace: WorkspaceDep) -> Envelope[list[WorkspaceMember
 )
 async def list_member_candidates(workspace: WorkspaceDep) -> Envelope[list[WorkspaceMemberCandidateOut]]:
     """List organization members who can be added to a workspace."""
-    candidates = await User.candidates_for_workspace(workspace.org_id, workspace.id)
+    users = await User.candidates_for_workspace(workspace.org_id, workspace.id)
     return Envelope(
-        data=[
-            WorkspaceMemberCandidateOut(user_id=user.id, email=user.email, name=user.name, service_account=user.service_account)
-            for user in candidates
-        ]
+        data=[WorkspaceMemberCandidateOut(user_id=user.id, email=user.email, name=user.name, service_account=user.service_account) for user in users]
     )
 
 
@@ -227,8 +224,26 @@ async def end_playground_session(
 )
 async def create_inference_key(body: InferenceKeyIn, workspace: WorkspaceDep, actor: ActorDep) -> Envelope[InferenceKeyCreatedOut]:
     """Create an inference key for model requests to this workspace and return its token once."""
-    key_id, token = await create_inference_key_for_workspace(workspace.org_id, workspace.id, actor.principal_id, label=body.label)
+    await ensure_inference_key_owner(actor, body.user_id, Scope.workspace(workspace.org_id, workspace.id))
+    key_id, token = await create_inference_key_for_workspace(workspace.org_id, workspace.id, body.user_id, label=body.label)
     return Envelope(data=InferenceKeyCreatedOut(id=key_id, token=token))
+
+
+@router.get(
+    "/{workspace_ref}/inference-key-owners",
+    tags=["Workspace Inference Keys"],
+    dependencies=[require("api", workspace_scope, Permission.inference_keys_manage)],
+)
+async def list_inference_key_owners(workspace: WorkspaceDep, actor: ActorDep) -> Envelope[list[InferenceKeyOwnerOut]]:
+    """List principals the caller may select as an inference-key owner."""
+    current = await User.find_by_id(actor.principal_id)
+    owners = [current] if current is not None else []
+    if await is_allowed(actor, Permission.members_manage, Scope.workspace(workspace.org_id, workspace.id)):
+        managed = await User.find(User.managing_org_id == workspace.org_id, col(User.service_account).is_(True), order_by=col(User.name))
+        owners = [*owners, *(owner for owner in managed if owner.id != actor.principal_id)]
+    return Envelope(
+        data=[InferenceKeyOwnerOut(user_id=owner.id, email=owner.email, name=owner.name, service_account=owner.service_account) for owner in owners]
+    )
 
 
 @router.get(
@@ -239,7 +254,7 @@ async def create_inference_key(body: InferenceKeyIn, workspace: WorkspaceDep, ac
 async def list_inference_keys(workspace: WorkspaceDep) -> Envelope[list[InferenceKeyOut]]:
     """List inference-key metadata for a workspace without returning secret tokens."""
     keys = await InferenceKey.find(InferenceKey.workspace_id == workspace.id, order_by=col(InferenceKey.id))
-    return Envelope(data=[InferenceKeyOut.model_validate(k) for k in keys])
+    return Envelope(data=[InferenceKeyOut.model_validate(key) for key in keys])
 
 
 @router.delete(

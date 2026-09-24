@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pytest
-import respx
 from conftest import mock_control_plane
 from starlette.testclient import TestClient
 
@@ -13,7 +12,8 @@ from data_plane.proxy import RequestRejectedError, _parse
 def request_body(dialect):
     if dialect == "openai_responses":
         return {"model": "gpt-test", "input": [{"role": "user", "content": "hello"}]}
-    return {"model": "gpt-test", "messages": [{"role": "user", "content": "hello"}]}
+    limit = {"max_tokens": 8} if dialect == "anthropic" else {}
+    return {"model": "gpt-test", "messages": [{"role": "user", "content": "hello"}], **limit}
 
 
 @pytest.mark.parametrize("dialect", REGISTRY)
@@ -83,23 +83,41 @@ def test_error_classification_does_not_depend_on_message_text(error, code, monke
     def reject(body):
         raise error
 
-    monkeypatch.setattr(REGISTRY["canonical"], "parse", reject)
+    monkeypatch.setattr(REGISTRY["openai_chat_completions"], "parse", reject)
     with pytest.raises(RequestRejectedError) as rejection:
-        _parse(request_body("canonical"), REGISTRY["canonical"])
+        _parse(request_body("openai_chat_completions"), REGISTRY["openai_chat_completions"])
     assert rejection.value.code == code
     assert rejection.value.message == str(error)
 
 
 @pytest.mark.parametrize("dialect", REGISTRY)
-@respx.mock
-def test_invalid_stream_mode_returns_a_json_error(dialect, api_key, dp_app):
-    mock_control_plane()
+def test_invalid_stream_mode_returns_a_json_error(http_mock, dialect, api_key, dp_app):
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         response = client.post(
-            "/inf/v1/chat/completions",
-            headers={"Authorization": f"Bearer {api_key}", "x-airmux-dialect": dialect},
+            REGISTRY[dialect].path,
+            headers={"Authorization": f"Bearer {api_key}"},
             json={**request_body(dialect), "stream": "false"},
         )
     assert response.status_code == 400
     assert response.headers["content-type"] == "application/json"
+    assert "invalid_request" in response.json()["error"].values()
+
+
+@pytest.mark.parametrize("dialect", REGISTRY)
+@pytest.mark.parametrize(
+    ("body", "message"),
+    [
+        (b"{", "the request body must be valid JSON"),
+        (b'{"content":"\xff"}', "the request body must be valid JSON"),
+        (b"{} trailing", "the request body must be valid JSON"),
+        *[(body, "the request body must be a JSON object") for body in (b"[]", b"null", b"true", b"1", b'"text"')],
+    ],
+)
+def test_json_boundary_preserves_rejection_details(http_mock, dialect, body, message, booted):
+    mock_control_plane(http_mock)
+    with TestClient(booted.app) as client:
+        response = client.post(REGISTRY[dialect].path, headers={"Authorization": f"Bearer {booted.api_key}"}, content=body)
+    assert response.status_code == 400
+    assert response.json()["error"]["message"] == message
     assert "invalid_request" in response.json()["error"].values()

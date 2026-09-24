@@ -66,10 +66,8 @@ management_keys_app = typer.Typer(help="Keys for control-plane access at instanc
 providers_app = typer.Typer(help="Upstream LLM providers")
 provider_credentials_app = typer.Typer(help="Your own provider API keys")
 models_app = typer.Typer(help="Models you can route to")
-rules_app = typer.Typer(help="Reusable workspace inference rules")
-policies_app = typer.Typer(help="Workspace inference restrictions, fallbacks, and budgets")
+policies_app = typer.Typer(help="Workspace inference restrictions and fallbacks")
 catalog_app = typer.Typer(help="Apply the instance provider and model catalog")
-bundles_app = typer.Typer(help="Publish configuration changes to your gateways")
 events_app = typer.Typer(help="Requests, tokens and spend")
 gateways_app = typer.Typer(help="Gateways connected to this instance")
 profiles_app = typer.Typer(help="Saved deployment and organization contexts")
@@ -87,11 +85,9 @@ for name, sub in (
     ("provider-credentials", provider_credentials_app),
     ("management-keys", management_keys_app),
     ("models", models_app),
-    ("rules", rules_app),
     ("policies", policies_app),
     ("catalog", catalog_app),
     ("providers", providers_app),
-    ("bundles", bundles_app),
     ("events", events_app),
     ("users", users_app),
     ("service-accounts", service_accounts_app),

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import pytest
 from conftest import CTX, PROVIDER, TEXT_LOG, TEXT_NONSTREAM, delta_event, sse
 
-from contract import Secret
+from airmux_runtime.secrets import Secret
 from data_plane.canonical import CanonicalReasoningPart, CanonicalTextPart, CanonicalToolCallPart
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import UpstreamProtocolError, UpstreamStreamError
@@ -267,6 +267,26 @@ def test_stream_and_buffered_agree(kind, modality):
 
 
 @pytest.mark.parametrize("kind", KINDS)
+@pytest.mark.parametrize("modality", MODALITIES)
+def test_partial_finalization_preserves_accumulation_and_previous_responses(kind, modality):
+    adapter = _adapter(kind)
+    state = adapter.new_stream_state(CTX)
+    events = list(adapter.frame(CASES[kind][modality].log, adapter.new_stream_state(CTX)))
+    for event in events[:3]:
+        adapter.transform_stream_event(event, state)
+    partial = adapter.finalize(state)
+    previous = partial.model_dump_json()
+    assert adapter.finalize(state) == partial
+
+    for event in events[3:]:
+        adapter.transform_stream_event(event, state)
+    final = adapter.finalize(state)
+    _, uninterrupted = fold(adapter, CASES[kind][modality].log, 7)
+    assert final == uninterrupted
+    assert partial.model_dump_json() == previous
+
+
+@pytest.mark.parametrize("kind", KINDS)
 def test_stream_tool_identity_is_emitted_once(kind):
     chunks, final = fold(_adapter(kind), CASES[kind]["tools"].log, 7)
     deltas = [chunk.delta for chunk in chunks if chunk.delta is not None and chunk.delta.type == "tool_call"]
@@ -309,10 +329,11 @@ def test_a_nonterminal_event_without_a_completed_response_is_rejected(kind):
 
 
 @pytest.mark.parametrize("kind", KINDS)
-def test_a_malformed_stream_event_is_rejected(kind):
+@pytest.mark.parametrize("payload", [b"not-json", b'{"text":"\xff"}', b"[]", b"null", b"42", b"{} trailing"])
+def test_a_malformed_stream_event_is_rejected(kind, payload):
     adapter = _adapter(kind)
     state = adapter.new_stream_state(CTX)
-    (event,) = list(adapter.frame(b"data: not-json\n\n", state))
+    (event,) = list(adapter.frame(b"data: " + payload + b"\n\n", state))
     with pytest.raises(ValueError, match="invalid upstream stream event"):
         adapter.transform_stream_event(event, state)
 

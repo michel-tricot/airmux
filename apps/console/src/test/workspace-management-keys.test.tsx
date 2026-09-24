@@ -4,17 +4,17 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { expect, it } from 'vitest';
 import App from '@/App';
-import { ORG, WORKSPACES, server } from './msw';
+import { ORG, WORKSPACES, enveloped, server } from './msw';
 
 it.each(['Never', '30 days'])('creates a workspace management key with expiry %s and reveals it once', async (expiry) => {
   const workspace = WORKSPACES[0];
   let keys: Api.ManagementKeyOut[] = [];
   server.use(
-    http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/member-candidates', () => HttpResponse.json({ data: [] })),
+    http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/member-candidates', () => enveloped([])),
     http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/management-keys', ({ params }) => {
       expect(params.orgId).toBe(ORG.id);
       expect(params.workspaceRef).toBe(workspace.id);
-      return HttpResponse.json({ data: keys });
+      return enveloped(keys);
     }),
     http.post('/api/v1/organizations/:orgId/workspaces/:workspaceRef/management-keys', async ({ params, request }) => {
       expect(params.workspaceRef).toBe(workspace.id);
@@ -42,7 +42,6 @@ it.each(['Never', '30 days'])('creates a workspace management key with expiry %s
         revoked_at: null,
         created_at: '2026-01-01T00:00:00Z',
         updated_at: '2026-01-01T00:00:00Z',
-        deleted_at: null,
         status: 'active',
         scope: { level: 'workspace', org_id: ORG.id, workspace_id: workspace.id },
       };

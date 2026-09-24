@@ -17,12 +17,15 @@ import httpx
 from dotenv import find_dotenv, load_dotenv
 
 WEATHER_TOOL = {
-    "name": "get_weather",
-    "description": "Get the current weather for a city",
-    "parameters": {
-        "type": "object",
-        "properties": {"city": {"type": "string"}, "unit": {"type": "string", "enum": ["celsius", "fahrenheit"]}},
-        "required": ["city"],
+    "type": "function",
+    "function": {
+        "name": "get_weather",
+        "description": "Get the current weather for a city",
+        "parameters": {
+            "type": "object",
+            "properties": {"city": {"type": "string"}, "unit": {"type": "string", "enum": ["celsius", "fahrenheit"]}},
+            "required": ["city"],
+        },
     },
 }
 
@@ -46,7 +49,7 @@ def main() -> int:
             "model": model,
             "messages": [{"role": "user", "content": "What is the weather in Paris and in Tokyo, in celsius?"}],
             "tools": [WEATHER_TOOL],
-            "tool_choice": {"name": "get_weather"},
+            "tool_choice": {"type": "function", "function": {"name": "get_weather"}},
             "stream": True,
         },
         timeout=60.0,
@@ -55,17 +58,19 @@ def main() -> int:
             if not line.startswith("data: ") or line == "data: [DONE]":
                 continue
             event = json.loads(line[len("data: ") :])
-            delta = event.get("delta", {})
-            if delta.get("type") == "tool_call":
-                index = delta.get("index", 0)
-                if delta.get("name"):
-                    names[index] = delta["name"]
-                    print(f"\n[tool {index}] {delta['name']}(", end="", flush=True)
-                if delta.get("arguments"):
-                    arguments[index] = arguments.get(index, "") + delta["arguments"]
-                    print(delta["arguments"], end="", flush=True)
-            elif "usage" in event:
-                print(f"\n\nfinish: {event['finish_reason']} | {event['usage']['input_tokens']} in / {event['usage']['output_tokens']} out")
+            for choice in event.get("choices", []):
+                for tool in choice["delta"].get("tool_calls", []):
+                    index = tool["index"]
+                    function = tool.get("function", {})
+                    if function.get("name"):
+                        names[index] = function["name"]
+                        print(f"\n[tool {index}] {function['name']}(", end="", flush=True)
+                    if function.get("arguments"):
+                        arguments[index] = arguments.get(index, "") + function["arguments"]
+                        print(function["arguments"], end="", flush=True)
+            if "usage" in event:
+                usage = event["usage"]
+                print(f"\n\nfinish: {event['gateway']['finish_reason']} | {usage['prompt_tokens']} in / {usage['completion_tokens']} out")
 
     print("\nassembled calls:")
     for index in sorted(names):

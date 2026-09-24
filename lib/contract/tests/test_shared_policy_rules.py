@@ -3,37 +3,29 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from contract import uuid7
-from contract.policies import PolicyDefinition, RuleEntry
+from contract.policies import PolicyDefinition
 
 
-def test_two_policies_can_reference_one_rule():
-    workspace_id = uuid7()
-    rule = RuleEntry.model_validate(
-        {
-            "id": uuid7(),
-            "workspace_id": workspace_id,
-            "name": "Team credentials",
-            "definition": {
-                "match": {"kind": "all_requests"},
-                "action": {"kind": "credential_access", "scopes": ["workspace", "org"]},
-            },
-        }
-    )
+def test_policy_rules_are_nonempty_canonical_and_unique():
+    models = {"match": {"kind": "all_requests"}, "action": {"kind": "models", "names": ["primary"]}}
+    providers = {"match": {"kind": "all_requests"}, "action": {"kind": "providers", "names": ["openai"]}}
+    definition = PolicyDefinition.model_validate({"target": {"kind": "workspace"}, "rules": [providers, models]})
 
-    first = PolicyDefinition.model_validate({"target": {"kind": "workspace"}, "rule_ids": [rule.id]})
-    second = PolicyDefinition.model_validate({"target": {"kind": "selected_keys", "key_ids": ["customer"]}, "rule_ids": [rule.id]})
-
-    assert first.rule_ids == second.rule_ids == (rule.id,)
-
-
-def test_policy_rule_references_are_nonempty_canonical_and_unique():
-    first = uuid7()
-    second = uuid7()
-    definition = PolicyDefinition.model_validate({"target": {"kind": "workspace"}, "rule_ids": [second, first]})
-
-    assert definition.rule_ids == tuple(sorted((first, second)))
-    assert definition == PolicyDefinition.model_validate({"target": {"kind": "workspace"}, "rule_ids": [first, second]})
-    for rule_ids in ([], [first, first]):
+    assert definition == PolicyDefinition.model_validate({"target": {"kind": "workspace"}, "rules": [models, providers]})
+    for rules in ([], [models, models]):
         with pytest.raises(ValidationError):
-            PolicyDefinition.model_validate({"target": {"kind": "workspace"}, "rule_ids": rule_ids})
+            PolicyDefinition.model_validate({"target": {"kind": "workspace"}, "rules": rules})
+
+
+def test_policy_rejects_multiple_fallback_rules():
+    fallback = {
+        "match": {"kind": "all_requests"},
+        "action": {"kind": "fallback", "models": ["backup"], "on": ["timeout"], "max_attempts": 2, "timeout_ms": 1000},
+    }
+    second = {
+        "match": {"kind": "request", "models": ["primary"]},
+        "action": {"kind": "fallback", "models": ["backup"], "on": ["timeout"], "max_attempts": 2, "timeout_ms": 1000},
+    }
+
+    with pytest.raises(ValidationError, match="at most one fallback rule"):
+        PolicyDefinition.model_validate({"target": {"kind": "workspace"}, "rules": [fallback, second]})

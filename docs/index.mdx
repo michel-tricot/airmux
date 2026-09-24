@@ -3,48 +3,47 @@ title: "airmux"
 description: "Run one self-hosted endpoint for LLM applications across providers, with routing, access controls, and usage accounting built in."
 ---
 
-airmux is a self-hosted LLM gateway. Applications send requests to one endpoint using a supported SDK or the native
-canonical API. airmux authenticates the workspace, applies policy, selects a model and provider credential, translates
-the request, and records usage.
+airmux is a self-hosted LLM gateway. Applications send requests using the Chat Completions, Responses, or Messages API.
+airmux authenticates the workspace, applies policy, selects a model and provider credential, translates the request,
+and records usage.
 
-<Columns cols={2}>
-  <Card title="Quickstart" icon="rocket" href="/docs/quickstart">
-    Start the complete stack, add a provider credential, and make a verified request.
-  </Card>
-  <Card title="Connect an SDK" icon="code" href="/docs/guides/openai-sdk">
-    Point an existing SDK at airmux by changing its base URL and API key.
-  </Card>
-  <Card title="Deploy" icon="server" href="/docs/deployment">
-    Run the all-in-one image or separate the console, control plane, and gateways.
-  </Card>
-  <Card title="Inference reference" icon="braces" href="/docs/reference/inference">
-    Compare the Chat Completions, Responses, Messages, and canonical surfaces.
-  </Card>
-</Columns>
+You run the whole platform: a web console, organizations and workspaces, managed provider credentials, live policy, and
+persistent usage history with estimated cost.
+
+<Card title="Quickstart" icon="rocket" href="/docs/quickstart" horizontal>
+  Start the platform, send a real request, find its cost in the console, and enforce your first policy.
+</Card>
 
 ## What airmux provides
 
 - One inference origin for multiple upstream provider families
 - Compatible Chat Completions, Responses, and Messages surfaces
-- A canonical request and response format for provider-neutral applications
 - Workspace-scoped inference keys and permission-limited management keys
-- Platform, organization, and workspace provider credentials
-- Model, provider, price, parameter, request, denial, and fallback policies
+- Instance, organization, and workspace provider credentials
+- Model, provider, price, budget, parameter, request, denial, and fallback policies
 - Buffered and streaming translation with tool calls, structured output, reasoning, images, and PDF inputs when the selected model supports them
-- Usage, cost, latency, status, credential scope, and audit records
-- Cached versioned configuration so separately deployed gateways keep serving during a control-plane outage
+- Usage, estimated cost, latency, status, credential scope, and audit records
+- Cached versioned configuration so gateways keep serving during a control-plane outage
 
 ## Choose a path
 
 | Goal | Start here |
 | --- | --- |
-| Try airmux locally | [Quickstart](/docs/quickstart) |
+| Run airmux and see it working | [Quickstart](/docs/quickstart) |
 | Move an existing application | [OpenAI SDK](/docs/guides/openai-sdk) or [Anthropic SDK](/docs/guides/anthropic-sdk) |
-| Add request controls | [Policy workflow](/docs/guides/policy-workflow) |
+| Control routing, access, and spending | [Workspace policies](/docs/policies) |
+| Understand usage and cost | [Usage and activity](/docs/features/usage) |
 | Plan production infrastructure | [Deployment overview](/docs/deployment) |
-| Upgrade or restore an installation | [Upgrade and rollback](/docs/deployment/upgrades) |
 | Call the management API | [Management API](/docs/reference/management-api) |
 | Understand the design | [Architecture](/docs/concepts/architecture) |
+
+## Run airmux another way
+
+The quickstart deploys the full platform, which is the recommended path. Two alternatives trade capability for
+simplicity or scale:
+
+- [Gateway only](/docs/deployment/gateway) serves inference from local files, with no Docker, Postgres, console, or usage history
+- [Separate services](/docs/deployment/scaling) splits the console, control plane, and gateways so gateways scale and restart independently
 
 <Info>
   airmux is pre-1.0. Configuration, APIs, and migrations may change before the first stable release.

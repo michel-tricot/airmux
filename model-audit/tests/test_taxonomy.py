@@ -111,7 +111,7 @@ def test_openai_catalog_declares_its_output_limit_alias():
     document = yaml.safe_load((ROOT / "taxonomy/providers.yml").read_text(encoding="utf-8"))
     provider = next(item for item in document["providers"] if item["id"] == "openai")
 
-    assert provider["param_aliases"]["max_tokens"] == "max_completion_tokens"
+    assert provider["param_aliases"]["max_output_tokens"] == "max_completion_tokens"
 
 
 def test_gpt_5_6_models_route_through_responses():

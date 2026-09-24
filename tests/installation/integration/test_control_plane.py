@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import signal
-import socket
 import subprocess
 import time
 
@@ -11,6 +10,7 @@ import httpx
 import pytest
 import yaml
 from testcontainers.core.container import DockerContainer
+from tests.acceptance.process_harness import uvicorn_port
 from tests.installation.installation_support import run_cli
 
 
@@ -63,18 +63,21 @@ def test_installed_control_plane_migrates_and_serves_outside_the_checkout(instal
         assert "migrated empty ->" in migrated.stdout
         assert database not in migrated.stdout
         assert "already at" in run_cli(installation, tmp_path, "control-plane", "migrate").stdout
-        with socket.socket() as listener:
-            listener.bind(("127.0.0.1", 0))
-            port = listener.getsockname()[1]
-        with (tmp_path / "control-plane.log").open("w") as log:
+        log_path = tmp_path / "control-plane.log"
+        with log_path.open("w") as log:
             process = subprocess.Popen(  # noqa: S603 the installed executable is supplied by the packaging test job
-                [executable, "control-plane", "serve", "--port", str(port)],
+                [executable, "control-plane", "serve", "--port", "0"],
                 cwd=tmp_path,
                 env=installation[1],
                 stdout=log,
                 stderr=subprocess.STDOUT,
             )
             try:
+                deadline = time.monotonic() + 20
+                while (port := uvicorn_port(log_path)) is None and time.monotonic() < deadline:
+                    assert process.poll() is None, log_path.read_text()
+                    time.sleep(0.1)
+                assert port is not None, log_path.read_text()
                 with httpx.Client(base_url=f"http://127.0.0.1:{port}", timeout=2) as client:
                     wait_ready(client, process)
                     response = client.get("/api/v1/instance/oss/claim")

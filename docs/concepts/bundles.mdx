@@ -13,17 +13,17 @@ Each bundle includes:
 - Provider endpoints and adapter kinds
 - Model routes, prices, limits, modalities, capabilities, and parameter support
 - Enabled provider-credential references, priorities, and versions
-- Enabled policies and the reusable rules they reference
+- Enabled policies with their inline rule definitions
 
 It excludes plaintext inference tokens and provider secret values.
 
 ## Publication flow
 
 1. A management transaction changes bundle-relevant state
-2. The control plane advances the affected organization's desired revision
-3. It compiles and stores a new immutable bundle
+2. A database trigger advances the affected global or organization generation in that transaction
+3. A background publisher compiles and stores a new immutable bundle
 4. A gateway polls the bundle manifest
-5. The gateway fetches changed bundles and validates their internal references
+5. The gateway fetches changed bundles and validates their policy actions and workspace limits
 6. It writes the accepted set to disk and atomically swaps in-memory indexes
 
 The default source configuration polls every five seconds. The general remote-bundle default is 30 seconds when an interval is not configured.
@@ -40,7 +40,7 @@ A request uses one immutable snapshot from authentication through routing, so it
 - A gateway with a valid cached bundle keeps serving if the control plane is unavailable
 - Usage events queue in the gateway's SQLite outbox and drain when connectivity returns
 - A new gateway with no cached bundle returns `503 bundle_unavailable`
-- A gateway that rejects the latest manifest keeps its current bundle but reports `503` from `/readyz`
+- A gateway that rejects the latest manifest keeps its current bundle and remains ready; the rejection is reported through metrics and logs
 - Secret-store availability remains a runtime dependency for uncached provider credentials
 
-Use `airmux bundles list`, `airmux gateways list`, `/healthz`, and `/readyz` to investigate convergence.
+Use `airmux doctor`, `airmux gateways list`, `/healthz`, `/readyz`, gateway metrics, and logs to investigate convergence.

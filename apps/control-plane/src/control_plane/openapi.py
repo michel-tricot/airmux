@@ -81,12 +81,12 @@ API_TAGS = [
         "x-displayName": "Provider Credentials",
         "description": "Manage provider API keys available across an organization",
     },
-    {"name": "Organization Bundles", "x-displayName": "Bundles", "description": "Republish and inspect policy bundles"},
     {
         "name": "Organization Usage Events",
         "x-displayName": "Usage Events",
         "description": "Inspect usage events across an organization",
     },
+    {"name": "Organization Reports", "x-displayName": "Reports", "description": "Explore usage and requests across an organization or one workspace"},
     {"name": "Organization Activity", "x-displayName": "Activity", "description": "Inspect recent audited changes in an organization"},
     {
         "name": "Organization Model Catalog",
@@ -94,7 +94,6 @@ API_TAGS = [
         "description": "Inspect the provider and model catalog available to an organization",
     },
     {"name": "Workspace Settings", "x-displayName": "Settings", "description": "View, update, and delete one workspace"},
-    {"name": "Workspace Rules", "x-displayName": "Rules", "description": "Manage reusable workspace inference rules"},
     {"name": "Workspace Policies", "x-displayName": "Policies", "description": "Manage workspace inference restrictions and fallbacks"},
     {
         "name": "Workspace Members",
@@ -163,8 +162,8 @@ TAG_GROUPS = [
             "Organization Workspaces",
             "Organization Management Keys",
             "Organization Provider Credentials",
-            "Organization Bundles",
             "Organization Usage Events",
+            "Organization Reports",
             "Organization Activity",
             "Organization Model Catalog",
         ],
@@ -173,7 +172,6 @@ TAG_GROUPS = [
         "name": "Workspace",
         "tags": [
             "Workspace Settings",
-            "Workspace Rules",
             "Workspace Policies",
             "Workspace Members",
             "Workspace Management Keys",
@@ -220,11 +218,9 @@ OPERATION_SUMMARIES = {
     "remove_member": "Remove Workspace Member",
     "ensure_playground_session": "Prepare Playground Session",
     "end_playground_session": "End Playground Session",
-    "republish_bundle": "Republish Policy Bundle",
     "list_activity": "List Organization Activity",
     "bundle_manifest": "Get Authorized Bundle Manifest",
     "get_bundle": "Get Bundle",
-    "bundle_latest": "Get Latest Bundle",
     "ingest_events": "Ingest Usage Events",
     "heartbeat": "Record Data Plane Heartbeat",
     "get_instance_taxonomy": "Get Instance Model Catalog",
@@ -245,11 +241,8 @@ PARAMETER_DESCRIPTIONS = {
     "code": "Device authorization code shown by the CLI",
     "include_offline": "Include data planes whose most recent heartbeat is outside the online window",
     "service_account": "Filter by principal type: true for service accounts and false for human users",
+    "cursor": "Opaque continuation token from the previous page",
     "limit": "Maximum number of results to return",
-    "before": "Return events before this timestamp; use with before_event_id",
-    "before_event_id": "Event ID that disambiguates the before timestamp",
-    "after": "Return events after this timestamp; use with after_event_id",
-    "after_event_id": "Event ID that disambiguates the after timestamp",
 }
 
 
@@ -279,7 +272,8 @@ class ControlPlaneApp(FastAPI):
             return self.openapi_schema
         schema = super().openapi()
         schema["x-tagGroups"] = TAG_GROUPS
-        security_schemes = schema.setdefault("components", {}).setdefault("securitySchemes", {})
+        components = schema.setdefault("components", {})
+        security_schemes = components.setdefault("securitySchemes", {})
         security_schemes["SessionCookie"] = {
             "type": "apiKey",
             "in": "cookie",

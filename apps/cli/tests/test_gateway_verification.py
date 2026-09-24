@@ -27,7 +27,7 @@ def test_verification_waits_for_bundle_inputs_but_does_not_retry_provider_reques
             return httpx.Response(200)
         assert json.loads(request.content) == {
             "model": "test-model",
-            "messages": [{"role": "user", "content": [{"type": "text", "text": "Say hello in one word."}]}],
+            "messages": [{"role": "user", "content": "Say hello in one word."}],
             "stream": False,
         }
         status, code = next(pending)

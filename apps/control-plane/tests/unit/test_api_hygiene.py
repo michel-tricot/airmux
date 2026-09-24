@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast, get_args, get_origin
+from typing import TYPE_CHECKING, Annotated, TypeAliasType, cast, get_args, get_origin
 
 from helpers import api_routes, make_app
 from pydantic import BaseModel
 
 from control_plane.deps import get_session
-from control_plane.models.common.wire import Envelope
+from control_plane.models.common.wire import Envelope, PageEnvelope
+from control_plane.throttling import ThrottleMiddleware
 
 if TYPE_CHECKING:
     from control_plane.throttling import ThrottleRoute
@@ -26,6 +27,12 @@ def _nested_models(tp: object, seen: set[type[BaseModel]] | None = None) -> set[
     return found
 
 
+def _unalias(tp: object) -> object:
+    while isinstance(tp, TypeAliasType):
+        tp = tp.__value__
+    return get_args(tp)[0] if get_origin(tp) is Annotated else tp
+
+
 def test_every_endpoint_declares_an_envelope():
     routes = api_routes(make_app())
     assert routes
@@ -37,6 +44,17 @@ def test_every_endpoint_declares_an_envelope():
     assert offenders == [], (
         f"Every endpoint responds {{'data': ...}}: annotate these with `-> Envelope[YourOut]` and return Envelope(data=...): {offenders}"
     )
+
+
+def test_event_ingestion_schema_is_a_discriminated_contract_list():
+    schema = make_app().openapi()
+    body = schema["paths"]["/api/v1/events"]["post"]["requestBody"]["content"]["application/json"]["schema"]
+
+    assert body["type"] == "array"
+    assert body["maxItems"] == 1000
+    assert body["items"]["discriminator"]["propertyName"] == "status"
+    for reference in body["items"]["discriminator"]["mapping"].values():
+        assert reference.rsplit("/", 1)[1] in schema["components"]["schemas"]
 
 
 def test_every_endpoint_is_tagged_for_docs():
@@ -83,7 +101,6 @@ def test_documentation_groups_follow_authority_scopes():
         "instance_scope": {"Instance"},
         "org_scope": {"Organization"},
         "workspace_scope": {"Workspace"},
-        "bundle_scope": {"Data Plane API"},
     }
     expected_by_operation = {
         "revoke_management_key": {"Instance", "Organization", "Workspace"},
@@ -135,7 +152,10 @@ def test_every_endpoint_declares_one_throttle_group():
 
 def test_throttle_route_map_uses_mounted_api_paths():
     app = make_app()
-    routes = cast("tuple[ThrottleRoute, ...]", app.user_middleware[0].kwargs["routes"])
+    routes = cast(
+        "tuple[ThrottleRoute, ...]",
+        next(middleware.kwargs["routes"] for middleware in app.user_middleware if middleware.cls is ThrottleMiddleware),
+    )
     groups = [group for pattern, methods, group in routes if "POST" in methods and pattern.fullmatch("/api/v1/auth/cli/start")]
     assert groups == ["cli"]
 
@@ -222,7 +242,7 @@ def test_payloads_are_named_models():
     offenders = []
     for route in api_routes(make_app()):
         assert route.response_model is not None
-        data = route.response_model.model_fields["data"].annotation
+        data = _unalias(route.response_model.model_fields["data"].annotation)
         inner = get_args(data)[0] if get_origin(data) is list else data
         if not (isinstance(inner, type) and issubclass(inner, BaseModel)):
             offenders.append(f"{sorted(route.methods or ())} {route.path} -> {data}")
@@ -231,7 +251,7 @@ def test_payloads_are_named_models():
     )
 
 
-def test_response_schemas_are_pure_envelopes():
+def test_response_schemas_are_envelopes():
     spec = make_app().openapi()
     offenders = []
     for path, ops in spec["paths"].items():
@@ -239,9 +259,59 @@ def test_response_schemas_are_pure_envelopes():
             schema = op["responses"]["200"]["content"]["application/json"]["schema"]
             if "$ref" in schema:
                 schema = spec["components"]["schemas"][schema["$ref"].rsplit("/", 1)[1]]
-            if set(schema.get("properties", {})) != {"data"}:
+            if set(schema.get("properties", {})) not in ({"data"}, {"data", "page"}):
                 offenders.append(f"{method.upper()} {path}")
     assert offenders == []
+
+
+def test_only_delete_action_results_expose_deleted_at():
+    schemas = make_app().openapi()["components"]["schemas"]
+    assert {name for name, schema in schemas.items() if "deleted_at" in schema.get("properties", {})} == {"DeletedOut_UUID_", "DeletedOut_str_"}
+
+
+def test_paginated_operations_share_one_query_contract():
+    app = make_app()
+    spec = app.openapi()
+    operations = {operation["operationId"]: operation for methods in spec["paths"].values() for operation in methods.values()}
+    contracts = []
+    paginated = set()
+    offenders = []
+    for route in api_routes(app):
+        if route.response_model is None or not issubclass(route.response_model, PageEnvelope):
+            continue
+        paginated.add(route.name)
+        actual = {
+            parameter["name"]: parameter for parameter in operations[route.name].get("parameters", []) if parameter["name"] in {"cursor", "limit"}
+        }
+        if set(actual) != {"cursor", "limit"}:
+            offenders.append(f"{route.path}: {actual}")
+        else:
+            contracts.append(actual)
+    assert offenders == []
+    assert paginated == {
+        "list_activity",
+        "list_instance_activity",
+        "list_org_events",
+        "list_orgs",
+        "list_workspace_events",
+    }
+    assert contracts
+    assert all(contract == contracts[0] for contract in contracts)
+    cursor_schema = contracts[0]["cursor"]["schema"]["anyOf"][0]
+    cursor_schema = spec["components"]["schemas"][cursor_schema["$ref"].rsplit("/", 1)[1]]
+    assert cursor_schema == {
+        "type": "string",
+        "maxLength": 512,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9_-]+$",
+    }
+    assert contracts[0]["limit"]["schema"] == {
+        "type": "integer",
+        "maximum": 200,
+        "minimum": 1,
+        "default": 50,
+        "title": "Limit",
+    }
 
 
 def test_request_transactions_are_shared_without_polluting_route_signatures():

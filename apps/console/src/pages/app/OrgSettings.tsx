@@ -1,5 +1,4 @@
 import { SettingsLayout } from '@/components/shared/settings-layout';
-import { BundleHistory } from '@/components/shared/bundle-history';
 import { useChangeOrgRoleMutation, orgRoleOptions } from '@/features/users/hooks';
 import { useState } from 'react';
 import * as z from 'zod';
@@ -13,7 +12,7 @@ import {
 } from '@/features/members/hooks';
 import { useCreateInvitationMutation, useInvitations, useReissueInvitationMutation, useRevokeInvitationMutation } from '@/features/invitations/hooks';
 import { useWorkspaces } from '@/features/workspaces/hooks';
-import { useBundles, useOrgActivity } from '@/features/telemetry/hooks';
+import { useOrgActivity } from '@/features/telemetry/hooks';
 import { Dropdown, Card, Button, Badge, ConfirmButton, Input, TabsContent } from '@/components/ui/elements';
 import { Plus, Settings, RefreshCw, UserPlus, Ban, Bot, Trash2 } from 'lucide-react';
 import { formatDate } from '@/lib/format';
@@ -51,7 +50,6 @@ export default function AppOrgSettings() {
   const canReadKeys = authorization.can(managementKeyAccess.org.read);
   const canIssueKey = authorization.can(managementKeyAccess.org.issue);
   const canRevokeKeys = authorization.can(managementKeyAccess.org.revoke);
-  const canReadBundles = authorization.can(telemetryAccess.bundles.read);
   const changeRole = useChangeOrgRoleMutation();
   const canChangeRole = authorization.can(orgMemberAccess.add);
   const canReadMembers = authorization.can(orgMemberAccess.read);
@@ -122,7 +120,7 @@ export default function AppOrgSettings() {
         categories={[
           ...(canReadKeys ? [{ id: 'keys', label: 'Management Keys' }] : []),
           ...(canReadMembers || canListInvitations ? [{ id: 'members', label: 'Members' }] : []),
-          ...(canReadActivity || canReadBundles ? [{ id: 'activity', label: 'Activity' }] : []),
+          ...(canReadActivity ? [{ id: 'activity', label: 'Activity' }] : []),
         ]}
       >
         {canReadKeys && (
@@ -219,7 +217,7 @@ export default function AppOrgSettings() {
                                 {canDeleteServiceAccount && (
                                   <ConfirmButton
                                     title={`Delete ${member.name}?`}
-                                    description="The service account and all of its control-plane management keys will stop working immediately."
+                                    description="The service account and all of its management keys, inference keys, and playground sessions stop working immediately."
                                     confirmLabel="Delete service account"
                                     pending={deleteServiceAccount.isPending}
                                     aria-label={`Delete service account ${member.name}`}
@@ -329,7 +327,7 @@ export default function AppOrgSettings() {
           </TabsContent>
         )}
 
-        {(canReadActivity || canReadBundles) && (
+        {canReadActivity && (
           <TabsContent value="activity" className="space-y-4 mt-0">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">Activity</h2>
@@ -348,7 +346,6 @@ export default function AppOrgSettings() {
                 />
               </Card>
             )}
-            {canReadBundles && <ConfigurationHistory orgId={orgId} />}
           </TabsContent>
         )}
       </SettingsLayout>
@@ -512,26 +509,5 @@ export default function AppOrgSettings() {
         copyLabel="Copy link"
       />
     </PageShell>
-  );
-}
-
-function ConfigurationHistory({ orgId }: { orgId: string }) {
-  const bundlesQuery = useBundles(orgId);
-  return (
-    <section className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold">Configuration history</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Configuration bundles are generated automatically when organization configuration changes.
-        </p>
-      </div>
-      <BundleHistory
-        bundles={bundlesQuery.data}
-        isLoading={bundlesQuery.isLoading}
-        isError={bundlesQuery.isError}
-        error={bundlesQuery.error}
-        onRetry={() => bundlesQuery.refetch()}
-      />
-    </section>
   );
 }

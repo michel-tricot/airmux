@@ -10,14 +10,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from .canonical import write_schema
-from .output import emit
+from .outcomes import DocumentedSchema, SchemasDocumented
 from .paths import TAXONOMY
 from .sources import registry
-from .types import object_or_empty
+from .types import object_or_empty, strings
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
     from .types import CatalogObject
 
 OUT = TAXONOMY / "schemas" / "completion"
@@ -174,17 +172,17 @@ for source in registry().values():
         BUILD[f"{source.provider_id}.{surface}"] = document
 
 
-def main(arguments: Sequence[str] = ()) -> int:
+def run(providers: tuple[str, ...] = ()) -> SchemasDocumented:
     OUT.mkdir(parents=True, exist_ok=True)
-    selected = set(arguments)
-    written = 0
+    selected = set(providers)
+    schemas: list[DocumentedSchema] = []
     for name, document in BUILD.items():
         provider, ingress = name.split(".")
         if selected and provider not in selected and name not in selected:
             continue
         write_schema(OUT / f"{ingress}.{provider}.request.json", document)
-        emit(f"{ingress}.{provider}.request: props={len(object_or_empty(document['properties']))} required={document['required']}")
-        written += 1
+        schemas.append(
+            DocumentedSchema(f"{ingress}.{provider}.request", len(object_or_empty(document["properties"])), tuple(strings(document["required"])))
+        )
 
-    emit("\nwrote", written, "documentation-derived schemas")
-    return 0
+    return SchemasDocumented(tuple(schemas))

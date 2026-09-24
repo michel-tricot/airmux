@@ -1,28 +1,26 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING
 
 import pytest
 from fastapi.testclient import TestClient
 from helpers import make_org, make_workspace, setup_control_plane
 
-from contract import uuid7
 from contract.policies import MAX_WORKSPACE_RULES, PolicyDefinition, RuleDefinition
 from control_plane.db import standalone_transaction
-from control_plane.models import Policy, Rule, set_actor
+from control_plane.models import Policy, set_actor
 from control_plane.models.policy import InvalidPolicyError
-
-if TYPE_CHECKING:
-    from uuid import UUID
 
 RULE_DEFINITION = RuleDefinition.model_validate(
     {"match": {"kind": "all_requests"}, "action": {"kind": "credential_access", "scopes": ["workspace", "org"]}}
 )
+LIMIT_RULE_DEFINITION = RuleDefinition.model_validate(
+    {"match": {"kind": "all_requests"}, "action": {"kind": "request_limits", "max_output_tokens": 1}}
+)
 
 
-def definition(rule_id: UUID) -> PolicyDefinition:
-    return PolicyDefinition(target={"kind": "workspace"}, rule_ids=(rule_id,))
+def definition(rule: RuleDefinition = RULE_DEFINITION) -> PolicyDefinition:
+    return PolicyDefinition(target={"kind": "workspace"}, rules=(rule,))
 
 
 @pytest.fixture
@@ -41,13 +39,22 @@ def test_policy_save_serializes_competing_writes_for_the_last_slot(policy_worksp
     async def compete():
         async with standalone_transaction(cp.db_url):
             await set_actor("root")
-            shared_rule = await Rule(org_id=org_id, workspace_id=workspace_id, name="Shared", definition=RULE_DEFINITION).save()
-            policy_definition = definition(shared_rule.id)
-            for position in range(MAX_WORKSPACE_RULES - 1):
-                await Policy(org_id=org_id, workspace_id=workspace_id, name=f"existing-{position}", definition=policy_definition).save()
-            disabled = tuple(
-                Policy(org_id=org_id, workspace_id=workspace_id, name=f"candidate-{position}", enabled=False, definition=policy_definition)
-                for position in range(2)
+            policy_definition = definition()
+            existing_count = MAX_WORKSPACE_RULES - (1 if operation == "create" else 2)
+            for position in range(existing_count):
+                existing_definition = (
+                    PolicyDefinition(target={"kind": "workspace"}, rules=(RULE_DEFINITION, LIMIT_RULE_DEFINITION))
+                    if operation == "enable" and position == 0
+                    else policy_definition
+                )
+                await Policy(org_id=org_id, workspace_id=workspace_id, name=f"existing-{position}", definition=existing_definition).save()
+            disabled = (
+                tuple(
+                    Policy(org_id=org_id, workspace_id=workspace_id, name=f"candidate-{position}", enabled=False, definition=policy_definition)
+                    for position in range(2)
+                )
+                if operation == "enable"
+                else ()
             )
             for policy in disabled:
                 await policy.save()
@@ -77,42 +84,48 @@ def test_policy_save_serializes_competing_writes_for_the_last_slot(policy_worksp
         async with standalone_transaction(cp.db_url):
             policies = await Policy.for_workspace(workspace_id)
         assert sorted(results) == [False, True]
-        assert sum(len(policy.definition.rule_ids) for policy in policies if policy.enabled) == MAX_WORKSPACE_RULES
+        assert sum(len(policy.definition.rules) for policy in policies if policy.enabled) == MAX_WORKSPACE_RULES
 
     asyncio.run(compete())
 
 
-def test_policy_save_rejects_an_unknown_rule(policy_workspace):
+def test_policy_save_preserves_symbolic_catalog_references(policy_workspace):
     cp, org_id, workspace_id = policy_workspace
-    invalid_definition = definition(uuid7())
+    symbolic_definition = definition(
+        RuleDefinition.model_validate({"match": {"kind": "request", "models": ["unknown"]}, "action": {"kind": "models", "names": ["unknown"]}})
+    )
 
     async def save():
         async with standalone_transaction(cp.db_url):
             await set_actor("root")
-            await Policy(org_id=org_id, workspace_id=workspace_id, name="Invalid", definition=invalid_definition).save()
+            await Policy(org_id=org_id, workspace_id=workspace_id, name="Symbolic", definition=symbolic_definition).save()
 
-    with pytest.raises(InvalidPolicyError):
-        asyncio.run(save())
+    asyncio.run(save())
 
     async def persisted():
         async with standalone_transaction(cp.db_url):
             return await Policy.for_workspace(workspace_id)
 
-    assert asyncio.run(persisted()) == []
+    policies = asyncio.run(persisted())
+    assert len(policies) == 1
+    assert policies[0].definition == symbolic_definition
 
 
-def test_policy_save_checks_capacity_before_references(policy_workspace):
+def test_policy_save_checks_capacity_with_symbolic_catalog_references(policy_workspace):
     cp, org_id, workspace_id = policy_workspace
-    invalid_definition = definition(uuid7())
+    symbolic_definition = definition(
+        RuleDefinition.model_validate({"match": {"kind": "request", "models": ["unknown"]}, "action": {"kind": "models", "names": ["unknown"]}})
+    )
 
     async def save():
         async with standalone_transaction(cp.db_url):
             await set_actor("root")
-            shared_rule = await Rule(org_id=org_id, workspace_id=workspace_id, name="Shared", definition=RULE_DEFINITION).save()
-            valid_definition = definition(shared_rule.id)
-            for position in range(MAX_WORKSPACE_RULES):
+            valid_definition = definition()
+            two_rules = PolicyDefinition(target={"kind": "workspace"}, rules=(RULE_DEFINITION, LIMIT_RULE_DEFINITION))
+            await Policy(org_id=org_id, workspace_id=workspace_id, name="existing-0", definition=two_rules).save()
+            for position in range(1, MAX_WORKSPACE_RULES - 1):
                 await Policy(org_id=org_id, workspace_id=workspace_id, name=f"existing-{position}", definition=valid_definition).save()
             with pytest.raises(InvalidPolicyError, match=f"at most {MAX_WORKSPACE_RULES} active policy rules"):
-                await Policy(org_id=org_id, workspace_id=workspace_id, name="Invalid", definition=invalid_definition).save()
+                await Policy(org_id=org_id, workspace_id=workspace_id, name="Symbolic", definition=symbolic_definition).save()
 
     asyncio.run(save())

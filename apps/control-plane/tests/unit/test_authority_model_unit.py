@@ -24,6 +24,7 @@ def test_data_plane_role_has_only_its_runtime_permissions():
                 Permission.bundles_read,
                 Permission.usage_ingest,
                 Permission.data_planes_heartbeat,
+                Permission.policy_state_sync,
             }
         )
         == DATA_PLANE_PERMISSIONS

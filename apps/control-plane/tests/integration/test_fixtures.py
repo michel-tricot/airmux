@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import asyncio
 from datetime import UTC, datetime
+from decimal import Decimal
 
 import pytest
 from fastapi.testclient import TestClient
 from helpers import run_in_db, setup_control_plane, write_config
 from typer.testing import CliRunner
 
+from airmux_runtime.secrets import EnvStoreConfig, MemoryStoreConfig
 from cli.control_plane import control_plane_app as cli_app
-from contract import EnvStoreConfig, MemoryStoreConfig, token_hash
+from contract import token_hash
 from control_plane.authz import InstanceRole
 from control_plane.fixtures import (
     ACME_MEMBER_INVITE_TOKEN,
@@ -20,6 +22,7 @@ from control_plane.fixtures import (
     MissingModelsError,
     MissingProvidersError,
     apply_fixtures,
+    fixture_id,
 )
 from control_plane.models import (
     DataPlaneInstance,
@@ -31,7 +34,7 @@ from control_plane.models import (
     Policy,
     Provider,
     ProviderCredential,
-    Rule,
+    UsageEvent,
     User,
     set_actor,
 )
@@ -59,10 +62,10 @@ def seed_catalog(tmp_path, *, include_models=True):
                     name=name,
                     provider_id=providers[provider_name].id,
                     upstream_model=name,
-                    input_price_per_mtok=1,
-                    output_price_per_mtok=2,
-                    cache_read_price_per_mtok=0,
-                    cache_write_price_per_mtok=0,
+                    input_price_per_mtok=Decimal(1),
+                    output_price_per_mtok=Decimal(2),
+                    cache_read_price_per_mtok=Decimal(0),
+                    cache_write_price_per_mtok=Decimal(0),
                     context_window=128000,
                     input_modalities=["text"],
                     output_modalities=["text"],
@@ -96,6 +99,40 @@ def test_apply_allows_the_deployment_service_account(tmp_path):
     users = run_in_db(tmp_path, User.find)
     assert {user.service_account for user in users} == {True, False}
     assert {user.email for user in users if not user.service_account} == {"m@airbyte.com", "b@airbyte.com"}
+
+
+def test_usage_fixtures_include_reportable_request_cases(tmp_path):
+    setup_control_plane(tmp_path)
+    seed_catalog(tmp_path)
+
+    run_in_db(tmp_path, lambda: apply_fixtures(NOW, MemoryStoreConfig().build()))
+
+    events = run_in_db(tmp_path, UsageEvent.find)
+    assert events
+    assert all(event.request_started_at is not None and (event.status == "denied" or event.attempt_started_at is not None) for event in events)
+    assert all(event.cache_read_tokens + event.cache_write_tokens <= event.input_tokens for event in events)
+    assert all(event.request_id.version == 7 for event in events)
+    assert all(event.request_id.int >> 80 == int(event.request_started_at.timestamp() * 1000) for event in events)
+
+    production_id = fixture_id("workspace:acme:production")
+    fallback_request = next(event.request_id for event in events if event.event_id == fixture_id(f"event:{production_id}:0"))
+    fallback = [event for event in events if event.request_id == fallback_request]
+    assert [(event.status, event.provider_id) for event in sorted(fallback, key=lambda event: event.occurred_at)] == [
+        ("upstream_error", "openai"),
+        ("ok", "anthropic"),
+    ]
+    denial = next(event for event in events if event.event_id == fixture_id(f"event:{production_id}:2"))
+    assert (denial.status, denial.attempt_started_at, denial.provider_id, denial.cost_usd) == ("denied", None, "", 0)
+    playground = next(event for event in events if event.event_id == fixture_id(f"event:{production_id}:3"))
+    assert playground.request_source == "playground"
+    assert playground.cache_read_tokens == 128
+
+    staging_id = fixture_id("workspace:acme:staging")
+    retry_request = next(event.request_id for event in events if event.event_id == fixture_id(f"event:{staging_id}:0"))
+    retry = [event for event in events if event.request_id == retry_request]
+    assert [event.status for event in sorted(retry, key=lambda event: event.occurred_at)] == ["upstream_error", "ok"]
+    assert next(event for event in events if event.event_id == fixture_id(f"event:{staging_id}:2")).status == "denied"
+    assert next(event for event in events if event.event_id == fixture_id(f"event:{staging_id}:3")).status == "upstream_error"
 
 
 def test_cli_refuses_a_database_that_already_has_a_human_account(tmp_path):
@@ -232,10 +269,10 @@ def test_policy_fixtures_cover_actions_targets_request_matches_and_states(tmp_pa
 
     run_in_db(tmp_path, lambda: apply_fixtures(NOW, MemoryStoreConfig().build()))
     policies = run_in_db(tmp_path, Policy.find)
-    rules = run_in_db(tmp_path, Rule.find)
     inference_keys = run_in_db(tmp_path, InferenceKey.find)
+    rules = [rule for policy in policies for rule in policy.definition.rules]
 
-    assert {rule.definition.action.kind for rule in rules} == {
+    assert {rule.action.kind for rule in rules} == {
         "models",
         "providers",
         "deny",
@@ -244,12 +281,11 @@ def test_policy_fixtures_cover_actions_targets_request_matches_and_states(tmp_pa
         "request_limits",
         "credential_access",
         "fallback",
-        "budget",
     }
     assert {policy.definition.target.kind for policy in policies} == {"workspace", "selected_users", "selected_keys"}
     assert {policy.enabled for policy in policies} == {True, False}
     streaming_policy = next(policy for policy in policies if policy.name == "Streaming uses team credentials")
-    streaming_match = next(rule for rule in rules if rule.id == streaming_policy.definition.rule_ids[0]).definition.match
+    streaming_match = streaming_policy.definition.rules[0].match
     assert streaming_match.kind == "request"
     assert streaming_match.stream is True
     ci_key = next(key for key in inference_keys if key.label == "ci")
@@ -260,7 +296,7 @@ def test_policy_fixtures_cover_actions_targets_request_matches_and_states(tmp_pa
     production_limits = {
         policy.definition.target.kind: (
             policy,
-            next(rule for rule in rules if rule.id == policy.definition.rule_ids[0]).definition.action,
+            policy.definition.rules[0].action,
         )
         for policy in policies
         if policy.name in {"Output token ceiling", "Michel output token ceiling", "Checkout output token ceiling"}
@@ -278,8 +314,8 @@ def test_policy_fixtures_cover_actions_targets_request_matches_and_states(tmp_pa
     key_target = production_limits["selected_keys"][0].definition.target
     assert key_target.kind == "selected_keys"
     assert key_target.key_ids == (str(checkout_key.id),)
-    team_credentials = next(rule for rule in rules if rule.name == "Streaming team credentials")
-    assert sum(team_credentials.id in policy.definition.rule_ids for policy in policies) == 2
+    team_credentials = streaming_policy.definition.rules[0]
+    assert sum(team_credentials in policy.definition.rules for policy in policies) == 2
 
 
 def test_data_plane_fixtures_cover_global_and_dedicated_lifecycle_states(tmp_path):

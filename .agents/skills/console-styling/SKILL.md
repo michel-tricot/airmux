@@ -51,13 +51,13 @@ Check `src/components/ui/elements.tsx` before writing inline utilities for a com
 | `Input` / `Label` | Every text field and its label |
 | `Dropdown` | Themed single-value selection and attached actions |
 | `Badge` | Status indication; variants `default` / `secondary` / `outline` / `success` / `destructive` / `mono` |
-| `Card` (+ `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`) | Every panel that groups content |
+| `Card` (+ `CardHeader`, `CardTitle`, `CardContent`) | Every panel that groups content |
 | `Table` (+ `TableHeader`, `TableBody`, `TableRow`, `TableHead`, `TableCell`) | All tabular resource data |
 | `Modal` | Form and content dialogs; takes `open`, `onOpenChange`, `title`, optional `description` |
 | `ConfirmButton` | Destructive or consequential actions that require confirmation |
 | `Tabs` (+ `TabsList`, `TabsTrigger`, `TabsContent`) | In-page sectioning |
 | `Alert` (+ `AlertTitle`, `AlertDescription`) | Inline callouts and recoverable feedback |
-| `Avatar` (+ `AvatarImage`, `AvatarFallback`) | User identity |
+| `Avatar` (+ `AvatarFallback`) | User identity |
 | `Sheet` (+ content, header, title, description) | Side panels and mobile navigation |
 
 The rest of `src/components/ui/` is the vendored shadcn set. Import from it, do not edit it by hand.
@@ -71,7 +71,7 @@ Check `src/components/shared/` before composing product patterns:
 | `LoadingState` / `ErrorState` / `EmptyState` | Observable query states |
 | `PageShell` | Standard page width, spacing, title, and actions |
 | `MembersPanel` | Membership lists and mutations |
-| `ApiKeysTable` | Instance and workspace key lists and revocation |
+| `KeysTable` / `ManagementKeysTable` | Inference and management key lists and revocation |
 
 ## Palette
 

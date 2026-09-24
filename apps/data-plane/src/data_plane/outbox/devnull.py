@@ -9,7 +9,5 @@ if TYPE_CHECKING:
 
 
 class DevNullOutbox(EventOutbox):
-    """Discards every event. For load tests, local dev, or deployments that meter elsewhere."""
-
-    def record(self, _event: UsageEvent, /) -> None:
-        return
+    def _record_reserved(self, _event: UsageEvent, /) -> None:
+        pass

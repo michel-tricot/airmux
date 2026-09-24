@@ -128,6 +128,7 @@ jobs:
     timeout-minutes: 20
     env:
       DOCKER_HOST: unix:///tmp/airmux-no-docker.sock
+      PYTHONPATH: .
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -163,6 +164,36 @@ jobs:
         with:
           name: performance-${{ needs.resolve.outputs.sha }}
           path: performance-results
+          retention-days: 90
+
+  performance-scaling:
+    needs: [resolve, package]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DOCKER_HOST: unix:///tmp/airmux-no-docker.sock
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ needs.resolve.outputs.sha }}
+      - uses: ./.github/actions/setup-python
+      - uses: ./.github/actions/install-candidate
+        with:
+          artifact-id: ${{ needs.package.outputs.artifact-id }}
+      - name: Measure gateway worker and connection pool scaling
+        run: |
+          uv run --no-sync python tests/acceptance/gateway/performance_scaling.py \
+            --candidate-bin "$AIRMUX_GATEWAY_BIN" --candidate-revision "${{ needs.resolve.outputs.sha }}" \
+            --output scaling-results
+          cat scaling-results/summary.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        continue-on-error: true
+        with:
+          name: scaling-${{ needs.resolve.outputs.sha }}
+          path: scaling-results
           retention-days: 90
 
   live-providers:
@@ -242,6 +273,8 @@ jobs:
     timeout-minutes: 30
     env:
       AIRMUX_PYTHON_BUILD: python-candidate
+      AIRMUX_IMAGE: airmux:local
+      DEPLOYMENT_IMAGE: airmux:local
       DEPLOYMENT_PROJECT: airmux-nightly
       DEPLOYMENT_FILE: docker-compose.yml
       DEPLOYMENT_URL: http://localhost:8080
@@ -256,11 +289,9 @@ jobs:
           artifact-ids: ${{ needs.package.outputs.artifact-id }}
           path: candidate
       - run: cd candidate && sha256sum --check SHA256SUMS
-      - run: docker compose -p "$DEPLOYMENT_PROJECT" build --no-cache
+      - run: docker build --no-cache --build-arg AIRMUX_PYTHON_BUILD="$AIRMUX_PYTHON_BUILD" --tag "$AIRMUX_IMAGE" .
       - run: docker compose -p "$DEPLOYMENT_PROJECT" up -d --wait --wait-timeout 180
       - run: uv run --no-sync pytest tests/deployment --junitxml=cold-docker-results/docker.xml
-        env:
-          DEPLOYMENT_COMPACT_IMAGE: airmux:local
       - name: Summarize cold-build results
         if: always()
         continue-on-error: true

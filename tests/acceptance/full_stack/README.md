@@ -25,7 +25,7 @@ authorization against real services, inference recovery, and server-side members
 
 Event replay uses real inference events. A forwarding HTTP proxy commits the first batch into the control plane, then
 returns an unavailable response instead of its acknowledgement. The test observes identical event IDs delivered again,
-exactly one stored event per ID and an empty public pending queue. It never inserts synthetic events into SQLite.
+exactly one stored event per ID and a durable outbox metric that returns to zero. It never inserts synthetic events into SQLite.
 Concurrent export requires all 128 requests to succeed across four configured gateway workers and all events to arrive
 with unique event and request IDs. This is a correctness scenario, not a throughput benchmark. Workers share one
 heartbeat identity, so the instance roster does not reveal individual worker readiness.

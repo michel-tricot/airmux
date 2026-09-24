@@ -1,17 +1,22 @@
 ---
 title: "Docker Compose"
-description: "Run the all-in-one airmux image and Postgres with persistent named volumes."
+description: "Run the airmux image and Postgres with persistent named volumes."
 ---
 
-The default `docker-compose.yml` runs two containers: airmux and Postgres.
+The default `docker-compose.yml` runs one long-lived airmux container and Postgres. Before airmux starts, two short-lived
+containers migrate the database and apply the shipped [model catalog](/docs/reference/models-and-providers).
 
 Install the [airmux CLI](/docs/reference/cli#installation) on the machine you use to manage the instance.
+
+Build from a checkout as shown below, or set `AIRMUX_IMAGE` to a published version or digest such as
+`ghcr.io/michel-tricot/airmux:X.Y.Z`. Use a digest for reproducible production deployment.
 
 ## Start
 
 ```bash
 cp .env.example .env
-docker compose up -d --build --wait
+docker build -t airmux:local .
+docker compose up -d --wait
 airmux quickstart --url http://localhost:8080
 ```
 
@@ -40,6 +45,20 @@ split deployment's control-plane port private to its Docker network.
 Set a URL-safe `POSTGRES_PASSWORD` before the first start of a public installation. Changing the Compose variable later
 does not rotate the password already stored by Postgres.
 
+## Startup and database changes
+
+`docker compose up` runs the migration job first and the catalog job second. The airmux container starts only after both
+jobs succeed. On later runs, migration checks the current schema revision and the catalog job reapplies the definitions
+shipped with the selected image. To diagnose a failure:
+
+```bash
+docker compose logs migrate taxonomy
+```
+
+Restarting the airmux container by itself does not run either job. The container does not use development mode, so the control
+plane never changes the database schema or catalog while starting; it refuses to serve when the schema is out of date and
+tells you to run the migration command.
+
 ## State
 
 | Volume | Contents |
@@ -55,11 +74,15 @@ does not rotate the password already stored by Postgres.
 
 ## Update
 
-Check out the intended release, take a backup, then rebuild:
+Check out the intended release, take a backup, then build the image once and replace the stack:
 
 ```bash
-docker compose up -d --build --wait
+docker build -t airmux:local .
+docker compose up -d --wait
 ```
 
-Startup applies the baseline migration and shipped catalog before serving. The image prepares volume ownership and runs
-application processes as UID `10001`.
+The migration and catalog jobs use the same image as the serving container. The image defaults to the `airmux` role, which
+starts the control plane, gateway, and console. The control plane verifies the migrated schema and creates its internal
+gateway credential only when absent. Application processes run as UID `10001`.
+Docker initializes fresh named volumes from the image's private state directories. Bind mounts and custom configured
+paths must be writable by the selected container user; overriding the container user does not change the startup path.

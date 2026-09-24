@@ -17,14 +17,6 @@ Add `POST /inf/v1/messages/count_tokens` to the Anthropic ingress so Claude Code
 context meter without calling a provider. The data plane already estimates tokens for metering,
 but this endpoint needs a caller-facing accuracy contract and adapter-wide tests.
 
-## Move SQLite outbox writes off the event loop
-
-`SqliteOutbox.record` commits synchronously on the request path. At moderate load this is cheap,
-but concurrent workers serialize on SQLite's write lock and can block the event loop. A dedicated
-writer thread with an acknowledged queue would retain durability while isolating that blocking
-work. Build it only if committed concurrency benchmarks show that single-host scale-out is not
-enough.
-
 ## Observe unauthenticated gateway traffic
 
 Usage events can attribute an authorization denial to a valid inference key. Invalid or missing
@@ -52,9 +44,12 @@ contract synchronous and local; network delivery belongs in the backend's backgr
 
 ## Soft delete on Postgres
 
-Deletes remain hard and `deleted_at` remains null until soft delete lands as one coordinated
+Deletes remain hard. The unused `deleted_at` column and resource field were removed before public
+release because no concrete near-term requirement justified reserving them. `DeletedOut.deleted_at`
+still reports when a hard-delete action succeeded. Soft delete would require one coordinated
 schema and query change. The blueprint is:
 
+- Add `deleted_at` to the affected tables and resource representations when soft deletion ships
 - Add a versioned `BEFORE DELETE` trigger beside the touch and audit triggers. It sets
   `deleted_at` and `updated_at` to the same instant and suppresses the physical delete
 - Add session-level live-row filtering with an explicit `include_deleted` escape hatch. Account

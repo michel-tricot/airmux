@@ -2,24 +2,25 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, cast
-
-from starlette.responses import JSONResponse, Response
 
 from data_plane.canonical import CanonicalAdjustment, CanonicalChunk, CanonicalGatewayInfo, CanonicalReasoningConfig, CanonicalRequest
 from data_plane.formats import anthropic as fmt
 from data_plane.ingress.base import IngressAdapter
+from data_plane.responses import JSONResponse
 
 if TYPE_CHECKING:
-    from starlette.datastructures import Headers
+    from starlette.responses import Response
 
-    from data_plane.canonical import CanonicalResponse
-    from data_plane.egress.base import CanonicalError, Ctx
+    from data_plane.canonical import CanonicalDelta, CanonicalError, CanonicalResponse
+    from data_plane.egress.base import Ctx
 
 # This dialect's own spellings of canonical fields; everything else rides through as extras,
 # so top_k and metadata reach providers whose profile accepts them.
-CONSUMED = frozenset(CanonicalRequest.model_fields) | frozenset({"system", "stop_sequences", "thinking", "output_config"})
+CONSUMED = (frozenset(CanonicalRequest.model_fields) - {"max_output_tokens"}) | frozenset(
+    {"max_tokens", "system", "stop_sequences", "thinking", "output_config"}
+)
 
 
 def _mapping(value: object) -> dict[str, Any]:
@@ -39,7 +40,7 @@ class _OpenBlock:
     index: int
     key: str  # what the block holds: "text", "thinking", or one tool call
     reasoning_id: str | None = None
-    signature: str = ""
+    signature: list[str] = field(default_factory=list)
 
 
 class AnthropicResponseStream:
@@ -63,14 +64,20 @@ class AnthropicResponseStream:
         block, self.open = self.open, None
         events = []
         if block.key == "thinking" and (block.reasoning_id is not None or block.signature):
-            signature = fmt.reasoning_signature(block.reasoning_id, block.signature or None)
+            signature = fmt.reasoning_signature(block.reasoning_id, "".join(block.signature) or None)
             events.append(fmt.ContentBlockDelta(index=block.index, delta=fmt.SignatureDeltaOut(signature=signature)).sse())
         return [*events, fmt.ContentBlockStop(index=block.index).sse()]
 
-    def _switch(self, key: str, opening: fmt.BlockOut) -> tuple[list[bytes], int]:
+    def _switch(self, key: str, delta: CanonicalDelta) -> tuple[list[bytes], int]:
         """The one boundary rule: same key keeps the open block, a new key ends it and starts the next."""
         if self.open is not None and self.open.key == key:
             return [], self.open.index
+        if delta.type == "text":
+            opening = fmt.TextOut(text="")
+        elif delta.type == "reasoning":
+            opening = fmt.ThinkingOut(thinking="")
+        else:
+            opening = fmt.ToolUseOut(id=delta.id or "", name=delta.name or "", input={})
         events = self._close()
         self.open = _OpenBlock(index=self.opened, key=key)
         self.opened += 1
@@ -81,18 +88,18 @@ class AnthropicResponseStream:
         if delta is None:
             return []
         if delta.type == "text":
-            events, index = self._switch("text", fmt.TextOut(text=""))
+            events, index = self._switch("text", delta)
             return [*events, fmt.ContentBlockDelta(index=index, delta=fmt.TextDeltaOut(text=delta.text)).sse()]
         if delta.type == "reasoning":
-            events, index = self._switch("thinking", fmt.ThinkingOut(thinking=""))
+            events, index = self._switch("thinking", delta)
             if self.open is not None:
                 self.open.reasoning_id = delta.id or self.open.reasoning_id
-                self.open.signature += delta.signature or ""
+                if delta.signature:
+                    self.open.signature.append(delta.signature)
             if delta.text:
                 events.append(fmt.ContentBlockDelta(index=index, delta=fmt.ThinkingDeltaOut(thinking=delta.text)).sse())
             return events
-        opening = fmt.ToolUseOut(id=delta.id or "", name=delta.name or "", input={})
-        events, index = self._switch(f"tool:{delta.index}", opening)
+        events, index = self._switch(f"tool:{delta.index}", delta)
         if delta.arguments:
             events.append(fmt.ContentBlockDelta(index=index, delta=fmt.InputJsonDeltaOut(partial_json=delta.arguments)).sse())
         return events
@@ -114,12 +121,15 @@ class AnthropicResponseStream:
 
 class AnthropicIngress(IngressAdapter):
     dialect = "anthropic"
-
-    def claims(self, _headers: Headers, _body: dict[str, Any], /) -> bool:
-        """Never claims on the chat route: /inf/v1/messages binds this dialect directly."""
-        return False
+    path = "/inf/v1/messages"
 
     def parse(self, body: dict[str, Any]) -> tuple[CanonicalRequest, list[CanonicalAdjustment]]:
+        if "max_output_tokens" in body:
+            message = "Anthropic Messages requests use max_tokens, not max_output_tokens"
+            raise ValueError(message)
+        if body.get("max_tokens") is None:
+            message = "max_tokens is required and must be an integer"
+            raise ValueError(message)
         extras = {key: value for key, value in body.items() if key not in CONSUMED}
         adjustments = []
         raw_tool_choice = body.get("tool_choice")
@@ -145,7 +155,7 @@ class AnthropicIngress(IngressAdapter):
                 "model": body.get("model"),
                 "messages": fmt.from_request(body),
                 "stream": body.get("stream", False),
-                "max_tokens": body.get("max_tokens"),
+                "max_output_tokens": body.get("max_tokens"),
                 "temperature": body.get("temperature"),
                 "top_p": body.get("top_p"),
                 "stop": body.get("stop_sequences"),
@@ -171,7 +181,7 @@ class AnthropicIngress(IngressAdapter):
             usage=fmt.usage_out(final.usage),
             gateway=final.gateway,
         )
-        return Response(message.model_dump_json(exclude_none=True), media_type="application/json")
+        return JSONResponse(message, exclude_none=True)
 
     def render_error(self, err: CanonicalError) -> Response:
         return JSONResponse({"type": "error", "error": {"type": err.code, "message": err.message}}, status_code=err.status)

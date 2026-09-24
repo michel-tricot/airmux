@@ -6,7 +6,7 @@ from typing import Annotated
 import typer
 from pydantic import ValidationError
 
-from api_models import DeletedOutUUID, PolicyCreate, PolicyOut, PolicyUpdate
+from api_models import DeletedOutUUID, PolicyBudgetStatus, PolicyCreate, PolicyOut, PolicyUpdate
 from cli.client import access_client, access_get, ensure_ok, org_path, payload, resolve_workspace
 from cli.common import console, policies_app
 from cli.output import Col, FormatOption, OutputFormat, print_rows
@@ -27,7 +27,7 @@ def list_policies(workspace: WorkspaceOption = "", control_plane_url: str = "", 
 def create_policy(
     configuration: PolicyFile, workspace: WorkspaceOption = "", control_plane_url: str = "", fmt: FormatOption = OutputFormat.table
 ) -> None:
-    """Create a policy from JSON; budgets are recorded but not yet enforced."""
+    """Create a policy from JSON."""
     body = _configuration(configuration, PolicyCreate)
     with access_client(control_plane_url) as client:
         response = ensure_ok(
@@ -69,3 +69,46 @@ def _configuration[T: PolicyCreate | PolicyUpdate](path: Path, model: type[T]) -
     except (OSError, ValidationError) as error:
         console.print(f"Invalid policy configuration: {error}", markup=False)
         raise typer.Exit(1) from error
+
+
+@policies_app.command("status")
+def policy_status(  # noqa: PLR0913 CLI exposes independent filtering and output options
+    policy_id: str,
+    *,
+    workspace: WorkspaceOption = "",
+    rule_index: Annotated[int | None, typer.Option(min=0, max=99, help="Budget rule position, starting at zero")] = None,
+    bucket_id: Annotated[str | None, typer.Option(help="Show spending for one budget bucket")] = None,
+    after_bucket: Annotated[str | None, typer.Option(help="Continue after this budget bucket ID")] = None,
+    limit: Annotated[int, typer.Option(min=1, max=1000)] = 100,
+    control_plane_url: str = "",
+    fmt: FormatOption = OutputFormat.table,
+) -> None:
+    """Show observed spending for each budget rule."""
+    with access_client(control_plane_url) as client:
+        response = ensure_ok(
+            client.get(
+                org_path(f"/workspaces/{resolve_workspace(workspace)}/policies/{policy_id}/status"),
+                params={
+                    name: value
+                    for name, value in {"rule_index": rule_index, "bucket_id": bucket_id, "after_bucket": after_bucket, "limit": limit}.items()
+                    if value is not None
+                },
+            )
+        )
+    status = payload(response, PolicyBudgetStatus)
+    budgets = [{**budget.model_dump(mode="json"), "computed_at": status.computed_at.isoformat()} for budget in status.budgets]
+    print_rows(
+        "budget status",
+        budgets,
+        [
+            Col("rule_index", "Rule"),
+            Col("period", "Period"),
+            Col("aggregation", "Aggregation"),
+            Col("amount_usd", "Limit USD"),
+            Col("buckets", "Bucket spending"),
+            Col("window_end", "Resets"),
+            Col("computed_at", "Calculated"),
+            Col("next_bucket", "Next bucket"),
+        ],
+        fmt,
+    )

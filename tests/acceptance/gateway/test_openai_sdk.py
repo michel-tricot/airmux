@@ -24,5 +24,4 @@ def test_the_unmodified_sdk_round_trips(gateway: Gateway) -> None:
         assert (usage.prompt_tokens, usage.completion_tokens) == (11, 3)
     events = gateway.events(2)
     assert [(event.status, event.stream, event.input_tokens, event.output_tokens) for event in events] == [("ok", False, 11, 3), ("ok", True, 11, 3)]
-    assert all("x-airmux-dialect" not in request.headers for request in provider.requests)
     assert [request.headers["authorization"] for request in provider.requests] == [f"Bearer {UPSTREAM_KEY}"] * 2

@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '@/App';
-import { ORG, WORKSPACES, server } from './msw';
+import { ORG, WORKSPACES, enveloped, paged, server } from './msw';
 
 const now = '2026-01-01T00:00:00Z';
 const USER: Api.UserOut = {
@@ -16,7 +16,6 @@ const USER: Api.UserOut = {
   managing_org_id: null,
   created_at: now,
   updated_at: now,
-  deleted_at: null,
   orgs: [ORG.id],
 };
 const MANAGEMENT_KEY: Api.ManagementKeyOut = {
@@ -34,7 +33,6 @@ const MANAGEMENT_KEY: Api.ManagementKeyOut = {
   prefix: 'sk-cp-abc',
   created_at: now,
   updated_at: now,
-  deleted_at: null,
 };
 const PROVIDER: Api.ProviderOut = {
   id: 'provider-1',
@@ -47,7 +45,6 @@ const PROVIDER: Api.ProviderOut = {
   params_closed: false,
   created_at: now,
   updated_at: now,
-  deleted_at: null,
 };
 const PROVIDER_CREDENTIAL: Api.ProviderCredentialOut = {
   id: 'provider-credential-1',
@@ -64,7 +61,6 @@ const PROVIDER_CREDENTIAL: Api.ProviderCredentialOut = {
   fingerprint: '1234',
   created_at: now,
   updated_at: now,
-  deleted_at: null,
   scope: 'platform',
 };
 
@@ -75,42 +71,36 @@ function installAdminHandlers() {
         data: { user_id: USER.id, email: USER.email, name: USER.name, instance_role: 'owner', orgs: USER.orgs },
       }),
     ),
-    http.get('/api/v1/organizations', () => HttpResponse.json<{ data: Api.OrgOut[] }>({ data: [ORG] })),
+    http.get('/api/v1/organizations', () => paged([ORG])),
     http.get('/api/v1/organizations/:orgId', () => HttpResponse.json<{ data: Api.OrgOut }>({ data: ORG })),
-    http.get('/api/v1/users', () => HttpResponse.json<{ data: Api.UserOut[] }>({ data: [USER] })),
+    http.get('/api/v1/users', () => enveloped([USER])),
     http.get('/api/v1/users/:userId', () => HttpResponse.json<{ data: Api.UserOut }>({ data: USER })),
-    http.get('/api/v1/instance/management-keys', () => HttpResponse.json<{ data: Api.ManagementKeyOut[] }>({ data: [MANAGEMENT_KEY] })),
+    http.get('/api/v1/instance/management-keys', () => enveloped([MANAGEMENT_KEY])),
     http.get('/api/v1/instance/taxonomy', () => HttpResponse.json<{ data: Api.TaxonomyOut }>({ data: { providers: [PROVIDER], models: [] } })),
-    http.get('/api/v1/instance/provider-credentials', () =>
-      HttpResponse.json<{ data: Api.ProviderCredentialOut[] }>({ data: [PROVIDER_CREDENTIAL] }),
-    ),
+    http.get('/api/v1/instance/provider-credentials', () => enveloped([PROVIDER_CREDENTIAL])),
     http.get('/api/v1/instance/data-planes', () =>
-      HttpResponse.json<{ data: Api.DataPlaneInstanceOut[] }>({
-        data: [
-          {
-            instance_id: 'data-plane-1',
-            org_id: null,
-            version: '0.1.0',
-            bundle_id: null,
-            address: '127.0.0.1',
-            status: 'online',
-            first_seen: now,
-            last_seen: now,
-          },
-        ],
-      }),
+      enveloped<Api.DataPlaneInstanceOut>([
+        {
+          instance_id: 'data-plane-1',
+          org_id: null,
+          version: '0.1.0',
+          bundle_id: null,
+          address: '127.0.0.1',
+          status: 'online',
+          first_seen: now,
+          last_seen: now,
+        },
+      ]),
     ),
     http.get('/api/v1/instance/activity', () =>
-      HttpResponse.json<{ data: Api.ActivityOut[] }>({
-        data: [{ id: 1, table_name: 'org', record_id: ORG.id, action: 'create', user_id: USER.id, occurred_at: now }],
-      }),
+      paged<Api.ActivityOut>([{ id: 1, table_name: 'org', record_id: ORG.id, action: 'create', user_id: USER.id, occurred_at: now }]),
     ),
     http.get('/api/v1/organizations/:orgId/users', () =>
-      HttpResponse.json<{ data: Api.OrgMemberOut[] }>({
-        data: [{ user_id: USER.id, email: USER.email, name: USER.name, service_account: false, role: 'owner', status: 'member' }],
-      }),
+      enveloped<Api.OrgMemberOut>([
+        { user_id: USER.id, email: USER.email, name: USER.name, service_account: false, role: 'owner', status: 'member' },
+      ]),
     ),
-    http.get('/api/v1/organizations/:orgId/workspaces', () => HttpResponse.json<{ data: Api.WorkspaceOut[] }>({ data: WORKSPACES })),
+    http.get('/api/v1/organizations/:orgId/workspaces', () => enveloped(WORKSPACES)),
   );
 }
 
@@ -149,10 +139,8 @@ describe('instance administration routes', () => {
       status: 'member',
     });
     server.use(
-      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/members', () =>
-        HttpResponse.json<{ data: Api.WorkspaceMembershipOut[] }>({ data: [member()] }),
-      ),
-      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/member-candidates', () => HttpResponse.json({ data: [] })),
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/members', () => enveloped([member()])),
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/member-candidates', () => enveloped([])),
       http.put('/api/v1/organizations/:orgId/workspaces/:workspaceRef/members/:userId', async ({ params, request }) => {
         expect(params.userId).toBe('user-2');
         role = ((await request.json()) as Api.WorkspaceMembershipIn).role;
@@ -175,18 +163,16 @@ describe('instance administration routes', () => {
     server.use(
       http.get('/api/v1/users', () => new HttpResponse(null, { status: 503 })),
       http.get('/api/v1/organizations/:orgId/users', () =>
-        HttpResponse.json<{ data: Api.OrgMemberOut[] }>({
-          data: [
-            {
-              user_id: 'user-2',
-              email: 'member@example.com',
-              name: 'Organization Member',
-              service_account: false,
-              role: 'member',
-              status: 'member',
-            },
-          ],
-        }),
+        enveloped<Api.OrgMemberOut>([
+          {
+            user_id: 'user-2',
+            email: 'member@example.com',
+            name: 'Organization Member',
+            service_account: false,
+            role: 'member',
+            status: 'member',
+          },
+        ]),
       ),
     );
     const user = userEvent.setup();
@@ -206,11 +192,11 @@ describe('instance administration routes', () => {
         return HttpResponse.json<{ data: Api.ProviderCredentialOut }>({ data: { ...PROVIDER_CREDENTIAL, name: 'backup', priority: 200 } });
       }),
       http.get('/api/v1/instance/provider-credentials', () =>
-        HttpResponse.json<{ data: Api.ProviderCredentialOut[] }>({
-          data: submitted
+        enveloped<Api.ProviderCredentialOut>(
+          submitted
             ? [PROVIDER_CREDENTIAL, { ...PROVIDER_CREDENTIAL, id: 'provider-credential-2', name: 'backup', priority: 200 }]
             : [PROVIDER_CREDENTIAL],
-        }),
+        ),
       ),
     );
     const user = userEvent.setup();
@@ -241,16 +227,51 @@ describe('instance administration routes', () => {
     expect(screen.queryByText('No users found.')).not.toBeInTheDocument();
   });
 
+  it.each([0, 1, 2])('shows the organization total after loading %s collection pages and creating an organization', async (pages) => {
+    let total = 125;
+    const organizations = Array.from({ length: 100 }, (_, index) => ({ ...ORG, id: `org-${index}`, name: `Organization ${index}` }));
+    server.use(
+      http.get('/api/v1/instance/organizations/summary', () => HttpResponse.json({ data: { total } })),
+      http.get('/api/v1/organizations', ({ request }) => {
+        const offset = new URL(request.url).searchParams.has('cursor') ? 50 : 0;
+        return HttpResponse.json({ data: organizations.slice(offset, offset + 50), page: { next_cursor: 'more' } });
+      }),
+      http.post('/api/v1/organizations', () => {
+        total += 1;
+        return HttpResponse.json({ data: { ...ORG, id: 'new-org', name: 'New organization' } });
+      }),
+    );
+    const user = userEvent.setup();
+    renderAt(pages ? '/instance/organizations' : '/instance');
+    if (pages) await screen.findByRole('link', { name: 'Organization 0' });
+    if (pages === 2) {
+      await user.click(screen.getByRole('button', { name: /load more/i }));
+      await screen.findByRole('link', { name: 'Organization 99' });
+    }
+    const navigation = await screen.findByRole('navigation', { name: 'Instance navigation' });
+    await user.click(within(navigation).getByRole('link', { name: 'Overview' }));
+    const heading = await screen.findByRole('heading', { name: 'Organizations' });
+    await waitFor(() => expect(within(heading.parentElement?.parentElement as HTMLElement).getByText('125')).toBeInTheDocument());
+
+    await user.click(within(navigation).getByRole('link', { name: 'Organizations' }));
+    await user.click(await screen.findByRole('button', { name: 'New Organization' }));
+    const dialog = screen.getByRole('dialog', { name: 'Create Organization' });
+    await user.type(within(dialog).getByRole('textbox'), 'New organization');
+    await user.click(within(dialog).getByRole('button', { name: 'Create Organization' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await user.click(within(navigation).getByRole('link', { name: 'Overview' }));
+    const updatedHeading = await screen.findByRole('heading', { name: 'Organizations' });
+    await waitFor(() => expect(within(updatedHeading.parentElement?.parentElement as HTMLElement).getByText('126')).toBeInTheDocument());
+  });
+
   it('counts only active management keys on the dashboard', async () => {
     server.use(
       http.get('/api/v1/instance/management-keys', () =>
-        HttpResponse.json<{ data: Api.ManagementKeyOut[] }>({
-          data: [
-            MANAGEMENT_KEY,
-            { ...MANAGEMENT_KEY, id: 'management-key-2', status: 'expired' },
-            { ...MANAGEMENT_KEY, id: 'management-key-3', status: 'revoked', revoked_at: now },
-          ],
-        }),
+        enveloped<Api.ManagementKeyOut>([
+          MANAGEMENT_KEY,
+          { ...MANAGEMENT_KEY, id: 'management-key-2', status: 'expired' },
+          { ...MANAGEMENT_KEY, id: 'management-key-3', status: 'revoked', revoked_at: now },
+        ]),
       ),
     );
     renderAt('/instance');
