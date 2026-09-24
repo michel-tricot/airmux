@@ -59,6 +59,31 @@ OpenAI compatible endpoint and a Bedrock API key. Azure OpenAI uses a resource e
 model's `upstream_model` is the deployment name. Store the corresponding provider key through the normal provider
 credential workflow. See [provider credentials](/docs/features/provider-credentials) for setup and capability limits.
 
+For example, a catalog input can define the endpoints and deployments directly:
+
+```yaml
+providers:
+  - provider_id: bedrock
+    kind: aws_bedrock
+    base_url: https://bedrock-mantle.us-east-1.api.aws/v1
+  - provider_id: azure_openai
+    kind: azure_openai
+    base_url: https://RESOURCE.openai.azure.com/openai/v1
+models:
+  - model_id: bedrock/anthropic.claude-sonnet
+    provider_id: bedrock
+    upstream_model: anthropic.claude-sonnet
+    input_modalities: [text]
+    output_modalities: [text]
+  - model_id: azure_openai/support-chat
+    provider_id: azure_openai
+    upstream_model: support-chat
+    input_modalities: [text]
+    output_modalities: [text]
+```
+
+Set each model's capabilities, modalities, context limits, prices, and parameter support to match the deployed model.
+
 ## Model entries
 
 | Field | Meaning |
