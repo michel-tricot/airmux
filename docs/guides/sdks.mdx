@@ -3,7 +3,7 @@ title: "Use an SDK"
 description: "Connect common LLM SDKs to airmux with an inference key and gateway model ID."
 ---
 
-Point an SDK at your airmux inference endpoint, use a workspace inference key, and choose a model ID from the gateway catalog. The SDK request shape stays the same; airmux routes and translates it to the selected provider.
+Point an SDK at your airmux inference endpoint, use a workspace inference key, and choose a model ID from the gateway catalog. OpenAI-compatible SDKs use `/inf/v1`; the Anthropic SDK uses `/inf`. airmux routes each request to the selected provider.
 
 Set these values for the examples:
 
@@ -47,7 +47,7 @@ client = Anthropic(
 )
 
 message = client.messages.create(
-    model="anthropic/claude-sonnet-4-6",
+    model="anthropic/claude-haiku-4-5-20251001",
     max_tokens=256,
     messages=[{"role": "user", "content": "Explain request routing in one sentence."}],
 )
@@ -76,18 +76,89 @@ console.log(response.output_text);
   <Tab title="OpenAI Go">
 
 ```go
-client := openai.NewClient(
-    option.WithBaseURL(os.Getenv("AIRMUX_URL") + "/inf/v1"),
-    option.WithAPIKey(os.Getenv("AIRMUX_INFERENCE_KEY")),
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+
+	"github.com/openai/openai-go/v3"
+	"github.com/openai/openai-go/v3/option"
+	"github.com/openai/openai-go/v3/responses"
 )
+
+func main() {
+	client := openai.NewClient(
+		option.WithBaseURL(os.Getenv("AIRMUX_URL") + "/inf/v1"),
+		option.WithAPIKey(os.Getenv("AIRMUX_INFERENCE_KEY")),
+	)
+	response, err := client.Responses.New(context.Background(), responses.ResponseNewParams{
+		Model: openai.ChatModel(os.Getenv("AIRMUX_MODEL")),
+		Input: responses.ResponseNewParamsInputUnion{
+			OfString: openai.String("Explain request routing in one sentence."),
+		},
+	})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(response.OutputText())
+}
 ```
 
-Use the SDK's Chat Completions or Responses method with a gateway model ID.
+Add the SDK to your Go module with `go get github.com/openai/openai-go/v3`.
+
+  </Tab>
+  <Tab title="Vercel AI SDK">
+
+Install `ai` and `@ai-sdk/openai-compatible` in your Node project:
+
+```bash
+npm install ai @ai-sdk/openai-compatible
+```
+
+```typescript
+import { generateText } from "ai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+
+const airmux = createOpenAICompatible({
+  name: "airmux",
+  baseURL: `${process.env.AIRMUX_URL}/inf/v1`,
+  apiKey: process.env.AIRMUX_INFERENCE_KEY,
+});
+
+const { text } = await generateText({
+  model: airmux(process.env.AIRMUX_MODEL!),
+  prompt: "Explain request routing in one sentence.",
+});
+
+console.log(text);
+```
+
+  </Tab>
+  <Tab title="LangChain Python">
+
+Install the OpenAI integration with `uv add langchain-openai`, then invoke it with the airmux endpoint:
+
+```python
+import os
+
+from langchain_openai import ChatOpenAI
+
+model = ChatOpenAI(
+    model=os.environ["AIRMUX_MODEL"],
+    base_url=f"{os.environ['AIRMUX_URL'].rstrip('/')}/inf/v1",
+    api_key=os.environ["AIRMUX_INFERENCE_KEY"],
+)
+
+response = model.invoke("Explain request routing in one sentence.")
+print(response.content)
+```
 
   </Tab>
 </Tabs>
 
-The same setup applies to other SDKs: set the base URL to the matching airmux API path and pass the inference key. For example, use `/inf/v1` with an OpenAI-compatible client such as [LiteLLM](https://docs.litellm.ai/docs/) or the [Vercel AI SDK](https://ai-sdk.dev/providers/openai-compatible), and `/inf` with the Anthropic SDK.
+Vercel AI SDK uses its [OpenAI-compatible provider](https://ai-sdk.dev/providers/openai-compatible-providers). LangChain uses the [OpenAI integration](https://docs.langchain.com/oss/python/integrations/chat/openai) with airmux's Chat Completions endpoint.
 
 List models with the OpenAI SDK using `client.models.list()`. Results reflect the models visible to the key's workspace policies and configured credential scopes. See the [model discovery reference](/docs/reference/models-and-providers#inference-model-discovery).
 

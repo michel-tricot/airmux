@@ -22,10 +22,8 @@
           {
             "group": "Use the platform",
             "pages": [
+              "docs/guides/cli",
               "docs/guides/sdks",
-              "docs/guides/streaming",
-              "docs/guides/tools",
-              "docs/guides/structured-output",
               "docs/policies",
               "docs/guides/policy-workflow",
               "docs/guides/budgets",

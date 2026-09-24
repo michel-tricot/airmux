@@ -52,7 +52,7 @@ airmux doctor --control-plane-url https://llm.example.com --gateway-url https://
 airmux gateways list
 ```
 
-Send one [buffered request](/docs/quickstart) and one [streaming request](/docs/guides/streaming). Confirm that the
+Send one [buffered request](/docs/quickstart) and one [streaming request](/docs/reference/chat-completions#streaming). Confirm that the
 requests appear in `airmux events list`, then verify that `airmux_data_plane_metering_outbox_pending` and
 `airmux_data_plane_metering_outbox_oldest_age_seconds` return to their normal ranges on the internal metrics listener.
 

@@ -13,15 +13,15 @@ You supply the model taxonomy and inference keys through files. Provider credent
 
 ## Install
 
-You need Python 3.13+ and uv. Install the CLI with the gateway runtime:
+You need Python 3.13+ and uv. Clone the repository and sync the CLI package:
 
 ```bash
-uv tool install airmux
+git clone https://github.com/michel-tricot/airmux.git
+cd airmux
+uv sync --package airmux --frozen
 ```
 
-The installed gateway runs outside the checkout and includes a starter taxonomy.
-
-If your shell cannot find `airmux`, run `uv tool update-shell` and restart the shell.
+Run CLI commands from this checkout with `uv run airmux`.
 
 ## Initialize and start
 
@@ -29,9 +29,9 @@ Initialize a directory with the shipped taxonomy:
 
 ```bash
 export OPENAI_API_KEY='your-provider-key'
-airmux gateway init
-airmux gateway validate
-airmux gateway serve
+uv run airmux gateway init
+uv run airmux gateway validate
+uv run airmux gateway serve
 ```
 
 `init` checks taxonomy and adapter validity, creates configuration and a private random inference key, and refuses to overwrite
