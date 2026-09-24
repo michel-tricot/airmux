@@ -32,26 +32,14 @@ database-capable exception, and resolved values remain outside the bundle.
 
 ## Canonical adapter waist
 
-```mermaid
-flowchart LR
-  O[OpenAI callers] --> I[Ingress adapters]
-  A[Anthropic callers] --> I
-  I --> W[Canonical request and response]
-  W --> P[Policy, routing, and metering]
-  P --> E[Egress adapters]
-  E --> X[OpenAI-compatible providers]
-  E --> Y[Anthropic providers]
-  E --> Z[Responses providers]
-```
+Caller dialects and provider families meet at one canonical request and response model, so `N` dialects and `M`
+provider families need `N + M` translators instead of one per pair. Policy, routing, reconciliation, usage, and
+cancellation accounting are implemented once against canonical types.
 
-With `N` caller dialects and `M` provider families, the canonical waist needs `N + M` translators rather than a
-translator for every caller-provider pair. Request reconciliation, policy, routing, adjustments, usage, and cancellation
-accounting are implemented once against canonical types.
+Each ingress adapter owns one public path; each egress adapter owns one provider family. Adapter modules are discovered
+automatically, so adding a dialect or provider family does not require editing a central registry or route list.
 
-Each ingress adapter owns one public path, parses that protocol into canonical, and renders canonical output for the
-caller. Egress adapters translate canonical requests to a provider family and fold buffered or streaming output back
-into canonical. Adapter modules are discovered automatically, so adding a dialect or provider family does not require
-editing a central registry or application route list.
+See [canonical model](/docs/concepts/canonical-model) for the typed content parts and translation guarantees.
 
 ## Control plane
 

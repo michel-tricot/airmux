@@ -92,19 +92,18 @@ airmux events list
 airmux events tail --interval 2 --keep 30
 ```
 
-The instance overview's organization total counts every organization currently stored on the instance, including
-personal organizations. Deleted organizations no longer count. The total comes from
-`GET /api/v1/instance/organizations/summary`, independently of collection pagination or previously loaded console pages.
-It requires instance-scoped `organizations.read` permission and returns `{"data":{"total":51}}` for an instance with
-51 organizations.
+Add `-f json` for complete event fields. The default table drops columns to fit a narrow terminal.
 
 ## Gateway health
 
 ```bash
-airmux gateways list
 curl http://localhost:8080/healthz
 curl http://localhost:8080/readyz
+airmux gateways list
 ```
+
+`gateways list` needs instance-scoped `data-planes.read` permission. An organization owner cannot run it and receives
+`403`. Use the health endpoints, which are public, to check a gateway from an organization context.
 
 `/healthz` is dependency-free process liveness. `/readyz` returns `503` when the gateway has no accepted bundle. Inspect
 `/metrics` on the data plane's internal listener for queue depth, durable backlog age, export failures, and rejected

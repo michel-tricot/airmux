@@ -1,31 +1,55 @@
 ---
 title: "Quickstart"
-description: "Start airmux with Docker, claim the instance, import a provider credential, and make a verified inference request."
+description: "Run the full airmux platform, send a real model request, find its cost in the console, and enforce your first workspace policy."
 ---
 
-This path runs the console, control plane, gateway, and Postgres on one machine.
+This is the recommended way to start. You run the console, control plane, gateway, and Postgres on one machine, then
+follow one application request from the gateway to the console.
+
+At the end you have a working installation, a real request with its recorded cost, and one policy you proved is
+enforced.
+
+<Warning>
+  Every request in this guide calls a real provider and is billed by that provider. The requests below cost well under
+  one cent.
+</Warning>
 
 ## Prerequisites
 
 - Docker with Compose 2.24.4 or newer
 - Python 3.13 or newer and [uv](https://docs.astral.sh/uv/getting-started/installation/)
-- An API key for at least one provider in the shipped catalog
+- An API key for at least one provider in the [shipped catalog](/docs/reference/models-and-providers)
 
 <Steps>
   <Step title="Install the CLI">
+    Pick one release and use it for both the CLI and the deployment files.
+
     ```bash
-    uv tool install airmux
+    export AIRMUX_VERSION=0.1.2
+    uv tool install "airmux==$AIRMUX_VERSION"
     ```
+
+    `airmux --version` prints the installed version. If the shell cannot find the command, run `uv tool update-shell`
+    and open a new shell.
+
+    <Warning>
+      Keep the CLI and the checkout on the same release. A CLI from one release and an image built from a different
+      commit do not share a management API contract, and commands fail while parsing responses.
+    </Warning>
   </Step>
 
-  <Step title="Clone and configure">
+  <Step title="Get the deployment files and set a provider key">
     ```bash
-    git clone https://github.com/michel-tricot/airmux.git
+    git clone --branch "v$AIRMUX_VERSION" https://github.com/michel-tricot/airmux.git
     cd airmux
     cp .env.example .env
     ```
 
-    Open `.env` and set at least one provider key, such as `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`.
+    Open `.env` and set one provider key, such as `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`. The CLI reads this file to
+    import credentials. The application container never receives these variables.
+
+    If port 8080 is already in use on your machine, set `AIRMUX_PORT` and `AIRMUX_PUBLIC_URL` to a free port in `.env`
+    and use that port everywhere below.
   </Step>
 
   <Step title="Start the stack">
@@ -34,71 +58,157 @@ This path runs the console, control plane, gateway, and Postgres on one machine.
     docker compose up -d --wait
     ```
 
-    The public origin is `http://localhost:8080`. It serves the console at `/`, the management API at `/api/v1`, and inference at `/inf/v1`.
+    The first build takes a few minutes. Compose migrates the database and loads the model catalog before the
+    application starts.
+
+    **You should see:** `docker compose ps` reports the `airmux` service as healthy, and
+    `curl http://localhost:8080/healthz` returns `{"status":"ok"}`.
+
+    `/readyz` returns `{"status":"no bundle"}` until the next step creates an organization. That is expected.
   </Step>
 
-  <Step title="Claim and verify the instance">
+  <Step title="Claim the instance">
     ```bash
     airmux quickstart --url http://localhost:8080
     ```
 
-    Enter an email and password when prompted. The command creates or resumes an owner account, organization, and
-    workspace; imports missing provider keys from `.env`; creates an inference key; and sends a real model request.
-  </Step>
+    Enter an email and password when prompted. The first account becomes the instance owner. The command creates the
+    account, organization, and a `default` workspace; imports provider keys from `.env`; creates an inference key; and
+    sends one real model request to prove the installation.
 
-  <Step title="Save the inference key">
-    The secret shown as `AIRMUX_INFERENCE_KEY` is returned once. Export it in the shell where you will run examples:
+    **You should see:** `Ready. Verified <model> through the gateway.` followed by your inference key and a copyable
+    `curl` command.
+
+    <Warning>
+      The inference key is shown once. Copy it now.
+    </Warning>
 
     ```bash
     export AIRMUX_INFERENCE_KEY='sk-inf-your-key'
     ```
   </Step>
 
-  <Step title="Make a request">
+  <Step title="Send a request from your own application">
     Use a model served by the provider you configured. `airmux models list` shows the catalog.
 
     ```bash
-    curl http://localhost:8080/inf/v1/chat/completions \
+    curl --fail-with-body http://localhost:8080/inf/v1/chat/completions \
       -H "Authorization: Bearer $AIRMUX_INFERENCE_KEY" \
       -H 'Content-Type: application/json' \
-      -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"Say hello in five words"}]}'
+      -d '{"model":"anthropic/claude-sonnet-4-6","messages":[{"role":"user","content":"Say hello in five words"}],"max_completion_tokens":512}'
     ```
+
+    **You should see:** HTTP 200 and a `choices[0].message.content` value, plus a `usage` object and a `gateway` object
+    holding any parameter airmux adjusted.
+
+    An existing application needs two changes: point its base URL at `http://localhost:8080/inf/v1` and replace its
+    provider key with the inference key. See [OpenAI SDK](/docs/guides/openai-sdk) and
+    [Anthropic SDK](/docs/guides/anthropic-sdk).
+  </Step>
+
+  <Step title="Find the request in the console">
+    Open [localhost:8080](http://localhost:8080) and sign in with the account you just created.
+
+    The organization **Overview** page opens on usage for the last 30 days. **Attribution** breaks the same spending
+    down by workspace, key owner, inference key, model, provider, or credential.
+
+    Select **Requests** to list individual requests.
+
+    **You should see:** your requests with spend, request count, and token counts on Overview, and one row per request
+    on Requests showing time, status, cost, total tokens, workspace, inference key, and model. Select a row to open its
+    detail panel.
+
+    <Info>
+      Costs are airmux estimates calculated from catalog prices at request time. They are not provider invoice amounts.
+      Events arrive asynchronously, so a request can take a few seconds to appear.
+    </Info>
+  </Step>
+
+  <Step title="Add a workspace policy and prove it works">
+    Policies decide which requests a workspace accepts. Save this as `output-limit-policy.json`:
+
+    ```json
+    {
+      "name": "Production output limit",
+      "enabled": true,
+      "priority": 10,
+      "definition": {
+        "target": {"kind": "workspace"},
+        "rules": [
+          {
+            "match": {"kind": "all_requests"},
+            "action": {"kind": "request_limits", "max_output_tokens": 1024}
+          }
+        ]
+      }
+    }
+    ```
+
+    ```bash
+    airmux policies create output-limit-policy.json
+    ```
+
+    Now repeat the request from step 5 with `"max_completion_tokens": 2048`:
+
+    ```bash
+    curl -i http://localhost:8080/inf/v1/chat/completions \
+      -H "Authorization: Bearer $AIRMUX_INFERENCE_KEY" \
+      -H 'Content-Type: application/json' \
+      -d '{"model":"anthropic/claude-sonnet-4-6","messages":[{"role":"user","content":"Say hello in five words"}],"max_completion_tokens":2048}'
+    ```
+
+    **You should see:** `403` with code `policy_denied` and a message naming the policy that blocked the request. The
+    same request with `"max_completion_tokens": 512` still returns 200.
+
+    In the console, the workspace **Policies** page lists the rule as `Output ≤ 1,024 tokens`, and the workspace
+    **Requests** page records the blocked call with status `DENIED`, zero tokens, and no cost.
+
+    A policy reaches the gateway when the next configuration bundle is adopted, normally within seconds. See
+    [bundles and consistency](/docs/concepts/bundles) if a saved policy is not yet visible.
   </Step>
 </Steps>
-
-<Check>
-  The installation is ready when `quickstart` prints `Ready` and `curl http://localhost:8080/readyz` returns `{"status":"ready"}`.
-</Check>
 
 ## Next steps
 
 <Columns cols={2}>
-  <Card title="Connect an SDK" icon="code" href="/docs/guides/openai-sdk">
-    Change the base URL in an existing application.
+  <Card title="Move an existing application" icon="code" href="/docs/guides/openai-sdk">
+    Change a base URL and an API key, then keep your request shapes.
   </Card>
-  <Card title="Add workspace policy" icon="shield-halved" href="/docs/guides/policy-workflow">
-    Restrict models, prices, output length, credentials, or failure behavior.
+  <Card title="Control cost and routing" icon="shield-halved" href="/docs/policies">
+    Restrict models, providers, prices, output length, and spending, and add bounded failover.
+  </Card>
+  <Card title="Understand your spending" icon="chart-line" href="/docs/features/usage">
+    Read usage reports, attribution, and request detail.
+  </Card>
+  <Card title="Deploy for real traffic" icon="server" href="/docs/deployment">
+    Plan TLS, persistence, backups, and separately scaled gateways.
   </Card>
 </Columns>
 
 ## Stop or reset
 
-`docker compose down` stops the stack and preserves both named volumes. `docker compose down -v` permanently deletes the
-local database, credentials, cached bundles, and pending usage.
+```bash
+docker compose down
+```
+
+This stops the stack and keeps both named volumes, so your account, credentials, and usage history survive.
 
 <Warning>
-  Do not use `docker compose down -v` on an installation whose state you need.
+  `docker compose down -v` permanently deletes the database, provider credentials, cached bundles, and usage history.
+  Do not run it on an installation whose state you need.
 </Warning>
 
-## Gateway-only mode
+## Other ways to run airmux
 
-For an inference endpoint managed through local files, without Docker, Postgres, or the console:
+| Alternative | What you give up | Guide |
+| --- | --- | --- |
+| Gateway only | No console, organizations, managed credentials, or usage history. Keys, catalog, and policies come from local files | [Gateway only](/docs/deployment/gateway) |
+| Split services | Same capabilities, more operational work. Use it to scale or restart gateways independently | [Separate services](/docs/deployment/scaling) |
+
+Gateway-only mode needs no Docker, Postgres, or control plane:
 
 ```bash
 export OPENAI_API_KEY='your-provider-key'
 airmux gateway init
 airmux gateway serve
 ```
-
-The standalone gateway copies the shipped taxonomy into `.airmux` and ignores usage events.
-See [Gateway only](/docs/deployment/gateway) for independent installation and standalone configuration.

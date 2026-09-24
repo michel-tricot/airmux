@@ -6,6 +6,11 @@ description: 'Run the inference gateway with a local taxonomy and no Postgres or
 Run the gateway by itself when you want one inference endpoint with translation, streaming, routing, and local policies.
 You supply the model taxonomy and inference keys through files. Provider credentials resolve from your environment.
 
+<Info>
+  Gateway-only mode is an alternative to the recommended [full platform](/docs/quickstart). It has no console,
+  organizations, workspaces, managed credentials, or usage history. See [Standalone limits](#standalone-limits).
+</Info>
+
 ## Install
 
 You need Python 3.13+ and uv. Install the CLI with the gateway runtime:
