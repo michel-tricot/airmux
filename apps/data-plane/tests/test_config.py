@@ -8,7 +8,7 @@ from pydantic import ValidationError
 from airmux_runtime.config import ConfigContext
 from airmux_runtime.secrets import FileStoreConfig
 from data_plane.bundle import LocalBundleConfig, RemoteBundleConfig
-from data_plane.config import Config, DevNullOutboxConfig, SqliteOutboxConfig, load_config
+from data_plane.config import Config, ControlPlaneBudgetConfig, DevNullOutboxConfig, NoBudgetConfig, SqliteOutboxConfig, load_config
 
 
 @pytest.fixture
@@ -36,6 +36,8 @@ def test_repo_config_parses_through_the_data_plane_loader(clean_env, monkeypatch
     assert config.bundle.control_plane.management_key == "dp-token"
     assert isinstance(config.events, SqliteOutboxConfig)
     assert config.events.control_plane == config.bundle.control_plane
+    assert isinstance(config.budget, ControlPlaneBudgetConfig)
+    assert config.budget.control_plane == config.bundle.control_plane
 
 
 def test_connected_configs_own_independent_control_plane_links():
@@ -49,6 +51,10 @@ def test_connected_configs_own_independent_control_plane_links():
                 "kind": "sqlite",
                 "control_plane": {"url": "http://events-cp.test", "management_key": "events-token"},
             },
+            "budget": {
+                "kind": "control_plane",
+                "control_plane": {"url": "http://budget-cp.test", "management_key": "budget-token"},
+            },
         }
     )
 
@@ -56,6 +62,8 @@ def test_connected_configs_own_independent_control_plane_links():
     assert isinstance(config.events, SqliteOutboxConfig)
     assert config.bundle.control_plane.url == "http://bundle-cp.test"
     assert config.events.control_plane.url == "http://events-cp.test"
+    assert isinstance(config.budget, ControlPlaneBudgetConfig)
+    assert config.budget.control_plane.url == "http://budget-cp.test"
 
 
 def test_repo_config_takes_the_stack_control_plane_from_the_environment(clean_env, monkeypatch):
@@ -76,7 +84,24 @@ def test_defaults_apply_to_a_standalone_data_plane(clean_env):
     config = load_config()
     assert isinstance(config.bundle, LocalBundleConfig)
     assert isinstance(config.events, DevNullOutboxConfig)
+    assert isinstance(config.budget, NoBudgetConfig)
     assert config.bundle.reload_interval_s == 2.0
+    assert config.http.max_connections == 100
+
+
+def test_http_limits_accept_environment_references(clean_env, monkeypatch):
+    monkeypatch.setenv("PROVIDER_CONNECTIONS", "256")
+    (clean_env / "airmux.yml").write_text(
+        "data_plane:\n  bundle: {kind: local, path: bundle.yml}\n  http:\n    max_connections: ${env:PROVIDER_CONNECTIONS}\n"
+    )
+    config = load_config()
+    assert config.http.max_connections == 256
+
+
+@pytest.mark.parametrize("value", [0, -1, 65536, None, True, 1.5, 100.0, "unlimited", "1.5"])
+def test_http_limits_reject_invalid_configuration(value):
+    with pytest.raises(ValidationError, match="max_connections"):
+        Config.model_validate({"bundle": {"kind": "local", "path": "bundle.yml"}, "http": {"max_connections": value}})
 
 
 def test_dev_uses_environment_then_config_then_default(clean_env, monkeypatch):
@@ -116,6 +141,14 @@ def test_sqlite_outbox_requires_a_control_plane(clean_env):
         load_config()
 
 
+def test_control_plane_budget_requires_a_control_plane(clean_env):
+    config = "data_plane:\n  bundle:\n    kind: local\n    path: ./bundle.yml\n  budget:\n    kind: control_plane\n"
+    (clean_env / "airmux.yml").write_text(config, encoding="utf-8")
+
+    with pytest.raises(ValidationError, match="control_plane"):
+        load_config()
+
+
 @pytest.mark.parametrize(
     "control_plane",
     [{"url": "http://cp.test"}, {"management_key": "dp-token"}, {"url": "http://cp.test", "token": "dp-token"}],
@@ -144,6 +177,11 @@ def test_remote_intervals_must_be_positive():
                     "kind": "sqlite",
                     "control_plane": {"url": "http://cp.test", "management_key": "dp-token"},
                     "flush_interval_s": 0,
+                },
+                "budget": {
+                    "kind": "control_plane",
+                    "control_plane": {"url": "http://cp.test", "management_key": "dp-token"},
+                    "poll_interval_s": 0,
                 },
             }
         )
@@ -176,6 +214,8 @@ def test_container_config_separates_gateway_state_from_shared_credentials(tmp_pa
     assert isinstance(config.events, SqliteOutboxConfig)
     assert config.events.control_plane == config.bundle.control_plane
     assert config.events.cache_dir == config.bundle.cache_dir
+    assert isinstance(config.budget, ControlPlaneBudgetConfig)
+    assert config.budget.control_plane == config.bundle.control_plane
     assert config.secrets == FileStoreConfig(path=tmp_path / "secrets")
 
 
@@ -224,3 +264,8 @@ def test_loader_resolves_paths_from_config_directory(tmp_path, monkeypatch):
     assert config.bundle.path == directory / "bundle.yml"
     assert config.events.cache_dir == directory / ".airmux"
     assert config.secrets.path == directory / ".airmux/secrets"
+
+
+def test_http_configuration_rejects_the_removed_idle_connection_limit():
+    with pytest.raises(ValidationError, match="max_keepalive_connections"):
+        Config.model_validate({"bundle": {"kind": "local", "path": "bundle.yml"}, "http": {"max_keepalive_connections": 20}})

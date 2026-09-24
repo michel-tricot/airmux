@@ -13,7 +13,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError, ProgrammingError, SQLAlchemyError
 from starlette.routing import Route
 
-from airmux_runtime.observability import configure_logger
+from airmux_runtime.observability import configure_logger, flush_logger
 from control_plane.authority import AuthorizationError, CredentialError
 from control_plane.bootstrap import bootstrap_data_plane
 from control_plane.config import load_settings
@@ -43,6 +43,7 @@ from control_plane.routes.oss import router as oss_router
 from control_plane.routes.policies import router as policies_router
 from control_plane.routes.provider_credentials import instance_router as instance_provider_credentials_router
 from control_plane.routes.provider_credentials import router as provider_credentials_router
+from control_plane.routes.reports import router as reports_router
 from control_plane.routes.sync import router as sync_router
 from control_plane.routes.taxonomy import router as taxonomy_router
 from control_plane.routes.users import router as users_router
@@ -80,7 +81,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = app.state.settings
     configure_logger(logger, dev=settings.dev)
     engine = make_engine(settings.database.url)
-    try:
+    async with contextlib.AsyncExitStack() as cleanup:
+        cleanup.callback(flush_logger, logger)
+        cleanup.push_async_callback(asyncio.to_thread, app.state.metrics.shutdown)
+        cleanup.push_async_callback(engine.dispose)
+        cleanup.callback(app.state.password_workers.close)
         await _require_migrated_schema(engine)
         app.state.session_factory = make_session_factory(engine)
         if settings.bootstrap is not None:
@@ -95,12 +100,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                 publisher.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
                     await publisher
-    finally:
-        app.state.password_workers.close()
-        try:
-            await engine.dispose()
-        finally:
-            await asyncio.to_thread(app.state.metrics.shutdown)
 
 
 async def not_owned_handler(_request: Request, _exc: Exception) -> JSONResponse:
@@ -225,6 +224,7 @@ def create_app(settings: Settings | None = None, *, throttle_backend: ThrottleBa
         instance_provider_credentials_router,
         provider_credentials_router,
         org_router,
+        reports_router,
         sync_router,
         taxonomy_router,
     )

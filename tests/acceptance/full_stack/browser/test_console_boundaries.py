@@ -75,7 +75,7 @@ def test_organization_roles_navigation_permissions_and_workspace_dialog(stack: S
         admin.put(f"{org_path}/workspaces/{workspace['id']}/members/{user_id}", json={"role": "member"}).raise_for_status()
         console.login("browser-member@acceptance.test", "browser-member-password")
         page = console.page
-        expect(page.get_by_role("combobox", name="Workspace", exact=True)).to_contain_text("acceptance")
+        console.select_workspace(workspace["name"])
         visit_sidebar(console, "Workspace navigation")
         page.goto(f"{console.url}/instance/users")
         expect(page).to_have_url(re.compile(r"/org(?:/|$)"))
@@ -100,6 +100,7 @@ def test_playground_streaming_errors_and_recovery(stack: Stack) -> None:
     with running_console(stack) as console:
         console.login(ADMIN_EMAIL, ADMIN_PASSWORD)
         page = console.page
+        console.select_workspace("acceptance")
         page.get_by_role("link", name="Playground", exact=True).click()
         composer = page.get_by_placeholder("Send a message... (Shift+Enter for newline)")
         composer.fill("streaming browser probe")

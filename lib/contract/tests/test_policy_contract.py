@@ -51,7 +51,7 @@ def test_request_match_combines_typed_criteria():
         {"kind": "credential_access", "scopes": ["org", "org"]},
         {"kind": "credential_access", "scopes": ["unknown"]},
         {"kind": "fallback", "models": ["backup"], "on": [], "max_attempts": 2, "timeout_ms": 1000},
-        {"kind": "budget", "period": "day", "amount_usd": "10", "sharing": "shared"},
+        {"kind": "budget", "period": "week", "amount_usd": "10", "aggregation": "shared"},
         {"kind": "execute", "code": "anything"},
     ],
 )

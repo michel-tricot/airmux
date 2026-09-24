@@ -3,10 +3,11 @@ from __future__ import annotations
 import asyncio
 import contextlib
 from dataclasses import dataclass
+from http import HTTPStatus
 from typing import TYPE_CHECKING
 
+import aiohttp
 import anyio
-import httpx2
 from starlette.responses import Response, StreamingResponse
 
 from data_plane.egress.base import UpstreamProtocolError, UpstreamResponseError, UpstreamStreamError
@@ -14,7 +15,7 @@ from data_plane.metering import status_for_error, usage_event
 from data_plane.metrics import upstream_outcome
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncGenerator, Iterator
 
     from starlette.types import Receive, Scope, Send
 
@@ -24,6 +25,9 @@ if TYPE_CHECKING:
     from data_plane.ingress import IngressAdapter
     from data_plane.metrics import DataPlaneMetrics, UpstreamOutcome
     from data_plane.outbox import OutboxReservation
+    from data_plane.provider_http_client import ProviderHttpClient, ProviderResponse
+
+_MAX_STREAM_BATCH_BYTES = 65_536
 
 
 @dataclass(frozen=True)
@@ -34,7 +38,7 @@ class StreamSession:
     request: CanonicalRequest
     adjustments: tuple[CanonicalAdjustment, ...]
     reservation: OutboxReservation
-    http_client: httpx2.AsyncClient
+    http_client: ProviderHttpClient
     metrics: DataPlaneMetrics
     egress_kind: str
     attempt_started_at: float
@@ -42,11 +46,11 @@ class StreamSession:
     async def open(self, upstream: UpstreamRequest) -> Response:
         async with contextlib.AsyncExitStack() as stack:
             response = await stack.enter_async_context(
-                self.http_client.stream(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body)
+                self.http_client.request(upstream.method, upstream.url, headers=upstream.headers, data=upstream.body, stream=True)
             )
-            if response.is_error:
-                body = await response.aread()
-                raise UpstreamResponseError(response.status_code, body)
+            if response.status >= HTTPStatus.BAD_REQUEST:
+                body = await response.read()
+                raise UpstreamResponseError(response.status, body)
             stream_state = self.adapter.new_stream_state(self.ctx)
             handoff = stack.pop_all()
 
@@ -57,7 +61,7 @@ class _StreamResponse(StreamingResponse):
     def __init__(
         self,
         session: StreamSession,
-        response: httpx2.Response,
+        response: ProviderResponse,
         handoff: contextlib.AsyncExitStack,
         stream_state: StreamState,
     ) -> None:
@@ -68,32 +72,31 @@ class _StreamResponse(StreamingResponse):
         self._renderer = session.ingress.new_stream()
         self._reservation = session.reservation.transfer()
         self._recorded = False
-        super().__init__(self._events(), media_type="text/event-stream")
+        self._event_stream = self._events()
+        super().__init__(self._event_stream, media_type="text/event-stream")
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         with self._reservation:
-            async with self._handoff:
+            async with self._handoff, contextlib.aclosing(self._event_stream):
                 try:
                     await super().__call__(scope, receive, send)
                 finally:
                     if not self._recorded:
                         self._record(self._cancelled_event(), "cancelled")
 
-    async def _events(self) -> AsyncIterator[bytes]:
+    async def _events(self) -> AsyncGenerator[bytes]:
         try:
             for frame in self._renderer.start(self._session.ctx):
                 yield frame
-            async for payload in self._response.aiter_bytes():
-                for event in self._session.adapter.frame(payload, self._stream_state):
-                    for canonical_chunk in self._session.adapter.transform_stream_event(event, self._stream_state):
-                        for frame in self._renderer.chunk(canonical_chunk):
-                            yield frame
+            async for payload in self._response.iter_any():
+                for batch in self._render_payload(payload):
+                    yield batch
             self._session.adapter.validate_stream(self._stream_state)
             final = self._session.adapter.finalize(self._stream_state)
             for frame in self._renderer.closing(final, list(self._session.adjustments)):
                 yield frame
             self._record(usage_event(self._session.ctx, final, status="ok", request=self._session.request), "success")
-        except (UpstreamProtocolError, UpstreamStreamError, httpx2.HTTPError) as error:
+        except (UpstreamProtocolError, UpstreamStreamError, aiohttp.ClientError, TimeoutError) as error:
             for frame in self._renderer.error(self._session.adapter.map_error(error)):
                 yield frame
             self._record(
@@ -108,6 +111,23 @@ class _StreamResponse(StreamingResponse):
         except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
             self._record(self._cancelled_event(), "cancelled")
             raise
+
+    def _render_payload(self, payload: bytes) -> Iterator[bytes]:
+        batch = bytearray()
+        try:
+            for event in self._session.adapter.frame(payload, self._stream_state):
+                for canonical_chunk in self._session.adapter.transform_stream_event(event, self._stream_state):
+                    for frame in self._renderer.chunk(canonical_chunk):
+                        batch.extend(frame)
+                        if len(batch) >= _MAX_STREAM_BATCH_BYTES:
+                            yield bytes(batch)
+                            batch.clear()
+        except Exception:
+            if batch:
+                yield bytes(batch)
+            raise
+        if batch:
+            yield bytes(batch)
 
     def _cancelled_event(self) -> UsageEvent:
         return usage_event(

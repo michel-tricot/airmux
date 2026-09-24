@@ -1,6 +1,6 @@
 ---
 title: "Workspace policies"
-description: "Match inference requests and compose model, provider, credential, price, parameter, request, denial, and fallback rules."
+description: "Match inference requests and compose model, provider, credential, price, budget, parameter, request, denial, and fallback rules."
 ---
 
 Workspace policies control which inference requests airmux accepts, which routes and credentials are eligible, and when it may try a fallback model.
@@ -18,8 +18,8 @@ its workspace, selected users, or selected inference keys.
 - Exact duplicate rule definitions are invalid
 - Editing one policy cannot change another policy
 
-Changes take effect after a gateway adopts the workspace's newly published bundle. Saving a policy and observing it at
-every gateway are not one synchronous operation.
+Routing restrictions take effect after a gateway adopts the workspace's newly published bundle. Budget rules use a
+separate background refresh. Saving a policy and observing it at every gateway are not one synchronous operation.
 
 ## Targets
 
@@ -232,3 +232,67 @@ Create one self-contained resource at `/api/v1/organizations/{org_id}/workspaces
 
 Successful control-plane responses wrap the result in `{"data": ...}`. See the
 [policy tutorial](/docs/guides/policy-workflow) for the CLI flow and the generated endpoint reference for exact schemas.
+
+## Cost budgets
+
+A budget limits observed USD spending for matching usage in a UTC calendar day or month.
+Multiple budget rules can share one policy, and every matching budget must have remaining allowance.
+For example, one policy can impose both a daily and monthly shared budget:
+
+```json
+{
+  "name": "Workspace spending",
+  "definition": {
+    "target": { "kind": "workspace" },
+    "rules": [
+      {
+        "match": { "kind": "all_requests" },
+        "action": { "kind": "budget", "amount_usd": "20.00", "period": "day", "aggregation": "shared" }
+      },
+      {
+        "match": { "kind": "all_requests" },
+        "action": { "kind": "budget", "amount_usd": "300.00", "period": "month", "aggregation": "shared" }
+      }
+    ]
+  }
+}
+```
+
+`amount_usd` is a positive fixed-point decimal string. The policy `target` determines which workspace, users,
+or inference keys the rule applies to. `aggregation: "shared"` combines all matching usage within that target;
+`aggregation: "per_key"` gives each matching inference key its own allowance. Request filters still apply.
+A selected-user target with shared aggregation combines usage across all selected users' keys.
+
+Budgets include matching usage from the whole period, even before the policy existed or while it was disabled.
+Deleting, recreating, moving, or changing a rule does not erase usage. Changing a filter selects different history.
+Historical costs use recorded prices and completion timestamps. All attempts, including fallback and partial
+cancellation usage, count according to their recorded costs. Request filters use the original requested model
+and capabilities, even when a different model serves the request.
+
+The control-plane budget backend is best effort. Data planes export usage and refresh budget state in the
+background, so delayed and in-flight usage can exceed the allowance.
+
+Exhaustion returns `429` with `budget_exhausted` and `Retry-After`. Missing, mismatched, or expired budget state
+allows the request. Bundle and budget polling are independent.
+
+Budget state uses the configured budget backend independently of bundle loading and event export. Keep usage history
+for the full current month even when no budget is configured. Original user, requested-model, and capability facts must
+have been recorded to support historical filters; missing historical facts are not reconstructed.
+
+In the console, add a **Cost budget** rule and use **View spending** on its policy. The view shows
+observed spending, remaining allowance, reset time, and calculation time. Calculation time does not establish
+that every data plane has exported its latest usage.
+
+```bash
+airmux policies status POLICY_ID -w production -f json
+airmux policies status POLICY_ID -w production --rule-index 0 --bucket-id BUCKET_ID
+```
+
+The management endpoint is `GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies/{policy_id}/status`.
+It requires both `policies.read` and `usage.read`. Optional `rule_index`, `bucket_id`, `after_bucket`, and `limit` parameters
+select a rule or page through bucket spending. Rule indices refer to the canonical rule array returned with the status.
+Buckets with no recorded matching usage are absent from the list; querying a particular unused bucket returns zero spending.
+
+Data planes use `POST /api/v1/policy-state/sync` with `{"org_ids": ["organization-uuid"]}` and the operational
+`policy-state.sync` permission. Data-plane roles include this permission. The response uses the standard envelope
+and contains complete budget definitions and exhaustion state for each requested organization.

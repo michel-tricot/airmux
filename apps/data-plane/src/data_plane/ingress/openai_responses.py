@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import json
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, cast
 
-from starlette.responses import JSONResponse, Response
+from pydantic_core import to_json
 
 from data_plane.canonical import (
     CanonicalAdjustment,
@@ -27,8 +26,11 @@ from data_plane.canonical import (
 from data_plane.errors import UnsupportedFeatureError
 from data_plane.formats import openai_responses as fmt
 from data_plane.ingress.base import IngressAdapter, sse
+from data_plane.responses import JSONResponse
 
 if TYPE_CHECKING:
+    from starlette.responses import Response
+
     from data_plane.canonical import CanonicalError, CanonicalResponse
     from data_plane.egress.base import Ctx
 
@@ -127,28 +129,30 @@ class _ResponseItem:
     item_id: str
     call_id: str = ""
     name: str = ""
-    text: str = ""
-    arguments: str = ""
-    signature: str = ""
+    text: list[str] = field(default_factory=list)
+    arguments: list[str] = field(default_factory=list)
+    signature: list[str] = field(default_factory=list)
 
     def body(self, status: str) -> dict[str, Any]:
         if self.kind == "message":
-            content = [] if status == "in_progress" else [fmt.output_text(self.text)]
+            content = [] if status == "in_progress" else [fmt.output_text("".join(self.text))]
             return {"type": "message", "id": self.item_id, "role": "assistant", "status": status, "content": content}
         if self.kind == "reasoning":
-            summary = [] if not self.text else [{"type": "summary_text", "text": self.text}]
+            text = "".join(self.text)
+            signature = "".join(self.signature)
+            summary = [{"type": "summary_text", "text": text}] if text else []
             return {
                 "type": "reasoning",
                 "id": self.item_id,
                 "summary": summary,
-                **({"encrypted_content": self.signature} if self.signature else {}),
+                **({"encrypted_content": signature} if signature else {}),
             }
         return {
             "type": "function_call",
             "id": self.item_id,
             "call_id": self.call_id,
             "name": self.name,
-            "arguments": self.arguments,
+            "arguments": "".join(self.arguments),
             "status": status,
         }
 
@@ -164,7 +168,7 @@ class ResponsesStream:
     def _event(self, kind: str, payload: dict[str, Any]) -> bytes:
         body = {"type": kind, **payload, "sequence_number": self.sequence}
         self.sequence += 1
-        return b"event: " + kind.encode() + b"\n" + sse(json.dumps(body, separators=(",", ":")).encode())
+        return b"event: " + kind.encode() + b"\n" + sse(to_json(body))
 
     def start(self, ctx: Ctx, /) -> list[bytes]:
         self.id, self.model, self.created_at = str(ctx.request_id), ctx.model.model_id, int(time.time())
@@ -186,13 +190,13 @@ class ResponsesStream:
             if delta.type == "tool_call":
                 item = _ResponseItem(index, "function_call", f"fc_{index}", call_id=delta.id or "", name=delta.name or "")
             elif delta.type == "reasoning":
-                item = _ResponseItem(index, "reasoning", delta.id or f"rs_{index}", signature=delta.signature or "")
+                item = _ResponseItem(index, "reasoning", delta.id or f"rs_{index}", signature=[delta.signature] if delta.signature else [])
             else:
                 item = _ResponseItem(index, "message", f"msg_{index}")
             self.items[key] = item
             frames.append(self._event("response.output_item.added", {"output_index": index, "item": item.body("in_progress")}))
         if delta.type == "text":
-            item.text += delta.text
+            item.text.append(delta.text)
             frames.append(
                 self._event(
                     "response.output_text.delta",
@@ -200,9 +204,9 @@ class ResponsesStream:
                 )
             )
         elif delta.type == "reasoning":
-            item.text += delta.text
-            if not opened:
-                item.signature += delta.signature or ""
+            item.text.append(delta.text)
+            if not opened and delta.signature:
+                item.signature.append(delta.signature)
             if delta.text:
                 frames.append(
                     self._event(
@@ -213,7 +217,7 @@ class ResponsesStream:
         else:
             item.call_id = delta.id or item.call_id
             item.name = delta.name or item.name
-            item.arguments += delta.arguments
+            item.arguments.append(delta.arguments)
             if delta.arguments:
                 frames.append(
                     self._event(

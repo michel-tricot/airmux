@@ -6,12 +6,14 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from contract.events import CredentialScope
-from contract.money import UsdRate
+from contract.model_types import RequestCapability
+from contract.money import UsdAmount, UsdRate
 
 PolicyName = Annotated[str, Field(min_length=1, max_length=200)]
 PolicyIdentifier = Annotated[str, Field(min_length=1, max_length=255)]
 FallbackReason = Literal["rate_limited", "upstream_unavailable", "timeout"]
-RequestCapability = Literal["tools", "reasoning", "structured_output"]
+BudgetPeriod = Literal["day", "month"]
+BudgetAggregation = Literal["shared", "per_key"]
 MAX_WORKSPACE_RULES = 100
 
 
@@ -119,6 +121,13 @@ class CredentialAccess(_PolicyModel):
         return scopes
 
 
+class Budget(_PolicyModel):
+    kind: Literal["budget"]
+    amount_usd: UsdAmount = Field(gt=0)
+    period: BudgetPeriod
+    aggregation: BudgetAggregation
+
+
 class Fallback(_PolicyModel):
     kind: Literal["fallback"]
     models: tuple[PolicyIdentifier, ...] = Field(min_length=1, max_length=4)
@@ -135,7 +144,7 @@ class Fallback(_PolicyModel):
 
 
 PolicyAction = Annotated[
-    AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimit | RequestLimits | CredentialAccess | Fallback,
+    AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimit | RequestLimits | CredentialAccess | Fallback | Budget,
     Field(discriminator="kind"),
 ]
 

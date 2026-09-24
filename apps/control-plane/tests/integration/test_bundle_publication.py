@@ -35,6 +35,7 @@ def test_full_flow_to_verified_bundle(tmp_path):
         assert len(bundles) == 1
         assert bundle.bundle_id == bundles[-1].id
         assert [k.key_id for k in bundle.keys] == [key["id"]]
+        assert [k.request_source for k in bundle.keys] == ["inference_key"]
         assert [k.token_hash for k in bundle.keys] == [token_hash(key["token"])]
         assert [k.workspace_id for k in bundle.keys] == [ws]
         (model,) = bundle.catalog.models
@@ -66,7 +67,7 @@ def test_revocation_lands_in_next_bundle(tmp_path):
         ]
         assert c.delete(f"/api/v1/organizations/{org_id}/workspaces/{ws}/inference-keys/{key['id']}", headers=org).status_code == 200
         bundle = BundleV1.model_validate(wait_for_publication(c, org_id, org))
-        assert bundle.keys == []
+        assert bundle.keys == ()
         assert len(asyncio.run(_bundles(cp.db_url, org_id))) == 1
 
 
@@ -89,7 +90,7 @@ def test_inference_key_changes_publish_without_manual_action(tmp_path):
         assert c.delete(f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/inference-keys/{key['id']}", headers=org).status_code == 200
         revoked = BundleV1.model_validate(wait_for_publication(c, org_id, org, created.bundle_id))
         assert revoked.bundle_id != created.bundle_id
-        assert revoked.keys == []
+        assert revoked.keys == ()
 
 
 def test_bundle_manifest_follows_the_management_key_scope(tmp_path):

@@ -3,6 +3,12 @@ import type { RuleForm } from './form';
 export type RuleKind = RuleForm['kind'];
 
 export const ruleTypes = [
+  {
+    kind: 'budget',
+    label: 'Cost budget',
+    formName: 'budget rule',
+    description: 'Limit spending across matching usage in a UTC day or month.',
+  },
   { kind: 'models', label: 'Allowed models', formName: 'allowed models rule', description: 'Limit matching requests to specific models.' },
   {
     kind: 'providers',

@@ -29,6 +29,7 @@ logger = logging.getLogger("data_plane")
 CACHE_TTL_S = 300.0
 NEGATIVE_TTL_S = 15.0
 RATE_LIMIT_COOLDOWN_S = 30.0
+CACHE_SWEEP_INTERVAL_S = 1.0
 
 type CredentialIndex = Mapping[tuple[UUID | None, str], tuple[CredentialEntry, ...]]
 
@@ -85,6 +86,7 @@ class CredentialResolver:
         self._values: dict[tuple[UUID, int], tuple[float, Secret | None]] = {}
         self._locks: dict[tuple[UUID, int], asyncio.Lock] = {}
         self._cooldowns: dict[tuple[UUID, int], float] = {}
+        self._next_sweep_at = 0.0
 
     def forget(self, entry: CredentialEntry) -> None:
         """Drop a cached value after upstream rejected it, so a key rotated out of band is refetched
@@ -98,6 +100,8 @@ class CredentialResolver:
     def available(self, entries: tuple[CredentialEntry, ...]) -> tuple[CredentialEntry, ...]:
         now = time.monotonic()
         self._prune(now)
+        if not self._cooldowns:
+            return entries
         available = tuple(entry for entry in entries if self._cooldowns.get((entry.ref.secret_id, entry.version), 0) <= now)
         if available or not entries:
             return available
@@ -146,6 +150,9 @@ class CredentialResolver:
         return secret
 
     def _prune(self, now: float) -> None:
+        if now < self._next_sweep_at:
+            return
+        self._next_sweep_at = now + CACHE_SWEEP_INTERVAL_S
         for key, (expires, _) in tuple(self._values.items()):
             if expires > now:
                 continue

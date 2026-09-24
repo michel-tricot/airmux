@@ -86,6 +86,7 @@ API_TAGS = [
         "x-displayName": "Usage Events",
         "description": "Inspect usage events across an organization",
     },
+    {"name": "Organization Reports", "x-displayName": "Reports", "description": "Explore usage and requests across an organization or one workspace"},
     {"name": "Organization Activity", "x-displayName": "Activity", "description": "Inspect recent audited changes in an organization"},
     {
         "name": "Organization Model Catalog",
@@ -162,6 +163,7 @@ TAG_GROUPS = [
             "Organization Management Keys",
             "Organization Provider Credentials",
             "Organization Usage Events",
+            "Organization Reports",
             "Organization Activity",
             "Organization Model Catalog",
         ],
@@ -270,7 +272,8 @@ class ControlPlaneApp(FastAPI):
             return self.openapi_schema
         schema = super().openapi()
         schema["x-tagGroups"] = TAG_GROUPS
-        security_schemes = schema.setdefault("components", {}).setdefault("securitySchemes", {})
+        components = schema.setdefault("components", {})
+        security_schemes = components.setdefault("securitySchemes", {})
         security_schemes["SessionCookie"] = {
             "type": "apiKey",
             "in": "cookie",

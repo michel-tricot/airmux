@@ -20,19 +20,31 @@
             "pages": ["docs/index", "docs/quickstart"]
           },
           {
-            "group": "Tutorials",
+            "group": "Use the platform",
             "pages": [
               "docs/guides/openai-sdk",
               "docs/guides/anthropic-sdk",
               "docs/guides/streaming",
               "docs/guides/tools",
               "docs/guides/structured-output",
-              "docs/guides/policy-workflow"
+              "docs/policies",
+              "docs/guides/policy-workflow",
+              "docs/features/model-routing",
+              "docs/features/provider-credentials",
+              "docs/features/usage"
             ]
           },
           {
-            "group": "Features",
-            "pages": ["docs/features/model-routing", "docs/features/provider-credentials", "docs/policies", "docs/features/usage"]
+            "group": "Deploy and operate",
+            "pages": [
+              "docs/deployment/index",
+              "docs/deployment/docker",
+              "docs/deployment/gateway",
+              "docs/deployment/scaling",
+              "docs/deployment/security",
+              "docs/deployment/operations",
+              "docs/deployment/upgrades"
+            ]
           },
           {
             "group": "Concepts",
@@ -42,18 +54,6 @@
               "docs/concepts/authentication",
               "docs/concepts/bundles",
               "docs/concepts/request-lifecycle"
-            ]
-          },
-          {
-            "group": "Deployment",
-            "pages": [
-              "docs/deployment/index",
-              "docs/deployment/gateway",
-              "docs/deployment/docker",
-              "docs/deployment/upgrades",
-              "docs/deployment/scaling",
-              "docs/deployment/operations",
-              "docs/deployment/security"
             ]
           },
           {
@@ -228,6 +228,16 @@
                     "pages": ["GET /api/v1/organizations/{org_id}/events"]
                   },
                   {
+                    "group": "Reports",
+                    "pages": [
+                      "GET /api/v1/organizations/{org_id}/reports/usage",
+                      "GET /api/v1/organizations/{org_id}/reports/attribution",
+                      "GET /api/v1/organizations/{org_id}/reports/filter-options",
+                      "GET /api/v1/organizations/{org_id}/reports/requests",
+                      "GET /api/v1/organizations/{org_id}/reports/requests/{request_id}"
+                    ]
+                  },
+                  {
                     "group": "Activity",
                     "pages": ["GET /api/v1/organizations/{org_id}/activity"]
                   },
@@ -256,7 +266,8 @@
                       "POST /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies",
                       "PUT /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies/order",
                       "PATCH /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies/{policy_id}",
-                      "DELETE /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies/{policy_id}"
+                      "DELETE /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies/{policy_id}",
+                      "GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies/{policy_id}/status"
                     ]
                   },
                   {
@@ -323,7 +334,8 @@
                       "GET /api/v1/bundles/manifest",
                       "GET /api/v1/bundles/{bundle_id}",
                       "POST /api/v1/events",
-                      "POST /api/v1/heartbeat"
+                      "POST /api/v1/heartbeat",
+                      "POST /api/v1/policy-state/sync"
                     ]
                   }
                 ]

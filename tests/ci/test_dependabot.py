@@ -51,6 +51,15 @@ def test_dependabot_covers_bun_workspace_manifests_and_native_lockfile():
     assert manifests <= members
 
 
+def test_dependabot_excludes_only_the_local_airmux_project_from_registry_updates():
+    configuration = yaml.safe_load((ROOT / ".github/dependabot.yml").read_text())
+    sources = tomllib.loads((ROOT / "pyproject.toml").read_text())["tool"]["uv"]["sources"]
+    assert sources["airmux"] == {"workspace": True}
+    for update in configuration["updates"]:
+        expected = [{"dependency-name": "airmux"}] if update["package-ecosystem"] == "uv" else []
+        assert update.get("ignore", []) == expected
+
+
 def test_dependabot_covers_container_manifests():
     dockerfiles = [ROOT / "Dockerfile", *ROOT.glob("deploy/**/Dockerfile*")]
     compose_files = [*ROOT.glob("docker-compose*.yml"), *ROOT.glob("deploy/**/compose*.yml")]
@@ -64,7 +73,6 @@ def test_dependabot_keeps_major_upgrades_focused_and_security_updates_coordinate
     assert update_directories("github-actions") == {ROOT}
     for update in configuration["updates"]:
         assert update["schedule"]["interval"] == "weekly"
-        assert not update.get("ignore")
         if update["package-ecosystem"] in {"uv", "bun"}:
             for group in update["groups"].values():
                 if group.get("applies-to", "version-updates") == "version-updates":

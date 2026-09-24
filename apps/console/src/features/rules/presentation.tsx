@@ -43,6 +43,8 @@ type RuleDefinition = RuleDefinitionInput | RuleDefinitionOutput;
 function actionSummary(definition: RuleDefinition): string {
   const { action } = definition;
   switch (action.kind) {
+    case 'budget':
+      return `$${action.amount_usd} per ${action.period} (${action.aggregation.replace('_', ' ')})`;
     case 'models':
       return `Models: ${action.names.join(', ')}`;
     case 'providers':
@@ -52,7 +54,7 @@ function actionSummary(definition: RuleDefinition): string {
     case 'strict_parameters':
       return 'Require parameter support';
     case 'price_limit':
-      return `Price ≤ $${action.max_input_price_per_mtok} input / $${action.max_output_price_per_mtok} output per 1M tokens`;
+      return `Price ≤ $${action.max_input_price_per_mtok} input · $${action.max_output_price_per_mtok} output per 1M tokens`;
     case 'request_limits':
       return `Output ≤ ${action.max_output_tokens.toLocaleString()} tokens`;
     case 'credential_access':

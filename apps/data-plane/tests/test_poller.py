@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-import httpx
 import pytest
-import respx
+from aioresponses import CallbackResult
 from conftest import ORG, make_config, make_key, make_remote_bundle
 from pydantic import ValidationError
 from starlette.requests import Request
+from yarl import URL
 
 from contract import BundleManifest, BundleManifestEntry, BundleV1, uuid7
 from data_plane.app import readyz
@@ -28,23 +28,22 @@ def _remote_source(tmp_path, holder, http_client) -> RemoteBundleSource:
     return RemoteBundleSource(_source(tmp_path), holder, http_client)
 
 
-def manifest_response(*bundles: BundleV1) -> httpx.Response:
+def manifest_response(*bundles: BundleV1) -> CallbackResult:
     entries = [BundleManifestEntry(org_id=bundle.org_id, bundle_id=bundle.bundle_id) for bundle in bundles]
-    return httpx.Response(200, content=f'{{"data": {BundleManifest(bundles=entries).model_dump_json()}}}')
+    return CallbackResult(status=200, body=f'{{"data": {BundleManifest(bundles=tuple(entries)).model_dump_json()}}}')
 
 
-def bundle_response(bundle: BundleV1) -> httpx.Response:
-    return httpx.Response(200, content=f'{{"data": {bundle.model_dump_json()}}}')
+def bundle_response(bundle: BundleV1) -> CallbackResult:
+    return CallbackResult(status=200, body=f'{{"data": {bundle.model_dump_json()}}}')
 
 
-@respx.mock
-async def test_poll_admits_every_bundle_in_the_authorized_manifest(tmp_path, http_client):
+async def test_poll_admits_every_bundle_in_the_authorized_manifest(http_mock, tmp_path, http_client):
     other_org = uuid7()
     first = make_remote_bundle(key_ids=("first",), org=ORG)
     second = make_remote_bundle(key_ids=("second",), org=other_org)
-    respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(first, second))
-    respx.get(f"http://cp.test/api/v1/bundles/{first.bundle_id}").mock(return_value=bundle_response(first))
-    respx.get(f"http://cp.test/api/v1/bundles/{second.bundle_id}").mock(return_value=bundle_response(second))
+    http_mock.get("http://cp.test/api/v1/bundles/manifest", callback=lambda _url, **_kwargs: manifest_response(first, second), repeat=True)
+    http_mock.get(f"http://cp.test/api/v1/bundles/{first.bundle_id}", callback=lambda _url, **_kwargs: bundle_response(first), repeat=True)
+    http_mock.get(f"http://cp.test/api/v1/bundles/{second.bundle_id}", callback=lambda _url, **_kwargs: bundle_response(second), repeat=True)
     holder = BundleHolder(DataPlaneMetrics())
 
     await _remote_source(tmp_path, holder, http_client).once()
@@ -57,11 +56,10 @@ async def test_poll_admits_every_bundle_in_the_authorized_manifest(tmp_path, htt
     assert {bundle.bundle_id for bundle in cached.bundles} == {first.bundle_id, second.bundle_id}
 
 
-@respx.mock
-async def test_poll_swaps_and_persists(tmp_path, http_client):
+async def test_poll_swaps_and_persists(http_mock, tmp_path, http_client):
     bundle = make_remote_bundle()
-    respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(bundle))
-    respx.get(f"http://cp.test/api/v1/bundles/{bundle.bundle_id}").mock(return_value=bundle_response(bundle))
+    http_mock.get("http://cp.test/api/v1/bundles/manifest", callback=lambda _url, **_kwargs: manifest_response(bundle), repeat=True)
+    http_mock.get(f"http://cp.test/api/v1/bundles/{bundle.bundle_id}", callback=lambda _url, **_kwargs: bundle_response(bundle), repeat=True)
     holder = BundleHolder(DataPlaneMetrics())
 
     await _remote_source(tmp_path, holder, http_client).once()
@@ -73,11 +71,10 @@ async def test_poll_swaps_and_persists(tmp_path, http_client):
     assert [cached_bundle.bundle_id for cached_bundle in cached.bundles] == [bundle.bundle_id]
 
 
-@respx.mock
-async def test_cached_bundle_keeps_serving_when_control_plane_is_unreachable(tmp_path, http_client):
+async def test_cached_bundle_keeps_serving_when_control_plane_is_unreachable(http_mock, tmp_path, http_client):
     bundle = make_remote_bundle()
-    respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(bundle))
-    respx.get(f"http://cp.test/api/v1/bundles/{bundle.bundle_id}").mock(return_value=bundle_response(bundle))
+    http_mock.get("http://cp.test/api/v1/bundles/manifest", callback=lambda _url, **_kwargs: manifest_response(bundle), repeat=True)
+    http_mock.get(f"http://cp.test/api/v1/bundles/{bundle.bundle_id}", callback=lambda _url, **_kwargs: bundle_response(bundle), repeat=True)
     first_holder = BundleHolder(DataPlaneMetrics())
     await _remote_source(tmp_path, first_holder, http_client).once()
 
@@ -87,11 +84,10 @@ async def test_cached_bundle_keeps_serving_when_control_plane_is_unreachable(tmp
     assert restarted_holder.current.snapshots[ORG].bundle.bundle_id == bundle.bundle_id
 
 
-@respx.mock
-async def test_poll_does_not_publish_a_bundle_set_that_failed_to_persist(tmp_path, http_client, monkeypatch):
+async def test_poll_does_not_publish_a_bundle_set_that_failed_to_persist(http_mock, tmp_path, http_client, monkeypatch):
     bundle = make_remote_bundle()
-    respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(bundle))
-    respx.get(f"http://cp.test/api/v1/bundles/{bundle.bundle_id}").mock(return_value=bundle_response(bundle))
+    http_mock.get("http://cp.test/api/v1/bundles/manifest", callback=lambda _url, **_kwargs: manifest_response(bundle), repeat=True)
+    http_mock.get(f"http://cp.test/api/v1/bundles/{bundle.bundle_id}", callback=lambda _url, **_kwargs: bundle_response(bundle), repeat=True)
     holder = BundleHolder(DataPlaneMetrics())
     error = OSError("cache unavailable")
 
@@ -106,11 +102,10 @@ async def test_poll_does_not_publish_a_bundle_set_that_failed_to_persist(tmp_pat
     assert holder.current.snapshots == {}
 
 
-@respx.mock
-async def test_poll_same_bundle_is_a_noop(tmp_path, http_client):
+async def test_poll_same_bundle_is_a_noop(http_mock, tmp_path, http_client):
     bundle = make_remote_bundle()
-    respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(bundle))
-    respx.get(f"http://cp.test/api/v1/bundles/{bundle.bundle_id}").mock(return_value=bundle_response(bundle))
+    http_mock.get("http://cp.test/api/v1/bundles/manifest", callback=lambda _url, **_kwargs: manifest_response(bundle), repeat=True)
+    http_mock.get(f"http://cp.test/api/v1/bundles/{bundle.bundle_id}", callback=lambda _url, **_kwargs: bundle_response(bundle), repeat=True)
     holder = BundleHolder(DataPlaneMetrics())
     source = _remote_source(tmp_path, holder, http_client)
     await source.once()
@@ -121,29 +116,27 @@ async def test_poll_same_bundle_is_a_noop(tmp_path, http_client):
     assert not (tmp_path / "bundles.json").exists()
 
 
-@respx.mock
-async def test_poll_revocation_updates_holder(tmp_path, http_client):
+async def test_poll_revocation_updates_holder(http_mock, tmp_path, http_client):
     first = make_remote_bundle(key_ids=("k1",))
     second = make_remote_bundle(key_ids=())
-    route = respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(first))
-    respx.get(f"http://cp.test/api/v1/bundles/{first.bundle_id}").mock(return_value=bundle_response(first))
-    respx.get(f"http://cp.test/api/v1/bundles/{second.bundle_id}").mock(return_value=bundle_response(second))
+    http_mock.get("http://cp.test/api/v1/bundles/manifest", callback=lambda _url, **_kwargs: manifest_response(first), repeat=False)
+    http_mock.get(f"http://cp.test/api/v1/bundles/{first.bundle_id}", callback=lambda _url, **_kwargs: bundle_response(first), repeat=True)
+    http_mock.get(f"http://cp.test/api/v1/bundles/{second.bundle_id}", callback=lambda _url, **_kwargs: bundle_response(second), repeat=True)
     holder = BundleHolder(DataPlaneMetrics())
     source = _remote_source(tmp_path, holder, http_client)
     await source.once()
     assert make_key("k1")[1].token_hash in holder.current.key_index
 
-    route.mock(return_value=manifest_response(second))
+    http_mock.get("http://cp.test/api/v1/bundles/manifest", callback=lambda _url, **_kwargs: manifest_response(second), repeat=True)
     await source.once()
 
     assert holder.current.key_index == {}
 
 
-@respx.mock
-async def test_poll_rejects_a_bundle_that_fails_schema_validation(tmp_path, http_client):
+async def test_poll_rejects_a_bundle_that_fails_schema_validation(http_mock, tmp_path, http_client):
     bundle = make_remote_bundle()
-    respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(bundle))
-    respx.get(f"http://cp.test/api/v1/bundles/{bundle.bundle_id}").mock(return_value=httpx.Response(200, json={"data": {"schema_version": 1}}))
+    http_mock.get("http://cp.test/api/v1/bundles/manifest", callback=lambda _url, **_kwargs: manifest_response(bundle), repeat=True)
+    http_mock.get(f"http://cp.test/api/v1/bundles/{bundle.bundle_id}", status=200, payload={"data": {"schema_version": 1}}, repeat=True)
     metrics = DataPlaneMetrics()
     holder = BundleHolder(metrics)
 
@@ -176,19 +169,18 @@ async def test_readiness_fails_when_metering_cannot_accept_work():
     assert (await readyz(request)).status_code == 503
 
 
-@respx.mock
-async def test_poll_removes_an_org_absent_from_the_next_manifest(tmp_path, http_client):
+async def test_poll_removes_an_org_absent_from_the_next_manifest(http_mock, tmp_path, http_client):
     other_org = uuid7()
     first = make_remote_bundle(key_ids=("first",), org=ORG)
     second = make_remote_bundle(key_ids=("second",), org=other_org)
-    manifest = respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(first, second))
-    respx.get(f"http://cp.test/api/v1/bundles/{first.bundle_id}").mock(return_value=bundle_response(first))
-    respx.get(f"http://cp.test/api/v1/bundles/{second.bundle_id}").mock(return_value=bundle_response(second))
+    http_mock.get("http://cp.test/api/v1/bundles/manifest", callback=lambda _url, **_kwargs: manifest_response(first, second), repeat=False)
+    http_mock.get(f"http://cp.test/api/v1/bundles/{first.bundle_id}", callback=lambda _url, **_kwargs: bundle_response(first), repeat=True)
+    http_mock.get(f"http://cp.test/api/v1/bundles/{second.bundle_id}", callback=lambda _url, **_kwargs: bundle_response(second), repeat=True)
     holder = BundleHolder(DataPlaneMetrics())
     source = _remote_source(tmp_path, holder, http_client)
     await source.once()
 
-    manifest.mock(return_value=manifest_response(first))
+    http_mock.get("http://cp.test/api/v1/bundles/manifest", callback=lambda _url, **_kwargs: manifest_response(first), repeat=True)
     await source.once()
 
     assert list(holder.current.snapshots) == [ORG]
@@ -198,36 +190,34 @@ async def test_poll_removes_an_org_absent_from_the_next_manifest(tmp_path, http_
     assert [bundle.org_id for bundle in cached.bundles] == [ORG]
 
 
-@respx.mock
-async def test_poll_fetches_only_the_org_whose_bundle_changed(tmp_path, http_client):
+async def test_poll_fetches_only_the_org_whose_bundle_changed(http_mock, tmp_path, http_client):
     other_org = uuid7()
     first = make_remote_bundle(key_ids=("first",), org=ORG)
     changed = make_remote_bundle(key_ids=("changed",), org=ORG)
     second = make_remote_bundle(key_ids=("second",), org=other_org)
-    manifest = respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(first, second))
-    first_fetch = respx.get(f"http://cp.test/api/v1/bundles/{first.bundle_id}").mock(return_value=bundle_response(first))
-    changed_fetch = respx.get(f"http://cp.test/api/v1/bundles/{changed.bundle_id}").mock(return_value=bundle_response(changed))
-    second_fetch = respx.get(f"http://cp.test/api/v1/bundles/{second.bundle_id}").mock(return_value=bundle_response(second))
+    http_mock.get("http://cp.test/api/v1/bundles/manifest", callback=lambda _url, **_kwargs: manifest_response(first, second), repeat=False)
+    http_mock.get(f"http://cp.test/api/v1/bundles/{first.bundle_id}", callback=lambda _url, **_kwargs: bundle_response(first), repeat=True)
+    http_mock.get(f"http://cp.test/api/v1/bundles/{changed.bundle_id}", callback=lambda _url, **_kwargs: bundle_response(changed), repeat=True)
+    http_mock.get(f"http://cp.test/api/v1/bundles/{second.bundle_id}", callback=lambda _url, **_kwargs: bundle_response(second), repeat=True)
     holder = BundleHolder(DataPlaneMetrics())
     source = _remote_source(tmp_path, holder, http_client)
     await source.once()
 
-    manifest.mock(return_value=manifest_response(changed, second))
+    http_mock.get("http://cp.test/api/v1/bundles/manifest", callback=lambda _url, **_kwargs: manifest_response(changed, second), repeat=True)
     await source.once()
 
-    assert first_fetch.call_count == 1
-    assert changed_fetch.call_count == 1
-    assert second_fetch.call_count == 1
+    assert len(http_mock.requests.get(("GET", URL(f"http://cp.test/api/v1/bundles/{first.bundle_id}")), [])) == 1
+    assert len(http_mock.requests.get(("GET", URL(f"http://cp.test/api/v1/bundles/{changed.bundle_id}")), [])) == 1
+    assert len(http_mock.requests.get(("GET", URL(f"http://cp.test/api/v1/bundles/{second.bundle_id}")), [])) == 1
     assert make_key("changed", ORG)[1].token_hash in holder.current.key_index
     assert make_key("second", other_org)[1].token_hash in holder.current.key_index
 
 
-@respx.mock
-async def test_poll_rejects_a_bundle_that_does_not_match_its_manifest_entry(tmp_path, http_client):
+async def test_poll_rejects_a_bundle_that_does_not_match_its_manifest_entry(http_mock, tmp_path, http_client):
     expected = make_remote_bundle(key_ids=("expected",))
     mismatched = make_remote_bundle(key_ids=("mismatched",))
-    respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(expected))
-    respx.get(f"http://cp.test/api/v1/bundles/{expected.bundle_id}").mock(return_value=bundle_response(mismatched))
+    http_mock.get("http://cp.test/api/v1/bundles/manifest", callback=lambda _url, **_kwargs: manifest_response(expected), repeat=True)
+    http_mock.get(f"http://cp.test/api/v1/bundles/{expected.bundle_id}", callback=lambda _url, **_kwargs: bundle_response(mismatched), repeat=True)
     holder = BundleHolder(DataPlaneMetrics())
 
     with pytest.raises(ValueError, match="does not match manifest entry"):
@@ -237,14 +227,13 @@ async def test_poll_rejects_a_bundle_that_does_not_match_its_manifest_entry(tmp_
     assert read_cached_bundles(tmp_path) is None
 
 
-@respx.mock
-async def test_poll_rejects_a_token_hash_shared_by_two_org_bundles(tmp_path, http_client):
+async def test_poll_rejects_a_token_hash_shared_by_two_org_bundles(http_mock, tmp_path, http_client):
     other_org = uuid7()
     first = make_remote_bundle(key_ids=("same",), org=ORG)
     second = make_remote_bundle(key_ids=("same",), org=other_org)
-    respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(first, second))
-    respx.get(f"http://cp.test/api/v1/bundles/{first.bundle_id}").mock(return_value=bundle_response(first))
-    respx.get(f"http://cp.test/api/v1/bundles/{second.bundle_id}").mock(return_value=bundle_response(second))
+    http_mock.get("http://cp.test/api/v1/bundles/manifest", callback=lambda _url, **_kwargs: manifest_response(first, second), repeat=True)
+    http_mock.get(f"http://cp.test/api/v1/bundles/{first.bundle_id}", callback=lambda _url, **_kwargs: bundle_response(first), repeat=True)
+    http_mock.get(f"http://cp.test/api/v1/bundles/{second.bundle_id}", callback=lambda _url, **_kwargs: bundle_response(second), repeat=True)
     holder = BundleHolder(DataPlaneMetrics())
 
     with pytest.raises(ValueError, match="token hash appears in more than one bundle"):

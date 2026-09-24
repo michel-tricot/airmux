@@ -1,0 +1,36 @@
+name: Download artifact
+description: Download an artifact by ID with bounded retries for transient service failures
+inputs:
+  artifact-id:
+    description: Artifact ID
+    required: true
+  path:
+    description: Destination path
+    required: true
+runs:
+  using: composite
+  steps:
+    - id: download-1
+      continue-on-error: true
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+      with:
+        artifact-ids: ${{ inputs.artifact-id }}
+        path: ${{ inputs.path }}
+    - if: steps.download-1.outcome == 'failure'
+      run: sleep 3
+      shell: bash
+    - id: download-2
+      if: steps.download-1.outcome == 'failure'
+      continue-on-error: true
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+      with:
+        artifact-ids: ${{ inputs.artifact-id }}
+        path: ${{ inputs.path }}
+    - if: steps.download-1.outcome == 'failure' && steps.download-2.outcome == 'failure'
+      run: sleep 3
+      shell: bash
+    - if: steps.download-1.outcome == 'failure' && steps.download-2.outcome == 'failure'
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+      with:
+        artifact-ids: ${{ inputs.artifact-id }}
+        path: ${{ inputs.path }}

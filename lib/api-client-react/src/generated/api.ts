@@ -36,6 +36,7 @@ import type {
 
 import type {
   ApplyInstanceTaxonomyParams,
+  AttributionReportOut,
   BundleManifest,
   BundleV1,
   ClaimOut,
@@ -53,6 +54,11 @@ import type {
   DeniedUsageEventV1,
   EnrollOut,
   EventsIngestedOut,
+  FilterOptionsOut,
+  GetAttributionReportParams,
+  GetReportFilterOptionsParams,
+  GetUsageReportParams,
+  GetUsageRequestParams,
   HTTPValidationError,
   HeartbeatOut,
   HeartbeatV1,
@@ -72,6 +78,7 @@ import type {
   ListOrgEventsParams,
   ListOrgManagementKeysParams,
   ListOrgsParams,
+  ListUsageRequestsParams,
   ListUsersParams,
   ListWorkspaceEventsParams,
   ListWorkspaceManagementKeysParams,
@@ -106,9 +113,13 @@ import type {
   PasswordChangedOut,
   PlaygroundSessionEndedOut,
   PlaygroundSessionReadyOut,
+  PolicyBudgetStatus,
   PolicyCreate,
   PolicyOrder,
   PolicyOut,
+  PolicyState,
+  PolicyStateRequest,
+  PolicyStatusParams,
   PolicyUpdate,
   ProviderCredentialIn,
   ProviderCredentialOut,
@@ -116,12 +127,15 @@ import type {
   ProviderCredentialValueIn,
   ProviderIn,
   ProviderOut,
+  RequestDetailOut,
+  RequestPageOut,
   RoutedUsageEventV1,
   ServiceAccountIn,
   SignupIn,
   TaxonomyApplyOut,
   TaxonomyOut,
   TaxonomySpec,
+  UsageReportOut,
   UserOut,
   WorkspaceCreate,
   WorkspaceMemberCandidateOut,
@@ -5820,6 +5834,139 @@ export const useDeletePolicy = <TError = ErrorType<void | HTTPValidationError>,
       return useMutation(getDeletePolicyMutationOptions(options), queryClient);
     }
 
+export const getPolicyStatusUrl = (orgId: string,
+    workspaceRef: string,
+    policyId: string,
+    params?: PolicyStatusParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/organizations/${orgId}/workspaces/${workspaceRef}/policies/${policyId}/status?${stringifiedParams}` : `/api/v1/organizations/${orgId}/workspaces/${workspaceRef}/policies/${policyId}/status`
+}
+
+/**
+ * Required permissions: `policies.read` and `usage.read`.
+ * @summary Policy Status
+ */
+export const policyStatus = async (orgId: string,
+    workspaceRef: string,
+    policyId: string,
+    params?: PolicyStatusParams, options?: Parameters<typeof customFetch>[1]): Promise<PolicyBudgetStatus> => {
+
+  return customFetch<PolicyBudgetStatus>(getPolicyStatusUrl(orgId,workspaceRef,policyId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getPolicyStatusQueryKey = (orgId: string,
+    workspaceRef: string,
+    policyId: string,
+    params?: PolicyStatusParams,) => {
+    return [
+    `/api/v1/organizations/${orgId}/workspaces/${workspaceRef}/policies/${policyId}/status`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getPolicyStatusQueryOptions = <TData = Awaited<ReturnType<typeof policyStatus>>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
+    workspaceRef: string,
+    policyId: string,
+    params?: PolicyStatusParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof policyStatus>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPolicyStatusQueryKey(orgId,workspaceRef,policyId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof policyStatus>>> = ({ signal }) => policyStatus(orgId,workspaceRef,policyId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined && workspaceRef !== null && workspaceRef !== undefined && policyId !== null && policyId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof policyStatus>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PolicyStatusQueryResult = NonNullable<Awaited<ReturnType<typeof policyStatus>>>
+export type PolicyStatusQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function usePolicyStatus<TData = Awaited<ReturnType<typeof policyStatus>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    policyId: string,
+    params: undefined |  PolicyStatusParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof policyStatus>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof policyStatus>>,
+          TError,
+          Awaited<ReturnType<typeof policyStatus>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePolicyStatus<TData = Awaited<ReturnType<typeof policyStatus>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    policyId: string,
+    params?: PolicyStatusParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof policyStatus>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof policyStatus>>,
+          TError,
+          Awaited<ReturnType<typeof policyStatus>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePolicyStatus<TData = Awaited<ReturnType<typeof policyStatus>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    policyId: string,
+    params?: PolicyStatusParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof policyStatus>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Policy Status
+ */
+
+export function usePolicyStatus<TData = Awaited<ReturnType<typeof policyStatus>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    policyId: string,
+    params?: PolicyStatusParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof policyStatus>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPolicyStatusQueryOptions(orgId,workspaceRef,policyId,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getListInstanceProviderCredentialsUrl = () => {
 
 
@@ -7801,6 +7948,678 @@ export function useListActivity<TData = Awaited<ReturnType<typeof listActivity>>
 
 
 
+export const getGetUsageReportUrl = (orgId: string,
+    params?: GetUsageReportParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/organizations/${orgId}/reports/usage?${stringifiedParams}` : `/api/v1/organizations/${orgId}/reports/usage`
+}
+
+/**
+ * Required permission: `usage.read`.
+ * @summary Get Usage Report
+ */
+export const getUsageReport = async (orgId: string,
+    params?: GetUsageReportParams, options?: Parameters<typeof customFetch>[1]): Promise<UsageReportOut> => {
+
+  return customFetch<UsageReportOut>(getGetUsageReportUrl(orgId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetUsageReportQueryKey = (orgId: string,
+    params?: GetUsageReportParams,) => {
+    return [
+    `/api/v1/organizations/${orgId}/reports/usage`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetUsageReportQueryOptions = <TData = Awaited<ReturnType<typeof getUsageReport>>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
+    params?: GetUsageReportParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsageReport>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUsageReportQueryKey(orgId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUsageReport>>> = ({ signal }) => getUsageReport(orgId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUsageReport>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetUsageReportQueryResult = NonNullable<Awaited<ReturnType<typeof getUsageReport>>>
+export type GetUsageReportQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useGetUsageReport<TData = Awaited<ReturnType<typeof getUsageReport>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params: undefined |  GetUsageReportParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsageReport>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUsageReport>>,
+          TError,
+          Awaited<ReturnType<typeof getUsageReport>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetUsageReport<TData = Awaited<ReturnType<typeof getUsageReport>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params?: GetUsageReportParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsageReport>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUsageReport>>,
+          TError,
+          Awaited<ReturnType<typeof getUsageReport>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetUsageReport<TData = Awaited<ReturnType<typeof getUsageReport>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params?: GetUsageReportParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsageReport>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Usage Report
+ */
+
+export function useGetUsageReport<TData = Awaited<ReturnType<typeof getUsageReport>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params?: GetUsageReportParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsageReport>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetUsageReportQueryOptions(orgId,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetAttributionReportUrl = (orgId: string,
+    params?: GetAttributionReportParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/organizations/${orgId}/reports/attribution?${stringifiedParams}` : `/api/v1/organizations/${orgId}/reports/attribution`
+}
+
+/**
+ * Required permission: `usage.read`.
+ * @summary Get Attribution Report
+ */
+export const getAttributionReport = async (orgId: string,
+    params?: GetAttributionReportParams, options?: Parameters<typeof customFetch>[1]): Promise<AttributionReportOut> => {
+
+  return customFetch<AttributionReportOut>(getGetAttributionReportUrl(orgId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAttributionReportQueryKey = (orgId: string,
+    params?: GetAttributionReportParams,) => {
+    return [
+    `/api/v1/organizations/${orgId}/reports/attribution`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetAttributionReportQueryOptions = <TData = Awaited<ReturnType<typeof getAttributionReport>>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
+    params?: GetAttributionReportParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAttributionReport>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAttributionReportQueryKey(orgId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAttributionReport>>> = ({ signal }) => getAttributionReport(orgId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAttributionReport>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetAttributionReportQueryResult = NonNullable<Awaited<ReturnType<typeof getAttributionReport>>>
+export type GetAttributionReportQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useGetAttributionReport<TData = Awaited<ReturnType<typeof getAttributionReport>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params: undefined |  GetAttributionReportParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAttributionReport>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAttributionReport>>,
+          TError,
+          Awaited<ReturnType<typeof getAttributionReport>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAttributionReport<TData = Awaited<ReturnType<typeof getAttributionReport>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params?: GetAttributionReportParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAttributionReport>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAttributionReport>>,
+          TError,
+          Awaited<ReturnType<typeof getAttributionReport>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAttributionReport<TData = Awaited<ReturnType<typeof getAttributionReport>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params?: GetAttributionReportParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAttributionReport>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Attribution Report
+ */
+
+export function useGetAttributionReport<TData = Awaited<ReturnType<typeof getAttributionReport>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params?: GetAttributionReportParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAttributionReport>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetAttributionReportQueryOptions(orgId,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetReportFilterOptionsUrl = (orgId: string,
+    params: GetReportFilterOptionsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/organizations/${orgId}/reports/filter-options?${stringifiedParams}` : `/api/v1/organizations/${orgId}/reports/filter-options`
+}
+
+/**
+ * Required permission: `usage.read`.
+ * @summary Get Report Filter Options
+ */
+export const getReportFilterOptions = async (orgId: string,
+    params: GetReportFilterOptionsParams, options?: Parameters<typeof customFetch>[1]): Promise<FilterOptionsOut> => {
+
+  return customFetch<FilterOptionsOut>(getGetReportFilterOptionsUrl(orgId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetReportFilterOptionsQueryKey = (orgId: string,
+    params?: GetReportFilterOptionsParams,) => {
+    return [
+    `/api/v1/organizations/${orgId}/reports/filter-options`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetReportFilterOptionsQueryOptions = <TData = Awaited<ReturnType<typeof getReportFilterOptions>>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
+    params: GetReportFilterOptionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReportFilterOptions>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetReportFilterOptionsQueryKey(orgId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReportFilterOptions>>> = ({ signal }) => getReportFilterOptions(orgId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getReportFilterOptions>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetReportFilterOptionsQueryResult = NonNullable<Awaited<ReturnType<typeof getReportFilterOptions>>>
+export type GetReportFilterOptionsQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useGetReportFilterOptions<TData = Awaited<ReturnType<typeof getReportFilterOptions>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params: GetReportFilterOptionsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReportFilterOptions>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getReportFilterOptions>>,
+          TError,
+          Awaited<ReturnType<typeof getReportFilterOptions>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetReportFilterOptions<TData = Awaited<ReturnType<typeof getReportFilterOptions>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params: GetReportFilterOptionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReportFilterOptions>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getReportFilterOptions>>,
+          TError,
+          Awaited<ReturnType<typeof getReportFilterOptions>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetReportFilterOptions<TData = Awaited<ReturnType<typeof getReportFilterOptions>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params: GetReportFilterOptionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReportFilterOptions>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Report Filter Options
+ */
+
+export function useGetReportFilterOptions<TData = Awaited<ReturnType<typeof getReportFilterOptions>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params: GetReportFilterOptionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReportFilterOptions>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetReportFilterOptionsQueryOptions(orgId,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListUsageRequestsUrl = (orgId: string,
+    params?: ListUsageRequestsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/organizations/${orgId}/reports/requests?${stringifiedParams}` : `/api/v1/organizations/${orgId}/reports/requests`
+}
+
+/**
+ * Required permission: `usage.read`.
+ * @summary List Usage Requests
+ */
+export const listUsageRequests = async (orgId: string,
+    params?: ListUsageRequestsParams, options?: Parameters<typeof customFetch>[1]): Promise<RequestPageOut> => {
+
+  return customFetch<RequestPageOut>(getListUsageRequestsUrl(orgId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListUsageRequestsInfiniteQueryKey = (orgId: string,
+    params?: ListUsageRequestsParams,) => {
+    return [
+    'infinite', `/api/v1/organizations/${orgId}/reports/requests`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+export const getListUsageRequestsQueryKey = (orgId: string,
+    params?: ListUsageRequestsParams,) => {
+    return [
+    `/api/v1/organizations/${orgId}/reports/requests`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListUsageRequestsInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof listUsageRequests>>, ListUsageRequestsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
+    params?: ListUsageRequestsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsageRequests>>, TError, TData, QueryKey, ListUsageRequestsParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListUsageRequestsInfiniteQueryKey(orgId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listUsageRequests>>, QueryKey, ListUsageRequestsParams['cursor']> = ({ signal, pageParam }) => listUsageRequests(orgId,{...params, 'cursor': pageParam ?? params?.['cursor']}, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsageRequests>>, TError, TData, QueryKey, ListUsageRequestsParams['cursor']> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListUsageRequestsInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof listUsageRequests>>>
+export type ListUsageRequestsInfiniteQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useListUsageRequestsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listUsageRequests>>, ListUsageRequestsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params: undefined |  ListUsageRequestsParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsageRequests>>, TError, TData, QueryKey, ListUsageRequestsParams['cursor']>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listUsageRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listUsageRequests>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListUsageRequestsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listUsageRequests>>, ListUsageRequestsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params?: ListUsageRequestsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsageRequests>>, TError, TData, QueryKey, ListUsageRequestsParams['cursor']>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listUsageRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listUsageRequests>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListUsageRequestsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listUsageRequests>>, ListUsageRequestsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params?: ListUsageRequestsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsageRequests>>, TError, TData, QueryKey, ListUsageRequestsParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Usage Requests
+ */
+
+export function useListUsageRequestsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listUsageRequests>>, ListUsageRequestsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params?: ListUsageRequestsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsageRequests>>, TError, TData, QueryKey, ListUsageRequestsParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListUsageRequestsInfiniteQueryOptions(orgId,params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getListUsageRequestsQueryOptions = <TData = Awaited<ReturnType<typeof listUsageRequests>>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
+    params?: ListUsageRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUsageRequests>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListUsageRequestsQueryKey(orgId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listUsageRequests>>> = ({ signal }) => listUsageRequests(orgId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listUsageRequests>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListUsageRequestsQueryResult = NonNullable<Awaited<ReturnType<typeof listUsageRequests>>>
+export type ListUsageRequestsQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useListUsageRequests<TData = Awaited<ReturnType<typeof listUsageRequests>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params: undefined |  ListUsageRequestsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUsageRequests>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listUsageRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listUsageRequests>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListUsageRequests<TData = Awaited<ReturnType<typeof listUsageRequests>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params?: ListUsageRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUsageRequests>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listUsageRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listUsageRequests>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListUsageRequests<TData = Awaited<ReturnType<typeof listUsageRequests>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params?: ListUsageRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUsageRequests>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Usage Requests
+ */
+
+export function useListUsageRequests<TData = Awaited<ReturnType<typeof listUsageRequests>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params?: ListUsageRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUsageRequests>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListUsageRequestsQueryOptions(orgId,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetUsageRequestUrl = (orgId: string,
+    requestId: string,
+    params?: GetUsageRequestParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/organizations/${orgId}/reports/requests/${requestId}?${stringifiedParams}` : `/api/v1/organizations/${orgId}/reports/requests/${requestId}`
+}
+
+/**
+ * Required permission: `usage.read`.
+ * @summary Get Usage Request
+ */
+export const getUsageRequest = async (orgId: string,
+    requestId: string,
+    params?: GetUsageRequestParams, options?: Parameters<typeof customFetch>[1]): Promise<RequestDetailOut> => {
+
+  return customFetch<RequestDetailOut>(getGetUsageRequestUrl(orgId,requestId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetUsageRequestQueryKey = (orgId: string,
+    requestId: string,
+    params?: GetUsageRequestParams,) => {
+    return [
+    `/api/v1/organizations/${orgId}/reports/requests/${requestId}`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetUsageRequestQueryOptions = <TData = Awaited<ReturnType<typeof getUsageRequest>>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
+    requestId: string,
+    params?: GetUsageRequestParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsageRequest>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUsageRequestQueryKey(orgId,requestId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUsageRequest>>> = ({ signal }) => getUsageRequest(orgId,requestId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined && requestId !== null && requestId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUsageRequest>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetUsageRequestQueryResult = NonNullable<Awaited<ReturnType<typeof getUsageRequest>>>
+export type GetUsageRequestQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useGetUsageRequest<TData = Awaited<ReturnType<typeof getUsageRequest>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    requestId: string,
+    params: undefined |  GetUsageRequestParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsageRequest>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUsageRequest>>,
+          TError,
+          Awaited<ReturnType<typeof getUsageRequest>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetUsageRequest<TData = Awaited<ReturnType<typeof getUsageRequest>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    requestId: string,
+    params?: GetUsageRequestParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsageRequest>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUsageRequest>>,
+          TError,
+          Awaited<ReturnType<typeof getUsageRequest>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetUsageRequest<TData = Awaited<ReturnType<typeof getUsageRequest>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    requestId: string,
+    params?: GetUsageRequestParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsageRequest>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Usage Request
+ */
+
+export function useGetUsageRequest<TData = Awaited<ReturnType<typeof getUsageRequest>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    requestId: string,
+    params?: GetUsageRequestParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsageRequest>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetUsageRequestQueryOptions(orgId,requestId,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getBundleManifestUrl = () => {
 
 
@@ -8018,7 +8837,7 @@ export const getIngestEventsUrl = () => {
 }
 
 /**
- * Ingest up to 1,000 usage events; repeated event IDs are ignored.
+ * Ingest up to 1,000 usage events, skipping unauthorized or semantically invalid events.
  *
  * Required permission: `usage.ingest`.
  * @summary Ingest Usage Events
@@ -8155,6 +8974,78 @@ export const useHeartbeat = <TError = ErrorType<void | HTTPValidationError>,
         TContext
       > => {
       return useMutation(getHeartbeatMutationOptions(options), queryClient);
+    }
+
+export const getSyncPolicyStateUrl = () => {
+
+
+
+
+  return `/api/v1/policy-state/sync`
+}
+
+/**
+ * Required permission: `policy-state.sync`.
+ * @summary Sync Policy State
+ */
+export const syncPolicyState = async (policyStateRequest: PolicyStateRequest, options?: Parameters<typeof customFetch>[1]): Promise<PolicyState> => {
+
+  return customFetch<PolicyState>(getSyncPolicyStateUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(policyStateRequest)
+  }
+);}
+
+
+
+
+
+export const getSyncPolicyStateMutationOptions = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncPolicyState>>, TError,{data: BodyType<PolicyStateRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof syncPolicyState>>, TError,{data: BodyType<PolicyStateRequest>}, TContext> => {
+
+const mutationKey = ['syncPolicyState'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof syncPolicyState>>, {data: BodyType<PolicyStateRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  syncPolicyState(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SyncPolicyStateMutationResult = NonNullable<Awaited<ReturnType<typeof syncPolicyState>>>
+    export type SyncPolicyStateMutationBody = BodyType<PolicyStateRequest>
+    export type SyncPolicyStateMutationError = ErrorType<void | HTTPValidationError>
+
+    /**
+ * @summary Sync Policy State
+ */
+export const useSyncPolicyState = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncPolicyState>>, TError,{data: BodyType<PolicyStateRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof syncPolicyState>>,
+        TError,
+        {data: BodyType<PolicyStateRequest>},
+        TContext
+      > => {
+      return useMutation(getSyncPolicyStateMutationOptions(options), queryClient);
     }
 
 export const getGetInstanceTaxonomyUrl = () => {

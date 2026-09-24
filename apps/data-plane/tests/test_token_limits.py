@@ -67,7 +67,7 @@ def test_output_limits_reject_non_positive_values(dialect, limit):
 
 def test_all_provider_parameter_aliases_come_from_the_bundle() -> None:
     provider = PROVIDER.model_copy(update={"param_aliases": {"max_output_tokens": "provider_output_limit", "temperature": "provider_temperature"}})
-    bundle = make_bundle(catalog=Catalog(providers=[provider], models=[MODEL]))
+    bundle = make_bundle(catalog=Catalog(providers=(provider,), models=(MODEL,)))
     snapshot = BundleSnapshot.from_bundle(bundle)
     assert snapshot.provider_param_aliases == frozenset({"provider_output_limit", "provider_temperature"})
     assert CanonicalRequest.model_validate({**BODY, "max_new_tokens": 9}).extra == {"max_new_tokens": 9}

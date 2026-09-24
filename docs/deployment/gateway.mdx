@@ -6,6 +6,11 @@ description: 'Run the inference gateway with a local taxonomy and no Postgres or
 Run the gateway by itself when you want one inference endpoint with translation, streaming, routing, and local policies.
 You supply the model taxonomy and inference keys through files. Provider credentials resolve from your environment.
 
+<Info>
+  Gateway-only mode is an alternative to the recommended [full platform](/docs/quickstart). It has no console,
+  organizations, workspaces, managed credentials, or usage history. See [Standalone limits](#standalone-limits).
+</Info>
+
 ## Install
 
 You need Python 3.13+ and uv. Install the CLI with the gateway runtime:
@@ -46,6 +51,13 @@ Configuration resolution follows the [configuration reference](/docs/reference/c
 relative to the file containing them, so starting from another directory is safe.
 
 The gateway binds to `127.0.0.1:8080` by default. `--host` and `--port` change the listener.
+
+`--workers N` starts independent worker processes, each with its own
+[outbound connection pool](/docs/reference/configuration#outbound-http-connections). The default is one worker.
+Measure representative traffic before changing worker or pool limits.
+
+Uvicorn access logging is disabled during normal serving. `--dev` enables access logs and Python code reload and
+requires one worker. Usage logs, request IDs, metrics, startup logs, and error diagnostics remain available in both modes.
 
 `validate` checks the configuration, taxonomy, inference keys, adapter support, references, and policy compilation.
 It does not contact providers or prove that their credentials work. A real inference request is the final verification.

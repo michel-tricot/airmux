@@ -1,22 +1,23 @@
 from __future__ import annotations
 
-import json
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, ClassVar, final
 
-import httpx2
-from pydantic import BaseModel
+import aiohttp
+from pydantic_core import to_json
 
 from data_plane.canonical import CanonicalError, GatewayErrorCode, ProviderErrorCode
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
+    from datetime import datetime
     from uuid import UUID
 
     from airmux_runtime.secrets import Secret
-    from contract import CredentialScope, ModelEntry, ProviderEntry
+    from contract import CredentialScope, ModelEntry, ProviderEntry, RequestSource
+    from contract.model_types import RequestCapability
     from data_plane.canonical import CanonicalChunk, CanonicalRequest, CanonicalResponse
 
 
@@ -26,13 +27,12 @@ class ProviderDiagnostic:
     message: str
 
 
-def encode(body: BaseModel | Mapping[str, Any], aliases: Mapping[str, str], extras: Mapping[str, Any]) -> bytes:
+def encode(body: Mapping[str, Any], aliases: Mapping[str, str], extras: Mapping[str, Any]) -> bytes:
     """The wire body: typed fields spelled per the provider's aliases, then the forwardable
     extras merged after them, typed fields winning any collision. Absent fields are omitted:
     a provider must never see a null it would reject."""
-    fields = body.model_dump(mode="json", exclude_none=True) if isinstance(body, BaseModel) else body
-    rendered = {aliases.get(key, key): value for key, value in fields.items() if value is not None}
-    return json.dumps({**dict(extras), **rendered}).encode()
+    rendered = {aliases.get(key, key): value for key, value in body.items() if value is not None}
+    return to_json({**extras, **rendered}, by_alias=False)
 
 
 @dataclass(frozen=True)
@@ -125,12 +125,18 @@ class UpstreamProtocolError(ValueError):
 @dataclass(frozen=True)
 class Ctx:
     request_id: UUID
+    request_started_at: datetime
+    attempt_started_at: datetime
     model: ModelEntry
     provider: ProviderEntry
     stream: bool
     org_id: UUID
     workspace_id: UUID
     key_id: str
+    request_source: RequestSource
+    user_id: UUID
+    requested_model_id: str
+    requested_capabilities: frozenset[RequestCapability]
     credential_id: UUID
     credential_scope: CredentialScope
     bundle_id: UUID
@@ -196,9 +202,9 @@ class EgressAdapter[StateT: StreamState](ABC):
             rendered = CanonicalError(status=502, code=GatewayErrorCode.invalid_upstream_response, message="invalid upstream response")
         elif isinstance(error, UpstreamStreamError):
             rendered = self._provider_error(502, ProviderDiagnostic(code=error.code, message=error.message))
-        elif isinstance(error, httpx2.TimeoutException):
+        elif isinstance(error, TimeoutError):
             rendered = CanonicalError(status=504, code=GatewayErrorCode.upstream_timeout, message="upstream request timed out")
-        elif isinstance(error, httpx2.ConnectError):
+        elif isinstance(error, aiohttp.ClientConnectorError):
             rendered = CanonicalError(status=502, code=GatewayErrorCode.upstream_unreachable, message="upstream service is unreachable")
         else:
             rendered = CanonicalError(status=502, code=GatewayErrorCode.upstream_error, message="upstream request failed")

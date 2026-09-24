@@ -40,6 +40,7 @@ def test_playground_session_is_cookie_only_short_lived_and_reused(tmp_path):
         bundle = BundleV1.model_validate(wait_for_publication(client, org_id, org))
         assert len(bundle.keys) == 1
         assert bundle.keys[0].key_id == session["id"]
+        assert bundle.keys[0].request_source == "playground"
         assert bundle.keys[0].expires_at == expires_at
 
 
@@ -58,7 +59,7 @@ def test_ending_a_playground_session_clears_the_cookie_and_bundle_entry(tmp_path
         assert ended.json()["data"] == {"status": "ended"}
         assert 'airmux_playground=""' in ended.headers["set-cookie"]
         bundle = BundleV1.model_validate(wait_for_publication(client, org_id, org))
-        assert bundle.keys == []
+        assert bundle.keys == ()
 
 
 def test_playground_session_requires_execute_permission(tmp_path):

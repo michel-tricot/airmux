@@ -3,15 +3,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel, ConfigDict
-from starlette.responses import Response
 
 from contract import Capability, Modality, ParameterSupport
 from data_plane.canonical import GatewayErrorCode
 from data_plane.errors import RequestRejectedError
 from data_plane.policy import model_allowed
+from data_plane.responses import JSONResponse
 
 if TYPE_CHECKING:
     from starlette.requests import Request
+    from starlette.responses import Response
 
     from contract import KeyEntry, ModelEntry
     from data_plane.bundle.holder import BundleSnapshot
@@ -55,10 +56,10 @@ def _model_out(model: ModelEntry, snapshot: BundleSnapshot) -> ModelOut:
         gateway=ModelInfoOut(
             context_window=model.context_window,
             max_output_tokens=model.max_output_tokens,
-            input_modalities=model.input_modalities,
-            output_modalities=model.output_modalities,
-            capabilities=model.capabilities,
-            parameter_support=model.parameter_support,
+            input_modalities=list(model.input_modalities),
+            output_modalities=list(model.output_modalities),
+            capabilities=list(model.capabilities),
+            parameter_support=dict(model.parameter_support),
         ),
     )
 
@@ -81,4 +82,4 @@ async def models(request: Request, context: InferenceContext, _ingress: IngressA
                 if model_allowed(model, context.key, context.snapshot)
             ]
         )
-    return Response(result.model_dump_json(), media_type="application/json")
+    return JSONResponse(result)

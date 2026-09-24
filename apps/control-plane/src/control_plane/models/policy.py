@@ -10,12 +10,9 @@ from sqlmodel import Field, col, select
 
 from contract.policies import (
     MAX_WORKSPACE_RULES,
-    AllowedModels,
-    AllowedProviders,
     Fallback,
     PolicyDefinition,
     PolicyEntry,
-    RequestMatch,
     SelectedKeys,
     SelectedUsers,
 )
@@ -26,8 +23,6 @@ from control_plane.models.common import Identified, NotOwnedError, OrgOwned, Tom
 from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RecordCreate, RecordOut, RecordUpdate, RequestModel
 from control_plane.models.inference_key import InferenceKey
-from control_plane.models.model import Model
-from control_plane.models.provider import Provider
 from control_plane.models.user import User
 
 if TYPE_CHECKING:
@@ -111,25 +106,38 @@ class Policy(Record, Identified, OrgOwned, Tombstonable, table=True):
             return await super().save()
 
     async def _validate_configuration(self) -> None:
-        if self.enabled:
-            active_policies = select(Policy).where(
-                col(Policy.workspace_id) == self.workspace_id, col(Policy.enabled).is_(True), col(Policy.id) != self.id
-            )
-            policies = (await current_session().execute(active_policies)).scalars()
-            if sum(len(policy.definition.rules) for policy in policies) + len(self.definition.rules) > MAX_WORKSPACE_RULES:
-                msg = f"A workspace may contain at most {MAX_WORKSPACE_RULES} active policy rules"
-                raise InvalidPolicyError(msg)
+        await self._validate_workspace_capacity()
+        await self._validate_target()
+        self._validate_rule_invariants()
+
+    async def _validate_workspace_capacity(self) -> None:
+        if not self.enabled:
+            return
+        active_policies = select(Policy).where(
+            col(Policy.workspace_id) == self.workspace_id, col(Policy.enabled).is_(True), col(Policy.id) != self.id
+        )
+        policies = (await current_session().execute(active_policies)).scalars()
+        total_rules = sum(len(policy.definition.rules) for policy in policies) + len(self.definition.rules)
+        if total_rules > MAX_WORKSPACE_RULES:
+            msg = f"A workspace may contain at most {MAX_WORKSPACE_RULES} active policy rules"
+            raise InvalidPolicyError(msg)
+
+    async def _validate_target(self) -> None:
         target = self.definition.target
         if isinstance(target, SelectedKeys):
             keys = await InferenceKey.find(InferenceKey.workspace_id == self.workspace_id)
-            if set(target.key_ids) - {str(key.id) for key in keys}:
-                msg = "Selected inference keys must belong to this workspace"
-                raise InvalidPolicyError(msg)
+            if set(target.key_ids).issubset({str(key.id) for key in keys}):
+                return
+            msg = "Selected inference keys must belong to this workspace"
+            raise InvalidPolicyError(msg)
         if isinstance(target, SelectedUsers):
             users = await User.policy_candidates(self.org_id, self.workspace_id)
-            if set(target.user_ids) - {user.id for user in users}:
-                msg = "Selected users must belong to this organization and be eligible for this workspace"
-                raise InvalidPolicyError(msg)
+            if set(target.user_ids).issubset({user.id for user in users}):
+                return
+            msg = "Selected users must belong to this organization and be eligible for this workspace"
+            raise InvalidPolicyError(msg)
+
+    def _validate_rule_invariants(self) -> None:
         rules = self.definition.rules
         if len(set(rules)) != len(rules):
             msg = "Policy rules must be unique"
@@ -137,26 +145,6 @@ class Policy(Record, Identified, OrgOwned, Tombstonable, table=True):
         if sum(isinstance(rule.action, Fallback) for rule in rules) > 1:
             msg = "A policy may contain at most one fallback rule"
             raise InvalidPolicyError(msg)
-        model_names = {
-            name
-            for rule in rules
-            for name in (
-                *(rule.match.models if isinstance(rule.match, RequestMatch) else ()),
-                *(rule.action.names if isinstance(rule.action, AllowedModels) else ()),
-                *(rule.action.models if isinstance(rule.action, Fallback) else ()),
-            )
-        }
-        if model_names:
-            models = await Model.find(col(Model.name).in_(model_names))
-            if model_names != {model.name for model in models}:
-                msg = "Policy models must exist in the catalog"
-                raise InvalidPolicyError(msg)
-        provider_names = {name for rule in rules if isinstance(rule.action, AllowedProviders) for name in rule.action.names}
-        if provider_names:
-            providers = await Provider.find(col(Provider.name).in_(provider_names))
-            if provider_names != {provider.name for provider in providers}:
-                msg = "Policy providers must exist in the catalog"
-                raise InvalidPolicyError(msg)
 
     def entry(self) -> PolicyEntry:
         return PolicyEntry(id=self.id, workspace_id=self.workspace_id, name=self.name, priority=self.priority, definition=self.definition)

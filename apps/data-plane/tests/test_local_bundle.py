@@ -6,12 +6,12 @@ import threading
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, cast
 
-import httpx
 import pytest
-import respx
+from aioresponses import CallbackResult
 from conftest import make_outbox, read_and_close_outbox
 from pydantic import ValidationError
 from starlette.testclient import TestClient
+from yarl import URL
 
 from airmux_runtime.secrets import FileStoreConfig, Secret
 from data_plane.app import create_app
@@ -114,10 +114,9 @@ async def test_a_reload_swaps_on_change_and_survives_a_broken_edit(tmp_path):
     assert holder.current.snapshots[LOCAL_ORG].bundle.bundle_id == served  # the last good bundle keeps serving
 
 
-@respx.mock
-def test_local_mode_serves_end_to_end(tmp_path, monkeypatch):
+def test_local_mode_serves_end_to_end(http_mock, tmp_path, monkeypatch):
     monkeypatch.setenv("P1_API_KEY", "sk-upstream")
-    route = respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=UPSTREAM_REPLY))
+    http_mock.post("https://api.openai.com/v1/chat/completions", status=200, payload=UPSTREAM_REPLY, repeat=True)
     config = Config(bundle=LocalBundleConfig(kind="local", path=_write(tmp_path)))
     with TestClient(create_app(config)) as client:
         assert client.get("/readyz").status_code == 200
@@ -128,13 +127,15 @@ def test_local_mode_serves_end_to_end(tmp_path, monkeypatch):
         )
     assert response.status_code == 200, response.text
     assert response.json()["choices"][0]["message"]["content"] == "hi"
-    assert route.calls.last.request.headers["authorization"] == "Bearer sk-upstream"
+    assert (
+        http_mock.requests.get(("POST", URL("https://api.openai.com/v1/chat/completions")), [])[-1].kwargs["headers"]["authorization"]
+        == "Bearer sk-upstream"
+    )
 
 
-@respx.mock
-def test_local_mode_drops_a_model_parameter_before_the_upstream_request(tmp_path, monkeypatch):
+def test_local_mode_drops_a_model_parameter_before_the_upstream_request(http_mock, tmp_path, monkeypatch):
     monkeypatch.setenv("P1_API_KEY", "sk-upstream")
-    route = respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=UPSTREAM_REPLY))
+    http_mock.post("https://api.openai.com/v1/chat/completions", status=200, payload=UPSTREAM_REPLY, repeat=True)
     bundle = BUNDLE_YML.replace(
         "      capabilities: [streaming]\n",
         "      capabilities: [streaming]\n      parameter_support: {temperature: unsupported}\n",
@@ -147,23 +148,22 @@ def test_local_mode_drops_a_model_parameter_before_the_upstream_request(tmp_path
             json={"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}], "temperature": 0.7},
         )
     assert response.status_code == 200, response.text
-    assert "temperature" not in json.loads(route.calls.last.request.content)
+    assert "temperature" not in json.loads(http_mock.requests.get(("POST", URL("https://api.openai.com/v1/chat/completions")), [])[-1].kwargs["data"])
     assert response.json()["gateway"]["adjustments"] == [
         {"param": "temperature", "action": "dropped", "detail": "gpt-test does not support this parameter"}
     ]
 
 
-@respx.mock
-def test_local_bundle_source_does_not_disable_event_export(tmp_path, monkeypatch):
+def test_local_bundle_source_does_not_disable_event_export(http_mock, tmp_path, monkeypatch):
     monkeypatch.setenv("P1_API_KEY", "sk-upstream")
-    respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=UPSTREAM_REPLY))
+    http_mock.post("https://api.openai.com/v1/chat/completions", status=200, payload=UPSTREAM_REPLY, repeat=True)
     exported = threading.Event()
 
-    def accept_events(_request):
+    def accept_events(_url, **kwargs):
         exported.set()
-        return httpx.Response(200, json={"received": 1, "ingested": 1})
+        return CallbackResult(status=200, payload={"received": 1, "ingested": 1})
 
-    respx.post("http://cp.test/api/v1/events").mock(side_effect=accept_events)
+    http_mock.post("http://cp.test/api/v1/events", callback=accept_events, repeat=True)
     config = Config(
         bundle=LocalBundleConfig(kind="local", path=_write(tmp_path)),
         events=SqliteOutboxConfig(
@@ -183,8 +183,7 @@ def test_local_bundle_source_does_not_disable_event_export(tmp_path, monkeypatch
         assert exported.wait(1)
 
 
-@respx.mock
-def test_app_instances_keep_their_own_runtime(tmp_path, http_client):
+def test_app_instances_keep_their_own_runtime(http_mock, tmp_path, http_client):
     first_path = tmp_path / "first.yml"
     first_path.write_text(BUNDLE_YML.replace("sk-inf-local-dev", "sk-inf-first"), encoding="utf-8")
     second_path = tmp_path / "second.yml"
@@ -219,15 +218,15 @@ def test_app_instances_keep_their_own_runtime(tmp_path, http_client):
             ),
         )
     )
-    route = respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=UPSTREAM_REPLY))
+    http_mock.post("https://api.openai.com/v1/chat/completions", status=200, payload=UPSTREAM_REPLY, repeat=True)
     body = {"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}]}
 
     with TestClient(first) as first_client, TestClient(second) as second_client:
         first_http_client = cast("Runtime", first_client.app_state["runtime"]).http_client
         second_http_client = cast("Runtime", second_client.app_state["runtime"]).http_client
         assert first_http_client is not second_http_client
-        assert not first_http_client.is_closed
-        assert not second_http_client.is_closed
+        assert not first_http_client.closed
+        assert not second_http_client.closed
         first_response = first_client.post(
             "/inf/v1/chat/completions",
             headers={"Authorization": "Bearer sk-inf-first"},
@@ -239,10 +238,12 @@ def test_app_instances_keep_their_own_runtime(tmp_path, http_client):
             json=body,
         )
 
-    assert first_http_client.is_closed
-    assert second_http_client.is_closed
+    assert first_http_client.closed
+    assert second_http_client.closed
     assert first_response.status_code == 200
     assert second_response.status_code == 200
-    assert [call.request.headers["authorization"] for call in route.calls] == ["Bearer sk-first", "Bearer sk-second"]
+    assert [
+        call.kwargs["headers"]["authorization"] for call in http_mock.requests.get(("POST", URL("https://api.openai.com/v1/chat/completions")), [])
+    ] == ["Bearer sk-first", "Bearer sk-second"]
     assert [event.bundle_id for event in _recorded(first_events, http_client)] == [first_bundle.bundle_id]
     assert [event.bundle_id for event in _recorded(second_events, http_client)] == [second_bundle.bundle_id]

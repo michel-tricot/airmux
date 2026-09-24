@@ -7,16 +7,17 @@ import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
+from http import HTTPStatus
 from typing import TYPE_CHECKING
 
-import httpx2
 import tiktoken
 from pydantic import BaseModel
 
 from airmux_runtime.observability import log_event
-from contract import DeniedUsageEventV1, RoutedUsageEventV1, UsdAmount, uuid7
+from contract import DeniedUsageEventV1, RoutedUsageEventV1, TokenUsageSource, UsdAmount, uuid7
 from contract.money import USD_AMOUNT_QUANTUM, ZERO_USD
 from data_plane.canonical import CanonicalTextPart, CanonicalUsage
+from data_plane.requirements import requested_capabilities
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -29,13 +30,14 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("data_plane")
 
-REJECTS_CREDENTIAL = frozenset({httpx2.codes.UNAUTHORIZED, httpx2.codes.FORBIDDEN})
+REJECTS_CREDENTIAL = frozenset({HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN})
 
 
 @dataclass(frozen=True)
 class RequestStart:
     request_id: UUID
     started_at: float
+    request_started_at: datetime
 
 
 def cost_breakdown(usage: CanonicalUsage, model: ModelEntry) -> tuple[UsdAmount, UsdAmount]:
@@ -61,17 +63,17 @@ def estimate_tokens(text: str, model: ModelEntry) -> int:
     """Provider counts win where given; this fills the gap, notably partial accounting after a cancel."""
     if not text:
         return 0
-    return len(_encoding(model.upstream_model).encode(text))
+    return len(_encoding(model.upstream_model).encode_ordinary(text))
 
 
 def status_for_error(error: Exception) -> RoutedUsageStatus:
-    return "timeout" if isinstance(error, httpx2.TimeoutException) else "upstream_error"
+    return "timeout" if isinstance(error, TimeoutError) else "upstream_error"
 
 
 def status_for_upstream(status_code: int) -> RoutedUsageStatus:
     if status_code in REJECTS_CREDENTIAL:
         return "credential_rejected"
-    return "rate_limited" if status_code == httpx2.codes.TOO_MANY_REQUESTS else "upstream_error"
+    return "rate_limited" if status_code == HTTPStatus.TOO_MANY_REQUESTS else "upstream_error"
 
 
 def _text_of(parts: Sequence[object]) -> str:
@@ -102,15 +104,21 @@ def denied_event(
     return DeniedUsageEventV1(
         event_id=uuid7(),
         request_id=start.request_id,
+        request_started_at=start.request_started_at,
         occurred_at=datetime.now(tz=UTC),
         org_id=key.org_id,
         workspace_id=key.workspace_id,
         key_id=key.key_id,
+        request_source=key.request_source,
+        user_id=key.user_id,
+        requested_model_id=request.model,
+        requested_capabilities=requested_capabilities(request),
         model_id=request.model,
         provider_id="",
         bundle_id=bundle_id,
         input_tokens=0,
         output_tokens=0,
+        token_usage_source=TokenUsageSource.NOT_APPLICABLE,
         cost_usd=ZERO_USD,
         max_output_tokens=None,
         latency_ms=int((time.monotonic() - start.started_at) * 1000),
@@ -139,15 +147,22 @@ def usage_event(
     event = RoutedUsageEventV1(
         event_id=uuid7(),
         request_id=ctx.request_id,
+        request_started_at=ctx.request_started_at,
+        attempt_started_at=ctx.attempt_started_at,
         occurred_at=datetime.now(tz=UTC),
         org_id=ctx.org_id,
         workspace_id=ctx.workspace_id,
         key_id=ctx.key_id,
+        request_source=ctx.request_source,
+        user_id=ctx.user_id,
+        requested_model_id=ctx.requested_model_id,
+        requested_capabilities=ctx.requested_capabilities,
         model_id=ctx.model.model_id,
         provider_id=ctx.provider.provider_id,
         bundle_id=ctx.bundle_id,
         input_tokens=usage.input_tokens,
         output_tokens=usage.output_tokens,
+        token_usage_source=TokenUsageSource.ESTIMATED if usage.estimated else TokenUsageSource.PROVIDER,
         max_output_tokens=request.max_output_tokens,
         cache_read_tokens=usage.cache_read_tokens,
         cache_write_tokens=usage.cache_write_tokens,
@@ -173,7 +188,7 @@ def usage_event(
         max_output_tokens=request.max_output_tokens,
         cache_read_tokens=usage.cache_read_tokens,
         cache_write_tokens=usage.cache_write_tokens,
-        estimated=usage.estimated,
+        token_usage_source=event.token_usage_source,
         cost_usd=cost_in + cost_out,
         latency_ms=latency_ms,
     )

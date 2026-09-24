@@ -3,14 +3,16 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import time
 from dataclasses import dataclass
+from datetime import UTC, datetime
+from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, Literal
 
-import httpx2
+import aiohttp
 from pydantic import ValidationError
+from pydantic_core import from_json
 from starlette.responses import Response
 
 from airmux_runtime.observability import log_event
@@ -33,6 +35,7 @@ from data_plane.metrics import upstream_outcome
 from data_plane.outbox import OutboxFullError
 from data_plane.policy import Allow, Deny
 from data_plane.reconcile import reconcile
+from data_plane.requirements import requested_capabilities
 from data_plane.routing import RoutePlan, plan_routes
 from data_plane.runtime import Runtime, runtime_of
 from data_plane.streaming import StreamSession
@@ -49,6 +52,7 @@ if TYPE_CHECKING:
     from data_plane.http import InferenceContext
     from data_plane.ingress import IngressAdapter
     from data_plane.outbox import OutboxReservation
+    from data_plane.policies import CompiledRule
 
 
 logger = logging.getLogger("data_plane")
@@ -81,8 +85,8 @@ async def complete(request: Request, context: InferenceContext, ingress: Ingress
 
 async def _body(request: Request) -> dict[str, Any]:
     try:
-        body = json.loads(await request.body())
-    except (json.JSONDecodeError, UnicodeDecodeError) as error:
+        body = from_json(await request.body())
+    except ValueError as error:
         raise RequestRejectedError(400, GatewayErrorCode.invalid_request, "the request body must be valid JSON") from error
     if not isinstance(body, dict):
         raise RequestRejectedError(400, GatewayErrorCode.invalid_request, "the request body must be a JSON object")
@@ -139,7 +143,9 @@ class RequestExecution:
                 reservation.record(denied_event(self.key, self.snapshot.bundle.bundle_id, self.request, self.start))
             raise RequestRejectedError(plan.status, GatewayErrorCode(plan.code), plan.message)
         try:
-            async with asyncio.timeout(plan.timeout_ms / 1000 if plan.timeout_ms is not None else None):
+            if plan.timeout_ms is None:
+                return await self._execute(plan)
+            async with asyncio.timeout(plan.timeout_ms / 1000):
                 return await self._execute(plan)
         except TimeoutError as error:
             raise RequestRejectedError(504, GatewayErrorCode.fallback_deadline_exceeded, "The fallback time limit was reached") from error
@@ -151,6 +157,8 @@ class RequestExecution:
             for entry in self.runtime.credentials.available(decision.candidates):
                 if attempts >= plan.max_attempts:
                     break
+                if plan.budget_rules:
+                    self._check_budgets(plan.budget_rules)
                 credential = await _resolve_credential(entry, self.runtime.credentials)
                 if credential is None:
                     continue
@@ -170,6 +178,14 @@ class RequestExecution:
             return failure.response
         raise RequestRejectedError(502, GatewayErrorCode.credential_missing)
 
+    def _check_budgets(self, rules: tuple[CompiledRule, ...]) -> None:
+        try:
+            self.runtime.budgets.check(rules, self.key, datetime.now(UTC))
+        except RequestRejectedError:
+            with self.runtime.outbox.reserve() as reservation:
+                reservation.record(denied_event(self.key, self.snapshot.bundle.bundle_id, self.request, self.start))
+            raise
+
     async def _attempt(
         self,
         decision: Allow,
@@ -179,7 +195,10 @@ class RequestExecution:
     ) -> Response | AttemptFailure:
         egress_kind = decision.model.egress_kind or decision.provider.kind
         attempt_started_at = time.monotonic()
-        routed_request = self.request.model_copy(update={"model": decision.model.model_id})
+        attempt_started_at_utc = datetime.now(UTC)
+        routed_request = (
+            self.request if self.request.model == decision.model.model_id else self.request.model_copy(update={"model": decision.model.model_id})
+        )
         request, reconcile_adjustments = reconcile(
             routed_request,
             decision.model,
@@ -188,7 +207,7 @@ class RequestExecution:
         )
         adjustments = [*self.parse_adjustments, *reconcile_adjustments]
         adapter = REGISTRY[egress_kind](decision.provider, credential)
-        ctx = self._ctx(decision, entry)
+        ctx = self._ctx(decision, entry, attempt_started_at_utc, attempt_started_at)
         upstream = _transform(adapter, request, decision.model)
         try:
             if request.stream:
@@ -199,15 +218,18 @@ class RequestExecution:
                     request=request,
                     adjustments=tuple(adjustments),
                     reservation=reservation,
-                    http_client=self.runtime.http_client,
+                    http_client=self.runtime.provider_http_client,
                     metrics=self.runtime.metrics,
                     egress_kind=egress_kind,
                     attempt_started_at=attempt_started_at,
                 )
                 return await session.open(upstream)
-            response = await self.runtime.http_client.request(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body)
-            _check_upstream(response)
-            final = adapter.transform_response(response.content, ctx)
+            async with self.runtime.provider_http_client.request(
+                upstream.method, upstream.url, headers=upstream.headers, data=upstream.body, stream=request.stream
+            ) as response:
+                body = await response.read()
+                _check_upstream(response.status, body)
+            final = adapter.transform_response(body, ctx)
         except UpstreamResponseError as error:
             self.runtime.metrics.observe_upstream(egress_kind, upstream_outcome(error), attempt_started_at)
             status = status_for_upstream(error.status)
@@ -218,21 +240,21 @@ class RequestExecution:
             rendered = self.ingress.render_error(_record_upstream_error(adapter, ctx, error, request, reservation))
             reason: FallbackReason | None = (
                 "rate_limited"
-                if error.status == httpx2.codes.TOO_MANY_REQUESTS
+                if error.status == HTTPStatus.TOO_MANY_REQUESTS
                 else "upstream_unavailable"
-                if error.status >= httpx2.codes.INTERNAL_SERVER_ERROR
+                if error.status >= HTTPStatus.INTERNAL_SERVER_ERROR
                 else None
             )
             rejects_credential = error.status in {
-                httpx2.codes.UNAUTHORIZED,
-                httpx2.codes.FORBIDDEN,
-                httpx2.codes.TOO_MANY_REQUESTS,
+                HTTPStatus.UNAUTHORIZED,
+                HTTPStatus.FORBIDDEN,
+                HTTPStatus.TOO_MANY_REQUESTS,
             }
             return AttemptFailure(rendered, reason, rejects_credential)
-        except httpx2.HTTPError as error:
+        except (aiohttp.ClientError, TimeoutError) as error:
             self.runtime.metrics.observe_upstream(egress_kind, upstream_outcome(error), attempt_started_at)
             rendered = self.ingress.render_error(_record_upstream_error(adapter, ctx, error, request, reservation))
-            return AttemptFailure(rendered, "timeout" if isinstance(error, httpx2.TimeoutException) else "upstream_unavailable", False)
+            return AttemptFailure(rendered, "timeout" if isinstance(error, TimeoutError) else "upstream_unavailable", False)
         except UpstreamProtocolError as error:
             self.runtime.metrics.observe_upstream(egress_kind, "protocol_error", attempt_started_at)
             return self.ingress.render_error(_record_upstream_error(adapter, ctx, error, request, reservation))
@@ -245,25 +267,31 @@ class RequestExecution:
         self.runtime.metrics.observe_upstream(egress_kind, "success", attempt_started_at)
         return self.ingress.render_response(final)
 
-    def _ctx(self, decision: Allow, entry: CredentialEntry) -> Ctx:
+    def _ctx(self, decision: Allow, entry: CredentialEntry, attempt_started_at: datetime, started_at: float) -> Ctx:
         return Ctx(
             request_id=self.start.request_id,
+            request_started_at=self.start.request_started_at,
+            attempt_started_at=attempt_started_at,
             model=decision.model,
             provider=decision.provider,
             stream=self.request.stream,
             org_id=self.key.org_id,
             workspace_id=self.key.workspace_id,
             key_id=self.key.key_id,
+            request_source=self.key.request_source,
+            user_id=self.key.user_id,
+            requested_model_id=self.request.model,
+            requested_capabilities=requested_capabilities(self.request),
             credential_id=entry.ref.secret_id,
             credential_scope=_scope_of(entry),
             bundle_id=self.snapshot.bundle.bundle_id,
-            started_at=self.start.started_at,
+            started_at=started_at,
         )
 
 
-def _check_upstream(response: httpx2.Response) -> None:
-    if response.is_error:
-        raise UpstreamResponseError(response.status_code, response.content)
+def _check_upstream(status: int, body: bytes) -> None:
+    if status >= HTTPStatus.BAD_REQUEST:
+        raise UpstreamResponseError(status, body)
 
 
 async def _resolve_credential(entry: CredentialEntry, resolver: CredentialResolver) -> Secret | None:

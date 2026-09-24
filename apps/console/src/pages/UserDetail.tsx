@@ -16,6 +16,7 @@ import {
 } from '@/features/users/hooks';
 import { LoadingState, ErrorState } from '@/components/shared/states';
 import { DataTable } from '@/components/shared/data-table';
+import { TableLink } from '@/components/shared/table-link';
 import { RoleSelect } from '@/components/shared/role-select';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -150,11 +151,7 @@ export default function UserDetail() {
                 key: 'org',
                 header: 'Organization',
                 cellClassName: 'font-medium',
-                cell: (org) => (
-                  <Link href={`/instance/organizations/${org.id}`} className="hover:text-primary">
-                    {org.name}
-                  </Link>
-                ),
+                cell: (org) => <TableLink href={`/instance/organizations/${org.id}`}>{org.name}</TableLink>,
               },
               { key: 'id', header: 'ID', cellClassName: 'font-mono text-xs text-muted-foreground', cell: (org) => org.id },
               { key: 'created', header: 'Created', cellClassName: 'text-muted-foreground text-sm', cell: (org) => formatDate(org.created_at) },

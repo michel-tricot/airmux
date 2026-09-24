@@ -54,17 +54,17 @@ def _amount_precision(value: Decimal) -> Decimal:
 
 UsdRate = Annotated[
     Decimal,
+    Field(ge=0, max_digits=16, decimal_places=6),
     BeforeValidator(_exact_decimal),
     AfterValidator(_rate_precision),
-    Field(ge=0, max_digits=16, decimal_places=6),
     PlainSerializer(fixed_point, return_type=str, when_used="json"),
     WithJsonSchema(_MONEY_SCHEMA),
 ]
 UsdAmount = Annotated[
     Decimal,
+    Field(ge=0, max_digits=28, decimal_places=12),
     BeforeValidator(_exact_decimal),
     AfterValidator(_amount_precision),
-    Field(ge=0, max_digits=28, decimal_places=12),
     PlainSerializer(fixed_point, return_type=str, when_used="json"),
     WithJsonSchema(_MONEY_SCHEMA),
 ]

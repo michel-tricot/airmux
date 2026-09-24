@@ -5,7 +5,6 @@ from pathlib import Path
 from types import ModuleType, SimpleNamespace
 
 import pytest
-import respx
 from conftest import make_config, mock_control_plane
 from starlette.testclient import TestClient
 
@@ -58,14 +57,13 @@ def test_duplicate_ingress_path_fails_discovery(monkeypatch):
         ingress._discover()
 
 
-@respx.mock
-def test_discovered_ingress_adds_its_route_without_an_application_registry(monkeypatch, tmp_path):
+def test_discovered_ingress_adds_its_route_without_an_application_registry(http_mock, monkeypatch, tmp_path):
     class FutureIngress(OpenAIChatCompletionsIngress):
         dialect = "future"
         path = "/inf/v1/future"
 
     monkeypatch.setattr(app, "INGRESS", {**ingress.REGISTRY, FutureIngress.dialect: FutureIngress()})
-    mock_control_plane()
+    mock_control_plane(http_mock)
 
     gateway = app.create_app(make_config(tmp_path))
 

@@ -7,7 +7,8 @@ if TYPE_CHECKING:
 
 
 class RequestRejectedError(Exception):
-    def __init__(self, status: int, code: GatewayErrorCode, message: str = "") -> None:
+    def __init__(self, status: int, code: GatewayErrorCode, message: str = "", *, retry_after: int | None = None) -> None:
+        self.retry_after = retry_after
         self.status = status
         self.code = code
         self.message = message

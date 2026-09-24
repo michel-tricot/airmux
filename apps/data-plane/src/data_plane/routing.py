@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from contract.policies import Budget
 from data_plane.policy import Allow, Deny, evaluate, evaluate_policies
 
 if TYPE_CHECKING:
@@ -10,6 +11,7 @@ if TYPE_CHECKING:
     from contract.policies import FallbackReason
     from data_plane.bundle.holder import BundleSnapshot
     from data_plane.canonical import CanonicalRequest
+    from data_plane.policies import CompiledRule
 
 
 @dataclass(frozen=True)
@@ -19,6 +21,7 @@ class RoutePlan:
     retry_on: tuple[FallbackReason, ...]
     max_attempts: int
     timeout_ms: int | None
+    budget_rules: tuple[CompiledRule, ...]
 
 
 def plan_routes(request: CanonicalRequest, key: KeyEntry, snapshot: BundleSnapshot) -> RoutePlan | Deny:
@@ -27,10 +30,11 @@ def plan_routes(request: CanonicalRequest, key: KeyEntry, snapshot: BundleSnapsh
     if isinstance(primary, Deny):
         return primary
     fallback = evaluation.fallback
+    budget_rules = tuple(rule for rule in evaluation.rules if isinstance(rule.definition.action, Budget))
     if fallback is None:
-        return RoutePlan(primary, (), (), len(primary.candidates), None)
+        return RoutePlan(primary, (), (), len(primary.candidates), None, budget_rules)
     decisions = (
         evaluate(request.model_copy(update={"model": model}), key, snapshot, evaluation.rules) for model in fallback.models if model != request.model
     )
     backups = tuple(decision for decision in decisions if isinstance(decision, Allow))
-    return RoutePlan(primary, backups, fallback.on, fallback.max_attempts, fallback.timeout_ms)
+    return RoutePlan(primary, backups, fallback.on, fallback.max_attempts, fallback.timeout_ms, budget_rules)

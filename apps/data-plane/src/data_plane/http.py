@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from http import HTTPStatus
 from typing import TYPE_CHECKING, cast
 
@@ -40,7 +41,10 @@ type InferenceEndpoint = Callable[[Request, InferenceContext, IngressAdapter], A
 
 
 def render_rejection(ingress: IngressAdapter, error: RequestRejectedError) -> Response:
-    return ingress.render_error(CanonicalError(status=error.status, code=error.code, message=error.message))
+    response = ingress.render_error(CanonicalError(status=error.status, code=error.code, message=error.message))
+    if error.retry_after is not None:
+        response.headers["retry-after"] = str(error.retry_after)
+    return response
 
 
 class InferenceRoute(Route):
@@ -66,7 +70,7 @@ class ResponseHeadersMiddleware:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
-        start = RequestStart(request_id=uuid7(), started_at=time.monotonic())
+        start = RequestStart(request_id=uuid7(), started_at=time.monotonic(), request_started_at=datetime.now(UTC))
         route = self._route(scope)
         stream = False
         scope["state"] = {

@@ -6,7 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel
 from sqlalchemy import CheckConstraint, ForeignKeyConstraint
 from sqlalchemy.dialects.postgresql import insert
-from sqlmodel import Field, col
+from sqlmodel import Field
 
 from control_plane.authz import WorkspaceRole
 from control_plane.db import current_session
@@ -45,13 +45,6 @@ class WorkspaceMembership(Record, Tombstonable, table=True):
             .on_conflict_do_nothing(index_elements=["user_id", "workspace_id"])
         )
         await current_session().execute(statement)
-
-    @classmethod
-    async def roles_for_workspace_users(cls, workspace_id: UUID, user_ids: tuple[UUID, ...]) -> dict[UUID, WorkspaceRole]:
-        if not user_ids:
-            return {}
-        memberships = await cls.find(cls.workspace_id == workspace_id, col(cls.user_id).in_(user_ids))
-        return {membership.user_id: WorkspaceRole(membership.role) for membership in memberships}
 
     async def delete(self) -> None:
         from control_plane.models.inference_key import InferenceKey  # noqa: PLC0415 membership and credential models meet at the operation

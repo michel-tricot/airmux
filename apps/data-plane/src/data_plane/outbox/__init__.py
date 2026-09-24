@@ -9,7 +9,7 @@ from data_plane.outbox.file import FileOutbox
 from data_plane.outbox.sqlite import SqliteOutbox
 
 if TYPE_CHECKING:
-    import httpx2
+    import aiohttp
 
     from data_plane.config import OutboxConfig
     from data_plane.metrics import DataPlaneMetrics
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 __all__ = ["DevNullOutbox", "EventOutbox", "FileOutbox", "OutboxFullError", "OutboxReservation", "SqliteOutbox", "build_outbox"]
 
 
-def build_outbox(config: OutboxConfig, http_client: httpx2.AsyncClient, metrics: DataPlaneMetrics) -> EventOutbox:
+def build_outbox(config: OutboxConfig, http_client: aiohttp.ClientSession, metrics: DataPlaneMetrics) -> EventOutbox:
     if isinstance(config, DevNullOutboxConfig):
         return DevNullOutbox(metrics)
     if isinstance(config, FileOutboxConfig):

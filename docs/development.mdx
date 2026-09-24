@@ -110,6 +110,30 @@ Keep the copied `tests/...` layout so the suite can import its support modules. 
 test root; `-I` ignores the checkout's Python environment settings. The suite verifies that gateway modules load from
 the installed tool environment and sends buffered and streaming requests through the installed gateway.
 
+## Executable documentation checks
+
+These focused tests read the examples directly from their documents. They run in the existing CI suites and use local
+fixtures or the installed candidate wheel, with no paid provider requests:
+
+| Examples | Tests |
+| --- | --- |
+| CLI inventory, provider source discovery, repository paths, and supported Replit commands | `tests/documentation` |
+| Portable installation recipe and installed CLI inventory | `tests/installation/integration/test_documented_installation.py` |
+| README and gateway initialization, startup, and curl requests | `tests/acceptance/gateway/test_documented_gateway.py` |
+| Pagination with a cursor from a real preceding page | `tests/acceptance/full_stack/scenarios/test_documented_pagination.py` |
+| Standalone container configuration mount and inference | `tests/deployment/test_gateway_container.py` |
+
+The installation recipe test pins its minimal runner dependencies to `uv.lock` and runs offline. CI primes metadata for
+all exported dependencies before the tests; for a local run, prepare the same cache after `uv sync --all-packages --frozen`:
+
+```bash
+uv export --locked --all-packages --all-groups --no-emit-workspace --no-hashes --output-file /tmp/airmux-doc-constraints.txt
+uv pip compile /tmp/airmux-doc-constraints.txt --quiet > /dev/null
+```
+
+Installation checks require `AIRMUX_INSTALL_BIN` to name the installed candidate executable. Gateway acceptance uses `AIRMUX_GATEWAY_BIN` when set;
+the full-stack harness finds `airmux` on `PATH`. Container checks use `DEPLOYMENT_IMAGE` from the deployment suite.
+
 ## Workflow checks
 
 The CI `quality` job runs on both draft and ready pull requests. It runs actionlint 1.7.12 with ShellCheck for embedded

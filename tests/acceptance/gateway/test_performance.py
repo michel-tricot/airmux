@@ -10,9 +10,12 @@ from typing import TYPE_CHECKING
 
 import httpx2
 import performance
+import performance_resources
 import pytest
 import yaml
 from performance import Measurement, Revision, Settings, comparisons, request, run_revision, run_round
+from performance_scaling import CASES, ScalingMeasurement, summarize
+from performance_upstream import stream_events
 from pydantic import ValidationError
 from typer.testing import CliRunner
 
@@ -200,7 +203,7 @@ def test_overhead_rejects_unmatched_controls(field: str):
     timings["direct_after"][field] = {
         "revision": "candidate",
         "round": 2,
-        "provider_protocol": "http2",
+        "provider_protocol": "https",
         "scenario": "buffered",
         "concurrency": 8,
     }[field]
@@ -340,7 +343,7 @@ def test_performance_round_uses_the_supplied_revision_harness(gateway: Gateway, 
         performance.WORKLOADS
     )
     assert all(measurement.revision == "base" and measurement.round == 1 for measurement in result.measurements)
-    assert len(result.overhead) == 12
+    assert len(result.overhead) == 13
     assert all(min(timings.direct_before.latency_ms) > 40 for timings in result.overhead)
     bundle = yaml.safe_load((directory / "bundle.yml").read_text())
     assert bundle["keys"][0]["token"] == "sk-inf-revision-harness"
@@ -360,13 +363,13 @@ async def test_performance_upstream_preserves_idle_connections_between_controls(
         provider.close()
 
 
-async def test_performance_upstream_negotiates_http2_without_rotating_at_1000_requests(tmp_path: Path):
-    provider = performance.FastProvider(tmp_path, "http2", Settings(1, 1, 0))
+async def test_performance_upstream_negotiates_https_without_rotating_at_1000_requests(tmp_path: Path):
+    provider = performance.FastProvider(tmp_path, "https", Settings(1, 1, 0))
     try:
         provider.start()
-        async with httpx2.AsyncClient(http2=True, verify=provider.ssl_context(), trust_env=False) as client:
+        async with httpx2.AsyncClient(verify=provider.ssl_context(), trust_env=False) as client:
             responses = [await client.get(provider.url + "/readyz") for _ in range(1002)]
-        assert all(response.status_code == 200 and response.http_version == "HTTP/2" for response in responses)
+        assert all(response.status_code == 200 and response.http_version == "HTTP/1.1" for response in responses)
         assert responses[0].extensions["network_stream"] is responses[-1].extensions["network_stream"]
     finally:
         provider.close()
@@ -386,16 +389,76 @@ async def test_performance_upstream_supports_sized_payloads_and_chunked_streams(
         provider.close()
 
 
-def test_workloads_cover_pool_saturation_and_http2():
+def test_workloads_cover_pool_saturation_and_https():
     assert ("buffered_devnull", 128, "http1") in performance.WORKLOADS
-    assert any(provider_protocol == "http2" and scenario != "upstream" for scenario, _concurrency, provider_protocol in performance.WORKLOADS)
+    assert any(provider_protocol == "https" and scenario != "upstream" for scenario, _concurrency, provider_protocol in performance.WORKLOADS)
 
 
 def test_workload_filter_selects_one_scenario():
     settings = Settings(1, 1, 0, scenario="stream")
-    assert performance.workloads(settings) == (("stream", 1, "http1"), ("stream", 32, "http2"))
+    assert performance.workloads(settings) == (("stream", 1, "http1"), ("stream", 32, "https"))
 
 
 def test_devnull_only_result_accepts_zero_durable_events():
     result = performance.RevisionMeasurements(measurements=[], overhead=[], metering_events=0)
     assert result.metering_events == 0
+
+
+def test_scaling_workloads_cover_workers_pools_concurrency_and_protocols():
+    assert len(CASES) == 24
+    assert len(set(CASES)) == 24
+    assert {case.workers for case in CASES} == {1, 2, 4}
+    assert {case.max_connections for case in CASES} == {100, 256}
+    assert {case.concurrency for case in CASES} == {32, 128}
+    assert {case.protocol for case in CASES} == {"http1", "https"}
+
+
+def test_stream_fixture_emits_the_requested_content_event_count():
+    events = stream_events("x" * 8192, 256)
+    content = [json.loads(event[6:]) for event in events[:-3]]
+    assert len(content) == 256
+    assert "".join(event["choices"][0]["delta"]["content"] for event in content) == "x" * 8192
+    assert events[-1] == b"data: [DONE]\n\n"
+
+
+def test_process_cpu_totals_exclude_children_from_the_load_generator(monkeypatch):
+    monkeypatch.setattr(performance_resources, "process_times", lambda: {1: (0, 5.0), 2: (1, 2.0), 3: (2, 3.0), 4: (1, 4.0)})
+    assert performance_resources.process_tree_times({"client": 1, "gateway": 2, "provider": 4}) == {
+        "client": {1: 5.0},
+        "gateway": {2: 2.0, 3: 3.0},
+        "provider": {4: 4.0},
+    }
+
+
+def test_scaling_report_rejects_mislabeled_cases():
+    with pytest.raises(ValidationError, match="match"):
+        ScalingMeasurement(case=CASES[0], overhead=overhead("candidate", 1, 10, 20))
+
+
+def test_scaling_records_actual_worker_cpu_and_https_connections(gateway: Gateway, tmp_path: Path):
+    case = next(case for case in CASES if (case.workers, case.max_connections, case.concurrency, case.protocol) == (2, 256, 32, "https"))
+    settings = Settings(
+        0.2,
+        1,
+        0,
+        scenario="buffered_devnull",
+        workers=case.workers,
+        max_connections=case.max_connections,
+        concurrency=case.concurrency,
+        provider_protocol=case.protocol,
+        observe_resources=True,
+    )
+    result = run_revision(tmp_path / "scaling", Path(gateway.executable), "candidate", 1, settings)
+    (measured,) = result.overhead
+    resources = measured.proxied.resources
+    assert resources is not None
+    assert len(resources.gateway_cpu_seconds_by_pid) >= 3
+    assert resources.cpu_seconds["gateway"] > 0
+    assert 1 <= resources.provider_connections <= case.concurrency * case.workers
+    measurement = ScalingMeasurement(case=case, overhead=measured)
+    (summary,) = summarize([measurement])
+    assert summary["workers"] == 2
+    assert summary["max_connections"] == 256
+    assert summary["overhead_mean_ms"] == measured.metrics()["overhead_mean_ms"]
+    with pytest.raises(ValueError, match="duplicate"):
+        summarize([measurement, measurement])
