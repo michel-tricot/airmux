@@ -30,7 +30,7 @@ start_console() {
     *) echo 'AIRMUX_CONSOLE_URL must start with http:// or https://' >&2; exit 1 ;;
   esac
   export NGINX_RESOLVER PUBLIC_SCHEME
-  envsubst "\${CONTROL_PLANE_UPSTREAM} \${DATA_PLANE_UPSTREAM} \${NGINX_RESOLVER} \${PUBLIC_SCHEME}" \
+  envsubst "\${AIRMUX_CONSOLE_ROOT} \${CONTROL_PLANE_UPSTREAM} \${DATA_PLANE_UPSTREAM} \${NGINX_RESOLVER} \${PUBLIC_SCHEME}" \
     < /app/deploy/docker/nginx.conf.template > /tmp/airmux-nginx.conf
   exec nginx -c /tmp/airmux-nginx.conf -g 'daemon off;'
 }

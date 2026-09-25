@@ -30,10 +30,10 @@ def test_replit_cli_examples_exist():
 
 
 def test_compose_recipe_uses_the_published_image():
-    recipe = code_block("docs/quickstart.mdx", "export AIRMUX_VERSION=X.Y.Z")
-    assert "docker-compose.yml" in recipe
-    assert ".env.example" in recipe
-    assert "v${AIRMUX_VERSION}" in recipe
+    recipe = code_block("docs/quickstart.mdx", "curl -fsSLO")
+    assert "releases/latest/download/docker-compose.yml" in recipe
+    assert recipe.count("curl ") == 1
+    assert ".env.example" not in recipe
     assert "docker build" not in recipe
 
 

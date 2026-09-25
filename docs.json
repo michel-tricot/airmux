@@ -38,13 +38,12 @@
             "pages": [
               "docs/deployment/index",
               "docs/deployment/docker",
-              "docs/deployment/customization",
+              "docs/deployment/without-docker",
               "docs/deployment/gateway",
               "docs/deployment/scaling",
               "docs/deployment/security",
               "docs/deployment/opentelemetry",
-              "docs/deployment/operations",
-              "docs/deployment/upgrades"
+              "docs/deployment/operations"
             ]
           },
           {

@@ -19,7 +19,7 @@ Every service and short-lived startup job references `AIRMUX_IMAGE`, so pin that
 coordinated deployments. The split stack follows the same [database and catalog startup sequence](/docs/deployment/docker#startup-and-database-changes)
 as the default stack. Both gateways start after the control plane becomes healthy. The webapp proxy distributes `/inf/`
 requests between them.
-The same optional [Docker configuration directory](/docs/deployment/customization) is mounted in every role.
+The same optional [Docker configuration directory](/docs/deployment/docker#customize-the-runtime-yaml) is mounted in every role.
 
 Install the [`airmux` CLI](/docs/reference/cli#installation) on the machine you use to manage the instance.
 
@@ -51,6 +51,25 @@ bundle publication, and replica behavior are proven.
 
 Do not use `docker compose --scale` for gateways. Each gateway needs an explicit service and its own identity, bundle
 cache, and usage outbox volume.
+
+## Upgrade and roll back
+
+Use one release digest for every role. Read its release notes, compare any
+[custom runtime YAML](/docs/deployment/docker#customize-the-runtime-yaml) with the new image, and back up Postgres,
+`runtime-credentials`, `provider-secrets`, and every gateway state volume together. A database migration may prevent
+the previous image from starting, so record the current digest and confirm the backup can be restored.
+
+Remove gateways from public traffic and let active streams finish. Use the target release's split and base Compose
+files, set `AIRMUX_IMAGE` to the target digest, then run:
+
+```bash
+docker compose -p airmux-split -f docker-compose.split.yml up -d --wait
+```
+
+Wait for the control plane and both gateways to report ready, then restore traffic and check a buffered request, a
+streaming request, and usage export. If verification fails after migration, stop the new stack, restore Postgres and
+all state volumes from the same recovery point, and redeploy the previous digest. Do not run the previous image on
+the migrated database.
 
 ## Move from `airmux` to split
 

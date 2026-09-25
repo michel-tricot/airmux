@@ -8,6 +8,7 @@ One release provides one Python distribution and one container image. Choose how
 | Shape | Purpose | Guide |
 | --- | --- | --- |
 | `airmux` (recommended) | Full platform on one application host plus Postgres | [Docker Compose](/docs/deployment/docker) |
+| Without Docker | Full platform from source on a Linux host with Postgres and Nginx | [Deploy without Docker](/docs/deployment/without-docker) |
 | Split | Independent webapp, control-plane, and gateway processes with separately scalable gateways | [Separate services](/docs/deployment/scaling) |
 | Gateway only | Local-file inference without Postgres, a control plane, or usage history | [Gateway only](/docs/deployment/gateway) |
 
@@ -20,13 +21,13 @@ not permit mixed releases: every role must use the same image digest until cross
   <Card title="Docker Compose" icon="container-storage" href="/docs/deployment/docker">
     Run `airmux` and Postgres on one host.
   </Card>
-  <Card title="Upgrade and rollback" icon="rotate" href="/docs/deployment/upgrades">
-    Plan an upgrade and roll back from a consistent recovery point if verification fails.
+  <Card title="Docker upgrade and rollback" icon="rotate" href="/docs/deployment/docker#upgrade-and-roll-back">
+    Replace the image and roll back from a consistent recovery point if verification fails.
   </Card>
 </Columns>
 
 For the recommended single-container deployment, run the CLI inside the image with `docker compose exec airmux airmux ...`.
-See [Docker customization](/docs/deployment/customization) to override the bundled runtime YAML.
+See [Docker Compose](/docs/deployment/docker#customize-the-runtime-yaml) to override the bundled runtime YAML.
 
 ## Full-platform production requirements
 
@@ -72,5 +73,5 @@ docker compose exec airmux airmux doctor
 `quickstart` verifies a real inference request through the packaged proxy. Check the external HTTPS route separately
 when deploying behind another proxy.
 
-Continue with [operations](/docs/deployment/operations), [security](/docs/deployment/security), and
-[upgrade and rollback](/docs/deployment/upgrades) before production traffic.
+Continue with [operations](/docs/deployment/operations), [security](/docs/deployment/security), and the
+[upgrade steps for Docker](/docs/deployment/docker#upgrade-and-roll-back) before production traffic.

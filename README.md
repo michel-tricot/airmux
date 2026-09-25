@@ -33,20 +33,11 @@ persistent usage history with estimated cost.
 ## Quickstart
 
 Run the full platform on one machine. You need Docker with Compose 2.24.4+ and an API key for at least one provider.
-Choose a [published release](https://github.com/michel-tricot/airmux/releases) and use its version for both the Compose
-file and image:
+The latest [published release](https://github.com/michel-tricot/airmux/releases) includes a Compose file pinned to its
+verified image:
 
 ```bash
-export AIRMUX_VERSION=X.Y.Z
-mkdir airmux && cd airmux
-curl -fsSLo docker-compose.yml "https://raw.githubusercontent.com/michel-tricot/airmux/v${AIRMUX_VERSION}/docker-compose.yml"
-curl -fsSLo .env.example "https://raw.githubusercontent.com/michel-tricot/airmux/v${AIRMUX_VERSION}/.env.example"
-cp .env.example .env
-```
-
-In `.env`, replace `X.Y.Z` with the same release version and set `POSTGRES_PASSWORD`. Then start the stack and claim it:
-
-```bash
+curl -fsSLO https://github.com/michel-tricot/airmux/releases/latest/download/docker-compose.yml
 docker compose up -d --wait
 docker compose exec airmux airmux quickstart --url http://localhost:8080
 ```
@@ -55,11 +46,11 @@ Enter a provider key when prompted. `quickstart` creates the owner account, orga
 provider credential; mints an inference key; and proves the installation with a real model request. Open
 [localhost:8080](http://localhost:8080) for the console, where the request appears with its model, tokens, and estimated cost.
 
-> [!IMPORTANT]
+> [!NOTE]
 > Requests through `airmux` call real providers and are billed by them.
 
 The [quickstart guide](docs/quickstart.mdx) continues through finding that request in the console. See
-[customize the Docker deployment](docs/deployment/customization.mdx) when you need to change runtime settings.
+[customize the Docker deployment](docs/deployment/docker.mdx#customize-the-runtime-yaml) when you need to change runtime settings.
 
 | Goal | Command |
 | --- | --- |
@@ -167,8 +158,9 @@ shapes.
 | Control routing, access, and spending | [Workspace policies](docs/policies.mdx) |
 | Understand usage and cost | [Usage and activity](docs/features/usage.mdx) |
 | Deploy `airmux` | [Deployment overview](docs/deployment/index.mdx) |
-| Customize a Docker deployment | [Docker customization](docs/deployment/customization.mdx) |
-| Upgrade or roll back a deployment | [Upgrade and rollback](docs/deployment/upgrades.mdx) |
+| Deploy without Docker | [Linux host deployment](docs/deployment/without-docker.mdx) |
+| Customize a Docker deployment | [Docker Compose](docs/deployment/docker.mdx#customize-the-runtime-yaml) |
+| Upgrade or roll back a deployment | [Docker Compose](docs/deployment/docker.mdx#upgrade-and-roll-back), [without Docker](docs/deployment/without-docker.mdx#upgrade-and-roll-back), or [separate services](docs/deployment/scaling.mdx#upgrade-and-roll-back) |
 | Call the management API | [Management API](docs/reference/management-api.mdx) |
 | Work on the project | [Contributing](CONTRIBUTING.md) and [Development guide](docs/development.mdx) |
 

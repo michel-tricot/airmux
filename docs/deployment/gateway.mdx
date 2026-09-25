@@ -74,3 +74,16 @@ advanced settings.
 Standalone mode has no management API, webapp, or managed usage history. Its keys share one local workspace, and
 provider credentials come from environment variables. Usage events are discarded by default; see the
 [event outbox settings](/docs/reference/configuration#event-outboxes) to write them to a local file.
+
+## Upgrade and roll back
+
+Back up `.airmux/` and record the current release before changing the CLI. Check out the target release tag, run
+`uv sync --package airmux --frozen`, and validate the existing configuration:
+
+```bash
+uv run airmux gateway validate --config .airmux/airmux.yml
+uv run airmux gateway serve --config .airmux/airmux.yml
+```
+
+Before removing the backup, make a buffered and streaming request. If the new release fails, reinstall the previous
+release and restore its matching `.airmux/` directory. Stop the gateway before restoring state.

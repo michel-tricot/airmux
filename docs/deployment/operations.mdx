@@ -63,7 +63,7 @@ Compose completes its migration and catalog jobs before starting the control pla
 run either job. The process refuses to start unless the database is at the expected schema revision. A split gateway can keep
 serving an accepted cached bundle while the control plane is unavailable. Because pre-1.0 releases do not promise cross-version
 compatibility between planes, deploy one image digest across all components. Follow
-[Upgrade and rollback](/docs/deployment/upgrades) to restore the database and state together if verification fails.
+[Docker upgrade and rollback](/docs/deployment/docker#upgrade-and-roll-back) restores the database and state together if verification fails.
 
 ## Common failures
 

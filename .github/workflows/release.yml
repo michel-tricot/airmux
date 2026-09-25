@@ -383,4 +383,14 @@ jobs:
           notes="Version: $VERSION
           Source commit: $RELEASE_SHA
           Container: $IMAGE"
-          gh release create "$RELEASE_TAG" --verify-tag --target "$RELEASE_SHA" --title "airmux $VERSION" --generate-notes --notes "$notes"
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          compose = Path("docker-compose.yml").read_text()
+          local_image = "${AIRMUX_IMAGE:-airmux:local}"
+          assert compose.count(local_image) == 3
+          release_image = "${AIRMUX_IMAGE:-" + os.environ["IMAGE"] + "}"
+          (Path(os.environ["RUNNER_TEMP"]) / "docker-compose.yml").write_text(compose.replace(local_image, release_image))
+          PY
+          gh release create "$RELEASE_TAG" "$RUNNER_TEMP/docker-compose.yml" --verify-tag --target "$RELEASE_SHA" --title "airmux $VERSION" --generate-notes --notes "$notes"

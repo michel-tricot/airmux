@@ -3,14 +3,13 @@ title: "Docker Compose"
 description: "Run the airmux image and Postgres with persistent named volumes."
 ---
 
-The versioned `docker-compose.yml` runs one `airmux` container and Postgres. Short-lived containers migrate the database
+The release's `docker-compose.yml` runs one `airmux` container and Postgres. Short-lived containers migrate the database
 and apply the shipped [model catalog](/docs/reference/models-and-providers) before airmux starts. The CLI is in the image.
 Release images use `ghcr.io/michel-tricot/airmux:X.Y.Z`; pin a digest for a reproducible production deployment.
 
 ## Start
 
-Follow the [quickstart](/docs/quickstart) to download a release's Compose and environment files, set the image version
-and database password, and start the stack:
+Follow the [quickstart](/docs/quickstart) to download the release's Compose file and start the stack:
 
 ```bash
 docker compose up -d --wait
@@ -18,8 +17,8 @@ docker compose exec airmux airmux quickstart --url http://localhost:8080
 ```
 
 The CLI prompts for provider keys and stores them through the management API. The keys do not go in `.env`.
-The image's runtime YAML works without any local configuration file. To override it, follow
-[Customize the Docker deployment](/docs/deployment/customization).
+The image's runtime YAML works without any local configuration file. See [Customize the runtime YAML](#customize-the-runtime-yaml)
+for an override.
 
 ## Configure the public origin
 
@@ -43,6 +42,38 @@ split deployment's control-plane port private to its Docker network.
 
 Set a URL-safe `POSTGRES_PASSWORD` before the first start of a public installation. Changing the Compose variable later
 does not rotate the password already stored by Postgres.
+
+## Customize the runtime YAML
+
+Use this when you need to change the control-plane or data-plane settings in the
+[configuration reference](/docs/reference/configuration). Copy the default YAML from your running image:
+
+```bash
+mkdir -p airmux-config
+docker compose exec -T airmux cat /app/deploy/docker/airmux.yml > airmux-config/airmux.yml
+```
+
+Edit `airmux-config/airmux.yml`. Keep its `/state` paths unless you also provide suitable persistent storage, and keep
+the control plane and data plane on the same secret store. The Compose file mounts `./airmux-config` read-only into the
+migration, catalog, and serving containers. Each role uses `/config/airmux.yml` when it is a nonempty regular file.
+Compose does not read `airmux.yml` or `airmux.yaml` at the project root.
+If the file is absent or empty, each role uses the YAML bundled in the image. A nonempty invalid YAML file causes
+startup to fail.
+
+Runtime `${env:...}` references use each container's environment, not values read directly from `.env`. Paths in the
+custom YAML resolve relative to `/config`, so use absolute `/state/...` paths for persistent data as the bundled file
+does. Compare your custom file with the new image's default YAML when upgrading.
+
+Restart all roles after editing the YAML:
+
+```bash
+docker compose down
+docker compose up -d --wait
+```
+
+`down` keeps the database and state volumes. If startup fails, inspect `docker compose logs migrate taxonomy airmux`.
+To return to the image default, remove `airmux-config/airmux.yml` and run the same two commands. The split Compose
+example uses the same directory for its migration, catalog, control-plane, and gateway containers.
 
 ## Startup and database changes
 
@@ -71,14 +102,23 @@ tells you to run the migration command.
   Back up both volumes before an update, and do not use `down -v` unless permanent deletion is intended.
 </Warning>
 
-## Update
+## Upgrade and roll back
 
-Back up the database and state volumes together. Download the Compose file for the target release and set
-`AIRMUX_IMAGE` in `.env` to that release's image digest, then replace the stack:
+Read the target release notes and compare any [custom runtime YAML](#customize-the-runtime-yaml) with the target image's
+default. Record the current image digest, stop new traffic, and back up Postgres and `/state` together. The migration
+job may change the database schema; an older image cannot safely use a database migrated by a newer release.
+
+Download the Compose file for the target release. It pins that release's verified image digest. Remove any older
+`AIRMUX_IMAGE` override from `.env`, then replace the stack:
 
 ```bash
 docker compose up -d --wait
 ```
+
+Check `/healthz` and `/readyz` on the public origin, run `docker compose exec airmux airmux doctor`, and send a buffered
+and streaming request. Confirm that the requests appear in usage. If verification fails after migration, stop the new
+stack, restore Postgres and `/state` from the same backup, and redeploy the recorded previous release. Do not roll
+back only the image against the newer database.
 
 The migration and catalog jobs use the same image as the serving container. The image defaults to the `airmux` role, which
 starts the control plane, gateway, and webapp. The control plane verifies the migrated schema and creates its internal

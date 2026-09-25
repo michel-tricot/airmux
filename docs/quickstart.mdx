@@ -6,24 +6,21 @@ description: "Run airmux with Docker Compose and send a real request."
 You need Docker with Compose 2.24.4 or newer and an API key for a provider in the
 [shipped catalog](/docs/reference/models-and-providers).
 
-<Warning>
+<Info>
   Quickstart sends a real request that your provider bills.
-</Warning>
+</Info>
 
 <Steps>
-  <Step title="Get one release's deployment files">
-    Choose a [published release](https://github.com/michel-tricot/airmux/releases) and replace `X.Y.Z` with its version:
+  <Step title="Download the release's Compose file">
+    From an empty directory, download the latest [published release's](https://github.com/michel-tricot/airmux/releases)
+    Compose file. It is pinned to the image verified for that release:
 
     ```bash
-    export AIRMUX_VERSION=X.Y.Z
-    mkdir airmux && cd airmux
-    curl -fsSLo docker-compose.yml "https://raw.githubusercontent.com/michel-tricot/airmux/v${AIRMUX_VERSION}/docker-compose.yml"
-    curl -fsSLo .env.example "https://raw.githubusercontent.com/michel-tricot/airmux/v${AIRMUX_VERSION}/.env.example"
-    cp .env.example .env
+    curl -fsSLO https://github.com/michel-tricot/airmux/releases/latest/download/docker-compose.yml
     ```
 
-    Edit `.env`: replace `X.Y.Z` in `AIRMUX_IMAGE` with the same release version and set a private `POSTGRES_PASSWORD`.
-    Keep this file private. If port 8080 is occupied, change both `AIRMUX_PORT` and `AIRMUX_PUBLIC_URL`.
+    For a public deployment, set a private `POSTGRES_PASSWORD` in `.env` before the first start. If port 8080 is
+    occupied, set `AIRMUX_PORT` and `AIRMUX_PUBLIC_URL` there too. See [Docker Compose](/docs/deployment/docker).
   </Step>
 
   <Step title="Start and claim the instance">
@@ -51,7 +48,7 @@ You need Docker with Compose 2.24.4 or newer and an API key for a provider in th
 ## Next steps
 
 - [Create a workspace policy](/docs/guides/policy-workflow) to control requests
-- [Customize the Docker deployment](/docs/deployment/customization) to change runtime settings
+- [Customize the Docker deployment](/docs/deployment/docker#customize-the-runtime-yaml) to change runtime settings
 - [Docker operations](/docs/deployment/docker) for logs, state, and updates
 - [Development](/docs/development) if you want to edit the source
 

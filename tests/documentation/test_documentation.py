@@ -149,7 +149,8 @@ def test_local_distribution_installation_recipe_is_documented() -> None:
 
 
 def test_documentation_covers_safe_upgrades() -> None:
-    assert (DOCS / "deployment" / "upgrades.mdx").exists()
+    for page in ("docker.mdx", "without-docker.mdx", "scaling.mdx", "gateway.mdx"):
+        assert "## Upgrade and roll back" in (DOCS / "deployment" / page).read_text(encoding="utf-8")
 
 
 def test_documented_cli_command_groups_and_subcommands_exist() -> None:
@@ -220,20 +221,12 @@ def test_documentation_navigation_is_organized_around_reader_tasks() -> None:
     ]
 
 
-def test_full_platform_instructions_pin_one_release() -> None:
+def test_full_platform_instructions_download_the_release_compose_file() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     quickstart = (DOCS / "quickstart.mdx").read_text(encoding="utf-8")
-    declared = {version for document in (readme, quickstart) for version in re.findall(r"^\s*export AIRMUX_VERSION=(\S+)$", document, re.MULTILINE)}
-
-    assert len(declared) == 1, declared
-    version = declared.pop()
-
-    assert version == "X.Y.Z"
     for document in (readme, quickstart):
-        assert 'v${AIRMUX_VERSION}/docker-compose.yml' in document
-        assert 'v${AIRMUX_VERSION}/.env.example' in document
+        assert "releases/latest/download/docker-compose.yml" in document
         assert "docker compose exec airmux airmux quickstart" in document
-    assert "ghcr.io/michel-tricot/airmux:X.Y.Z" in (ROOT / ".env.example").read_text(encoding="utf-8")
 
 
 def test_quickstart_walks_through_the_webapp_and_links_to_customization() -> None:
@@ -242,11 +235,11 @@ def test_quickstart_walks_through_the_webapp_and_links_to_customization() -> Non
     assert "airmux quickstart --url" in quickstart
     assert "/inf/v1" in quickstart
     assert "/docs/guides/policy-workflow" in quickstart
-    assert "/docs/deployment/customization" in quickstart
+    assert "/docs/deployment/docker#customize-the-runtime-yaml" in quickstart
     assert "docker compose down" in quickstart
 
     steps = re.findall(r'<Step title="([^"]+)">', quickstart)
-    assert steps == ["Get one release's deployment files", "Start and claim the instance", "See the request"]
+    assert steps == ["Download the release's Compose file", "Start and claim the instance", "See the request"]
 
 
 def test_public_links_use_the_current_repository() -> None:

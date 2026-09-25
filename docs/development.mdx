@@ -24,13 +24,21 @@ This is enough for code-only changes and unit tests. Start Postgres when you nee
 docker compose -f docker-compose.dev.yml up -d --wait
 ```
 
-The development stack uses ports 5432, 8000, 8080, and 5000.
+The development stack uses ports 5432, 8000, 8080, and 5000. If port 5432 is occupied, set
+`AIRMUX_DEV_POSTGRES_PORT` to a free port when starting Compose and export `DATABASE_URL` with that port in shells that
+run control-plane commands. For example:
+
+```bash
+AIRMUX_DEV_POSTGRES_PORT=15432 docker compose -f docker-compose.dev.yml up -d --wait
+export DATABASE_URL='postgresql+asyncpg://airmux:airmux@127.0.0.1:15432/airmux'
+```
 
 ## Start the development environment
 
-Load the development catalog:
+Migrate the fresh database, then load the development catalog:
 
 ```bash
+uv run airmux control-plane migrate
 uv run airmux control-plane taxonomy --file taxonomy/taxonomy.yml
 ```
 

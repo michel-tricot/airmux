@@ -6,7 +6,8 @@ description: 'Reference Docker variables, runtime YAML sections, references, bun
 `airmux` runtime commands read YAML from `--config`, then `AIRMUX_CONFIG`. Gateway commands use
 `./.airmux/airmux.yml`, falling back to a shared `./airmux.yml` when the standalone file is absent. Control-plane
 commands use `./airmux.yml`. The `airmux` image uses `deploy/docker/airmux.yml` unless a nonempty
-`./airmux-config/airmux.yml` is mounted through the Compose file. See [Docker customization](/docs/deployment/customization).
+`./airmux-config/airmux.yml` is mounted through the Compose file. Compose does not read a root-level `airmux.yml` or
+`airmux.yaml`. See [Docker Compose](/docs/deployment/docker#customize-the-runtime-yaml).
 
 ## Docker Compose variables
 
@@ -16,7 +17,7 @@ commands use `./airmux.yml`. The `airmux` image uses `deploy/docker/airmux.yml` 
 | `AIRMUX_PUBLIC_URL`       | `http://localhost:8080` | Compose value mapped to the webapp origin    |
 | `AIRMUX_PUBLIC_SIGNUP`    | `false`                 | Allow account creation after instance claim  |
 | `POSTGRES_PASSWORD`       | `airmux`                | Initial local Postgres password              |
-| `AIRMUX_IMAGE`            | `airmux:local`          | Image used by every role in either topology; set to one published release in `.env` |
+| `AIRMUX_IMAGE`            | `airmux:local` in source Compose, verified digest in the release download | Image used by every role in either topology |
 
 ## YAML structure
 
