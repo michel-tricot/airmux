@@ -7,13 +7,24 @@ description: "Harden a public airmux deployment and protect its management, infe
 
 - Terminate HTTPS at the public origin
 - Set `AIRMUX_CONSOLE_URL` to that exact origin
-- Claim the instance immediately
 - Keep `AIRMUX_PUBLIC_SIGNUP=false` unless open registration is intentional
 - Use a strong URL-safe Postgres password set before database initialization
 - Restrict access to Postgres, the secret store, gateway state, and backups
 - Give the control plane write access to runtime credentials and provider secrets; mount both read-only in gateways
 - Keep control-plane synchronization traffic on a private or otherwise protected network
 - Disable response buffering on `/inf/` and set an appropriate streaming read timeout
+- Claim the first owner before exposing a new instance to untrusted clients; the first reachable signup can claim it even when public signup is disabled
+- Bound request size and concurrency at the edge for both packaged and direct gateway deployments
+
+The default Compose port mapping listens on all host interfaces. For local bootstrap, bind it to loopback and claim the
+first owner before exposing the service:
+
+```bash
+AIRMUX_PORT=127.0.0.1:8080 docker compose up -d --wait
+```
+
+If you choose another port, update `AIRMUX_PUBLIC_URL` and the CLI URL to match. For a remote bootstrap, firewall the
+published port until the owner claim is complete.
 
 ## Credential practices
 
@@ -29,6 +40,10 @@ description: "Harden a public airmux deployment and protect its management, infe
 The default file-backed secret store writes one owner-readable file per provider credential under `/state/secrets`. Bundle
 caches contain token hashes and secret references, not plaintext tokens or provider values. Usage and audit records can
 still contain sensitive operational metadata such as model IDs, user IDs, credential IDs, cost, and timestamps.
+
+Keep gateway state directories private when running natively or mounting host paths. The container image prepares its
+default state directory with private permissions, but a new native gateway cache or outbox path can inherit a permissive
+host umask. Verify the permissions of bundle caches, usage outboxes, runtime keys, and backups before sharing a host.
 
 Do not log `Authorization`, `x-api-key`, authentication-cookie values, request bodies, provider keys, or one-time token
 responses. Limit access to application logs, database exports, volume snapshots, and support bundles.
@@ -55,3 +70,16 @@ If a secret may be exposed, rotate or revoke it at its owning layer:
 | Provider credential | Rotate the credential value and verify the new fingerprint |
 | Postgres password | Rotate it at Postgres and update `DATABASE_URL` |
 | Gateway runtime key | Replace it on both planes, verify bundle and usage traffic, then revoke the old key |
+
+If a gateway cannot reach the control plane, it can continue serving its last accepted bundle. A revoked inference key
+can therefore remain usable there until a refreshed bundle arrives, unless the key's own expiry has passed. Isolate
+affected gateways when immediate revocation is necessary during an outage.
+
+Current spending budgets use periodically fetched historical usage and are not an atomic provider-spend cap. Treat
+catalog-priced usage as an estimate, and enforce a provider-side spending limit when a hard external cap is required.
+
+## Vulnerability reporting
+
+The repository's [security policy](https://github.com/michel-tricot/airmux/blob/main/SECURITY.md) gives researchers a
+private email contact. Before publishing the repository, enable and test GitHub private vulnerability reporting as an
+additional channel. Keep credentials and exploit details out of public issues.
