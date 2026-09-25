@@ -3,8 +3,7 @@ title: "Quickstart"
 description: "Run airmux with Docker Compose and send a real request."
 ---
 
-You need Docker with Compose 2.24.4 or newer and an API key for a provider in the
-[shipped catalog](/docs/reference/models-and-providers).
+You need Docker with Compose 2.24.4 or newer and an API key for a provider in the [shipped catalog](/docs/reference/models-and-providers).
 
 <Steps>
   <Step title="Download the release's Compose file">
@@ -14,11 +13,12 @@ You need Docker with Compose 2.24.4 or newer and an API key for a provider in th
     curl -fsSLO https://github.com/michel-tricot/airmux/releases/latest/download/docker-compose.yml
     ```
   </Step>
-
   <Step title="Start and claim the instance">
-    <Info>
-      `quickstart` sends a real request that your provider bills.
-    </Info>
+    <Note>
+      <Info>
+        `quickstart` sends a real request that your provider bills.
+      </Info>
+    </Note>
 
     ```bash
     docker compose up -d --wait
@@ -29,10 +29,8 @@ You need Docker with Compose 2.24.4 or newer and an API key for a provider in th
 
     Copy the inference key when it appears. It is shown once.
   </Step>
-
   <Step title="See the request">
-    Open [localhost:8080](http://localhost:8080), and sign in. **Overview** shows usage
-    and estimated cost. **Requests** shows the individual request after the event arrives, normally within seconds.
+    Open [localhost:8080](http://localhost:8080), and sign in. **Overview** shows usage and estimated cost. **Requests** shows the individual request after the event arrives, normally within seconds.
 
     Your agent can use the inference key at `http://localhost:8080/inf/v1`. See [Use an SDK](/docs/guides/sdks).
   </Step>
@@ -45,5 +43,4 @@ You need Docker with Compose 2.24.4 or newer and an API key for a provider in th
 - [Docker operations](/docs/deployment/docker) for logs, state, and updates
 - [Development](/docs/development) if you want to edit the source
 
-Stop the stack with `docker compose down`. It preserves the database and application volumes. `docker compose down -v`
-deletes the installation's state.
+Stop the stack with `docker compose down`. It preserves the database and application volumes. `docker compose down -v` deletes the installation's state.
