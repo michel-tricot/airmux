@@ -53,7 +53,7 @@ would drop a supplied parameter.
 
 A fallback rule names up to four backup model IDs and the failure classes that trigger them: `rate_limited`,
 `upstream_unavailable`, and `timeout`. Its deadline covers secret resolution and every attempt until response headers
-arrive; it does not cap the duration of an established stream. See
+arrive. It does not cap the duration of an established stream. See
 [model fallbacks](/docs/policies#model-fallbacks) for the rule shape and limits.
 
 Every backup route is evaluated against the same workspace restrictions. A fallback cannot escape an allowlist, price
