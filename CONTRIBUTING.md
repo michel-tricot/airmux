@@ -157,7 +157,7 @@ Changes enter `main` through a squash merge.
 
 ## What CI runs
 
-[PR CI](.github/workflows/ci.yml) runs on draft and ready pull requests. It checks quality, Python unit and integration tests, frontend, and package metadata. Its `required` job passes only when all five jobs succeed. [Security](.github/workflows/security.yml) runs Python and Bun audits plus dependency review on pull requests.
+[PR CI](.github/workflows/ci.yml) runs on draft and ready pull requests. It checks quality, Python unit and integration tests, frontend, and package metadata. Its `required` job passes only when all five jobs succeed. [Security](.github/workflows/security.yml) runs Python and Bun dependency audits.
 
 [Main CI](.github/workflows/main-ci.yml) runs after merge and on manual dispatch. It repeats the five fast checks, then tests the built candidate through the gateway matrix, full-stack scenarios, Chromium, and Docker deployments. Its `required` job covers all nine jobs. [Nightly](.github/workflows/nightly.yml) checks platform compatibility and live providers on a schedule; performance and soak checks run on manual dispatch. See the [CI design](notes/design/CI.md) for the artifact and release gates.
 
@@ -173,7 +173,7 @@ Two stable checks are required:
 | Required check | Coverage |
 | --- | --- |
 | `required` | Quality, Python, frontend, packaged gateway, full-stack, browser, and Docker correctness |
-| `dependency-security` | Python and JavaScript audits plus pull-request dependency review |
+| `dependency-security` | Python and JavaScript dependency audits |
 
 The versioned ruleset currently requires no approving reviews, but contributions still go through maintainer review.
 

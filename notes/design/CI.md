@@ -8,7 +8,7 @@ The workflow files define the checks. This record explains the boundaries that s
 | --- | --- | --- | --- |
 | [PR CI](../../.github/workflows/ci.yml) | Pull request | `required` | Quality, Python unit and integration, frontend, package metadata |
 | [Main CI](../../.github/workflows/main-ci.yml) | Main push or manual dispatch | `Main CI required` | PR checks plus gateway, full-stack, browser, and Docker candidate validation |
-| [Security](../../.github/workflows/security.yml) | Pull request, main push, weekly schedule, or manual dispatch | `dependency-security` | Python and Bun audits; dependency review on pull requests |
+| [Security](../../.github/workflows/security.yml) | Pull request, main push, weekly schedule, or manual dispatch | `dependency-security` | Python and Bun dependency audits |
 | [Nightly](../../.github/workflows/nightly.yml) | Daily schedule or manual dispatch | None | Scheduled platform compatibility and live providers; manual performance and soak checks |
 | [Prepare Release](../../.github/workflows/prepare-release.yml) | Manual dispatch on main | None | Version-only release branch |
 | [Publish Release](../../.github/workflows/release.yml) | Manual dispatch on main | None | Exact-commit eligibility, installation, provider check, tag, publish, registry verification, announcement |
@@ -35,7 +35,7 @@ Publishing is manual so the operator can see both main gates finish before start
 
 The gateway matrix assigns test node IDs to four shards using a stable hash. This covers newly collected cases without editing the workflow. The Docker job checks both compact and split deployments. Those checks provide broader release evidence than the PR gate while keeping PR feedback shorter.
 
-Security runs `pip-audit` and `bun audit` on both pull requests and main. Dependency review runs directly on pull requests because this is a public GitHub repository, where the feature is available. The `dependency-security` gate allows the review job to be skipped only on non-PR events; both ecosystem audits must always pass. See [GitHub's dependency review documentation](https://docs.github.com/en/code-security/concepts/supply-chain-security/dependency-review).
+Security runs `pip-audit` and `bun audit` on both pull requests and main. Both must pass. GitHub's dependency review action currently fails for this repository because its Dependency graph is disabled, so the workflow uses the two ecosystem audits without a runtime feature probe.
 
 Nightly retains Linux and macOS Python compatibility and live-provider checks on its schedule. Performance comparisons, worker scaling, and repeated concurrency scenarios run only when Nightly is dispatched manually. Main CI already exercises both Docker deployment topologies, so Nightly has no second cold Docker deployment job.
 

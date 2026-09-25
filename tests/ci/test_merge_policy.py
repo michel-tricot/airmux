@@ -74,53 +74,25 @@ def test_branch_protection_uses_pr_and_security_gates():
     }
 
 
-def test_security_runs_dependency_review_on_pr_without_feature_probe():
+@pytest.mark.parametrize(("audit", "expected"), [(None, True), ("pip-audit", False), ("bun-audit", False)])
+def test_security_gate_requires_both_audits(audit, expected):
     workflow = yaml.safe_load((ROOT / ".github/workflows/security.yml").read_text())
-    steps = workflow["jobs"]["dependency-review"]["steps"]
-    assert len(steps) == 2
-    assert steps[-1]["uses"].startswith("actions/dependency-review-action@")
-    assert workflow["jobs"]["dependency-security"]["if"] == "always()"
-
-
-@pytest.mark.parametrize(
-    ("event", "review", "expected"),
-    [
-        ("pull_request", "success", True),
-        ("pull_request", "skipped", False),
-        ("pull_request", "failure", False),
-        ("push", "skipped", True),
-    ],
-)
-def test_security_gate_requires_dependency_review_on_pull_requests(event, review, expected):
-    workflow = yaml.safe_load((ROOT / ".github/workflows/security.yml").read_text())
+    assert set(workflow["jobs"]) == {"pip-audit", "bun-audit", "dependency-security"}
+    gate = workflow["jobs"]["dependency-security"]
+    assert set(gate["needs"]) == {"pip-audit", "bun-audit"}
+    assert gate["if"] == "always()"
     needs = {name: {"result": "success"} for name in ("pip-audit", "bun-audit")}
-    needs["dependency-review"] = {"result": review}
+    if audit is not None:
+        needs[audit] = {"result": "failure"}
     completed = subprocess.run(
         ["/bin/bash", "-e", "-o", "pipefail"],
-        input=workflow["jobs"]["dependency-security"]["steps"][-1]["run"],
-        env={**os.environ, "NEEDS": json.dumps(needs), "GITHUB_EVENT_NAME": event},
+        input=gate["steps"][-1]["run"],
+        env={**os.environ, "NEEDS": json.dumps(needs)},
         capture_output=True,
         text=True,
         check=False,
     )
     assert (completed.returncode == 0) == expected
-
-
-@pytest.mark.parametrize("failed_audit", ["pip-audit", "bun-audit"])
-def test_security_gate_rejects_failed_audits(failed_audit):
-    workflow = yaml.safe_load((ROOT / ".github/workflows/security.yml").read_text())
-    needs = {name: {"result": "success"} for name in ("pip-audit", "bun-audit")}
-    needs[failed_audit] = {"result": "failure"}
-    needs["dependency-review"] = {"result": "skipped"}
-    completed = subprocess.run(
-        ["/bin/bash", "-e", "-o", "pipefail"],
-        input=workflow["jobs"]["dependency-security"]["steps"][-1]["run"],
-        env={**os.environ, "NEEDS": json.dumps(needs), "GITHUB_EVENT_NAME": "push"},
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert completed.returncode != 0
 
 
 def test_nightly_extended_checks_are_manual_and_cold_docker_is_removed():

@@ -14,7 +14,7 @@ default branch. The `required` and `dependency-security` checks are bound to the
 
 PR CI runs the same five fast jobs on draft and ready pull requests. Main CI runs those jobs and the installed-candidate
 acceptance jobs after merge. Each workflow's `required` gate rejects every dependency result other than success.
-Security audits and dependency review run on pull requests. Changes to job selection must keep the contributor guide
+Security audits run on pull requests. Changes to job selection must keep the contributor guide
 and workflow contract tests accurate.
 
 The policy uses loose status checks: a conflict-free branch with passing required checks may merge without being
