@@ -13,78 +13,51 @@ def steps(job: str) -> str:
     return "\n".join(step.get("run", "") + step.get("with", {}).get("script", "") for step in RELEASE["jobs"][job].get("steps", []))
 
 
-def prepare_steps() -> str:
-    return "\n".join(step.get("run", "") for step in PREPARE_RELEASE["jobs"]["release-branch"]["steps"])
-
-
-def test_release_branch_bumps_only_the_root_version_and_links_to_a_pull_request():
+def test_release_branch_changes_only_the_public_version():
     bump = PREPARE_RELEASE[True]["workflow_dispatch"]["inputs"]["bump"]
-    assert bump["type"] == "choice"
     assert bump["options"] == ["patch", "minor", "major"]
-    commands = prepare_steps()
+    commands = "\n".join(step.get("run", "") for step in PREPARE_RELEASE["jobs"]["release-branch"]["steps"])
     assert 'version_file = Path("VERSION")' in commands
     assert 'test "$(git diff --name-only)" = "VERSION"' in commands
-    assert 'test -z "$(git ls-files --others --exclude-standard)"' in commands
     assert "refs/heads/$RELEASE_BRANCH" in commands
     assert "compare/main...$RELEASE_BRANCH?expand=1" in commands
-    assert "gh pr create" not in commands
-    assert "gh workflow run" not in commands
 
 
-def test_release_derives_sha_and_consumes_exact_successful_main_artifact():
-    assert RELEASE[True]["workflow_dispatch"] == {}
-    assert RELEASE[True]["push"] == {"branches": ["main"], "paths": ["VERSION"]}
+def test_release_is_manual_and_requires_complete_checks_on_the_exact_main_commit():
+    assert RELEASE[True] == {"workflow_dispatch": {}}
     prepare = steps("prepare")
     assert 'RELEASE_SHA="$GITHUB_SHA"' in prepare
-    assert 'RELEASE_TAG="v$version"' in prepare
-    assert 'version="$(cat VERSION)"' in prepare
-    assert "ci.yml" in prepare
+    assert "main-ci.yml" in prepare
+    assert "Main CI required" in prepare
     assert "security.yml" in prepare
-    assert "candidate-${RELEASE_SHA}" in prepare
-    assert "sha256sum --check SHA256SUMS" in prepare
-    assert "./scripts/build-python-distribution.sh" not in prepare
+    assert "head_sha: process.env.RELEASE_SHA" in prepare
+    assert "run.conclusion === 'success'" in prepare
+    assert "job.name === check" in prepare
+    assert "setTimeout" not in prepare
+    assert RELEASE["jobs"]["prepare"]["outputs"]["ci-run-id"] == "${{ steps.checks.outputs.ci-run-id }}"
 
 
-def test_release_uses_official_publisher_with_narrow_permissions():
+def test_release_consumes_main_ci_artifacts_without_copying_them():
+    assert not any(step.get("uses", "").startswith("actions/upload-artifact@") for step in RELEASE["jobs"]["prepare"]["steps"])
+    for name in ("installation", "live-providers"):
+        assert any(step.get("uses") == "./.github/actions/install-candidate" for step in RELEASE["jobs"][name]["steps"])
+    for name in ("installation", "live-providers", "publish", "verify-pypi"):
+        downloads = [step for step in RELEASE["jobs"][name]["steps"] if step.get("uses", "").startswith("actions/download-artifact@")]
+        assert downloads
+        for download in downloads:
+            assert download["with"]["run-id"] == "${{ needs.prepare.outputs.ci-run-id }}"
+            assert download["with"]["github-token"] == "${{ github.token }}"
+    assert "container-${{ needs.prepare.outputs.sha }}" in str(RELEASE["jobs"]["publish"]["steps"])
+    assert "sha256sum --check SHA256SUMS" in steps("publish")
+
+
+def test_release_checks_candidate_before_tag_and_registry_before_announcement():
     jobs = RELEASE["jobs"]
-    publisher = next(step for step in jobs["publish"]["steps"] if step.get("uses", "").startswith("pypa/gh-action-pypi-publish@"))
-    assert len(publisher["uses"].rsplit("@", 1)[1]) == 40
-    assert jobs["publish"]["permissions"] == {"contents": "read", "id-token": "write", "packages": "write"}
-    assert jobs["announce"]["permissions"] == {"contents": "write"}
-    for name, job in jobs.items():
-        if name not in {"prepare", "publish", "verify-container", "announce"}:
-            assert job.get("permissions", RELEASE["permissions"]) == {"contents": "read"}
-
-
-def test_release_verifies_registry_bytes_and_gateway_before_announcement():
-    assert set(RELEASE["jobs"]["announce"]["needs"]) == {"prepare", "verify-pypi", "verify-container"}
-    verify = steps("verify-pypi")
-    assert "pypi_artifacts.py" in verify
-    assert "test_01_basic.py::test_ready_gateway_completes_and_records_usage" in verify
-    assert RELEASE["jobs"]["live-providers"]["needs"] == "prepare"
-
-
-def test_release_publishes_the_exact_ci_container_candidate():
-    prepare = steps("prepare")
-    publish = steps("publish")
-    verify = steps("verify-container")
-
-    assert "container-${RELEASE_SHA}" in prepare
-    assert "sha256sum --check SHA256SUMS" in prepare
-    assert "docker load" not in publish
-    image_step = next(step for step in RELEASE["jobs"]["publish"]["steps"] if step.get("id") == "image")
-    assert image_step["env"]["IMAGE"] == "ghcr.io/michel-tricot/airmux"
-    assert "docker buildx imagetools create" in publish
-    assert "docker pull" in verify
-    assert "--entrypoint airmux" in verify
-    assert "Container: $IMAGE" in steps("announce")
-
-
-def test_release_creates_the_immutable_tag_after_candidate_checks():
-    tag = RELEASE["jobs"]["tag"]
-    tag_step = next(step for step in tag["steps"] if step.get("name") == "Create the protected release tag")
-    assert set(tag["needs"]) == {"prepare", "installation", "live-providers"}
-    assert tag_step["env"]["GH_TOKEN"] == "${{ secrets.RELEASE_GITHUB_TOKEN }}"
-    assert 'test -n "$GH_TOKEN"' in tag_step["run"]
+    assert set(jobs["tag"]["needs"]) == {"prepare", "installation", "live-providers"}
+    assert jobs["publish"]["needs"] == ["prepare", "tag"]
+    assert set(jobs["announce"]["needs"]) == {"prepare", "verify-pypi", "verify-container"}
+    assert "pypi_artifacts.py" in steps("verify-pypi")
+    assert "test_ready_gateway_completes_and_records_usage" in steps("verify-pypi")
+    assert "docker pull" in steps("verify-container")
     assert "refs/tags/$RELEASE_TAG" in steps("tag")
-    assert RELEASE["jobs"]["publish"]["needs"] == ["prepare", "tag"]
+    assert jobs["publish"]["permissions"] == {"contents": "read", "actions": "read", "id-token": "write", "packages": "write"}

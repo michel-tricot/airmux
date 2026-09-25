@@ -1,0 +1,422 @@
+name: Main CI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: main-ci-${{ github.sha }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Main CI quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-tags: true
+      - uses: ./.github/actions/setup-python
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: 1.3.14
+      - run: bun install --frozen-lockfile
+      - name: Validate workflows and embedded shell
+        run: |
+          command -v shellcheck
+          curl --fail --silent --show-error --location https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz --output "$RUNNER_TEMP/actionlint.tar.gz"
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  $RUNNER_TEMP/actionlint.tar.gz" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" -color
+      - run: uv run --no-sync ruff format --check .
+      - run: uv run --no-sync ruff check .
+      - run: uv run --no-sync ty check .
+      - run: uv run --no-sync lint-imports
+      - run: ./scripts/export-openapi.sh && git diff --exit-code lib/api-spec/openapi.yaml
+      - run: ./scripts/generate-api-models.sh && git diff --exit-code lib/api-models
+      - run: ./scripts/export-completion-schemas.sh && git diff --exit-code taxonomy/schemas/completion
+      - run: uv run --no-sync airmux-audit cases coverage
+      - run: uv run --no-sync airmux-audit taxonomy validate
+      - run: bun run codegen && git diff --exit-code lib/api-client-react
+      - run: bun run format:check
+      - name: Verify workflow, policy, and documentation contracts
+        env:
+          AIRMUX_VALIDATE_ACTION_INPUTS: '1'
+        run: uv run --no-sync pytest tests/ci tests/documentation tests/workflows --junitxml=quality-results/quality.xml
+      - name: Verify lockfiles did not drift
+        run: git diff --exit-code -- uv.lock bun.lock
+      - name: Summarize quality results
+        if: always()
+        continue-on-error: true
+        run: uv run --no-sync python tests/acceptance/gateway/ci_report.py quality-results --summary "$GITHUB_STEP_SUMMARY"
+      - name: Upload quality results
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: quality-${{ github.sha }}
+          path: quality-results
+          retention-days: 7
+
+  python-unit:
+    name: Main CI python-unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DOCKER_HOST: unix:///tmp/airmux-no-docker.sock
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-python
+      - run: uv run --no-sync pytest lib/contract/tests lib/runtime/tests apps/control-plane/tests/unit apps/data-plane/tests apps/cli/tests model-audit/tests -n auto --junitxml=unit-results/unit.xml
+      - name: Summarize unit results
+        if: always()
+        continue-on-error: true
+        run: uv run --no-sync python tests/acceptance/gateway/ci_report.py unit-results --summary "$GITHUB_STEP_SUMMARY"
+      - name: Upload unit results
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: python-unit-${{ github.sha }}
+          path: unit-results
+          retention-days: 7
+
+  python-integration:
+    name: Main CI python-integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-python
+      - run: uv run --no-sync pytest apps/control-plane/tests/integration -n auto --junitxml=integration-results/integration.xml
+      - name: Summarize integration results
+        if: always()
+        continue-on-error: true
+        run: uv run --no-sync python tests/acceptance/gateway/ci_report.py integration-results --summary "$GITHUB_STEP_SUMMARY"
+      - name: Upload integration results
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: python-integration-${{ github.sha }}
+          path: integration-results
+          retention-days: 7
+
+  frontend:
+    name: Main CI frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: 1.3.14
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bun run typecheck
+      - run: mkdir -p frontend-results
+      - run: bun run --filter '@workspace/gateway-console' coverage -- --reporter=default --reporter=junit --outputFile=frontend-results/console.xml
+      - run: bun run --filter '@workspace/api-client-react' coverage -- --reporter=default --reporter=junit --outputFile=frontend-results/client.xml
+      - run: bun run --filter '@workspace/gateway-console' build
+      - name: Summarize frontend results
+        if: always()
+        continue-on-error: true
+        run: |
+          {
+            echo "Commit: $GITHUB_SHA"
+            echo "Bun: $(bun --version)"
+            echo "JUnit cases: $(grep -h -o '<testcase' frontend-results/*.xml 2>/dev/null | wc -l)"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload frontend results
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: frontend-${{ github.sha }}
+          path: |
+            frontend-results
+            apps/console/coverage
+            lib/api-client-react/coverage
+          retention-days: 7
+
+  package:
+    name: Main CI package
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      artifact-id: ${{ steps.candidate.outputs.artifact-id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-python
+      - name: Build source once and rebuild the wheel from it
+        run: |
+          ./scripts/build-python-distribution.sh
+          mkdir candidate
+          cp dist/airmux-*.tar.gz candidate/
+          uv build --wheel --out-dir candidate dist/airmux-*.tar.gz
+          cd candidate
+          sha256sum airmux-* > SHA256SUMS
+      - name: Validate candidate metadata
+        run: uv run --no-sync pytest tests/installation/test_distribution.py --junitxml=package-results/package.xml
+        env:
+          AIRMUX_DISTRIBUTION_DIR: candidate
+      - name: Summarize package results
+        if: always()
+        continue-on-error: true
+        run: uv run --no-sync python tests/acceptance/gateway/ci_report.py package-results --summary "$GITHUB_STEP_SUMMARY"
+      - name: Upload candidate distributions
+        id: candidate
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: candidate-${{ github.sha }}
+          path: candidate
+          if-no-files-found: error
+          retention-days: ${{ github.ref == 'refs/heads/main' && 30 || 7 }}
+
+  gateway:
+    name: Main CI gateway
+    needs: package
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-python
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          artifact-ids: ${{ needs.package.outputs.artifact-id }}
+          path: candidate
+      - uses: ./.github/actions/install-candidate
+      - name: Run discovered installation suites
+        if: matrix.shard == 0
+        run: |
+          uv pip compile "$RUNNER_TEMP/constraints.txt" --quiet > /dev/null
+          uv run --no-sync pytest tests/installation/portable tests/installation/integration -n auto --junitxml=gateway-results/installation.xml
+      - name: Run the discovered gateway suite without Docker
+        run: uv run --no-sync pytest tests/acceptance/gateway -n auto -m "not performance" --shard "${{ matrix.shard }}/4" --junitxml=gateway-results/gateway.xml
+        env:
+          AIRMUX_GATEWAY_ARTIFACTS: ${{ runner.temp }}/gateway-artifacts
+          DOCKER_HOST: unix:///tmp/airmux-no-docker.sock
+      - name: Summarize gateway results
+        if: always()
+        continue-on-error: true
+        run: uv run --no-sync python tests/acceptance/gateway/ci_report.py gateway-results --summary "$GITHUB_STEP_SUMMARY"
+      - name: Upload gateway results and diagnostics
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: gateway-${{ matrix.shard }}-${{ github.sha }}
+          path: |
+            gateway-results
+            ${{ runner.temp }}/gateway-artifacts
+          retention-days: 7
+
+  full-stack:
+    name: Main CI full-stack
+    needs: package
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-python
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          artifact-ids: ${{ needs.package.outputs.artifact-id }}
+          path: candidate
+      - uses: ./.github/actions/install-candidate
+      - run: uv run --no-sync pytest -n 2 tests/acceptance/full_stack/scenarios --junitxml=full-stack-results/full-stack.xml
+        env:
+          AIRMUX_STACK_ARTIFACTS: ${{ runner.temp }}/full-stack-artifacts
+      - name: Summarize full-stack results
+        if: always()
+        continue-on-error: true
+        run: uv run --no-sync python tests/acceptance/gateway/ci_report.py full-stack-results --summary "$GITHUB_STEP_SUMMARY"
+      - name: Upload full-stack results and diagnostics
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: full-stack-${{ github.sha }}
+          path: |
+            full-stack-results
+            ${{ runner.temp }}/full-stack-artifacts
+          retention-days: 7
+
+  browser:
+    name: Main CI browser
+    needs: package
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-python
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: 1.3.14
+      - run: bun install --frozen-lockfile
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          artifact-ids: ${{ needs.package.outputs.artifact-id }}
+          path: candidate
+      - uses: ./.github/actions/install-candidate
+      - run: uv run --no-sync playwright install --with-deps chromium
+      - run: uv run --no-sync pytest tests/acceptance/full_stack/browser --junitxml=browser-results/browser.xml
+        env:
+          AIRMUX_STACK_ARTIFACTS: ${{ runner.temp }}/browser-artifacts
+      - name: Summarize browser results
+        if: always()
+        continue-on-error: true
+        run: uv run --no-sync python tests/acceptance/gateway/ci_report.py browser-results --summary "$GITHUB_STEP_SUMMARY"
+      - name: Upload browser results and diagnostics
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: browser-${{ github.sha }}
+          path: |
+            browser-results
+            ${{ runner.temp }}/browser-artifacts
+          retention-days: 7
+
+  docker:
+    name: Main CI docker
+    needs: package
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    env:
+      AIRMUX_PYTHON_BUILD: python-candidate
+      AIRMUX_IMAGE: airmux:ci
+      DEPLOYMENT_IMAGE: airmux:ci
+      DEPLOYMENT_URL: http://localhost:8080
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-python
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          artifact-ids: ${{ needs.package.outputs.artifact-id }}
+          path: candidate
+      - run: cd candidate && sha256sum --check SHA256SUMS
+      - name: Build the candidate image once
+        id: image
+        run: |
+          version="$(cat VERSION)"
+          docker build --build-arg AIRMUX_PYTHON_BUILD="$AIRMUX_PYTHON_BUILD" --build-arg AIRMUX_VERSION="$version" \
+            --build-arg AIRMUX_REVISION="$GITHUB_SHA" --tag "$AIRMUX_IMAGE" .
+      - name: Exercise the airmux topology
+        env:
+          DEPLOYMENT_PROJECT: airmux
+          DEPLOYMENT_FILE: docker-compose.yml
+          AIRMUX_DEPLOYMENT_ARTIFACTS: ${{ runner.temp }}/docker-artifacts/airmux
+        run: |
+          docker compose -p "$DEPLOYMENT_PROJECT" -f "$DEPLOYMENT_FILE" up -d --wait --wait-timeout 180
+          uv run --no-sync pytest tests/deployment/test_docker.py tests/deployment/test_https.py --junitxml=docker-results/airmux.xml
+      - name: Preserve airmux logs
+        if: always() && steps.image.outcome == 'success'
+        continue-on-error: true
+        run: |
+          mkdir -p "$RUNNER_TEMP/docker-artifacts/airmux"
+          docker compose -p airmux -f docker-compose.yml logs --no-color 2>&1 | sed -e 's/deployment-test-key/[REDACTED]/g' -e 's/deployment-password/[REDACTED]/g' > "$RUNNER_TEMP/docker-artifacts/airmux/compose.log"
+      - name: Stop the airmux topology
+        if: always() && steps.image.outcome == 'success'
+        run: docker compose -p airmux -f docker-compose.yml down -v
+      - name: Exercise the split topology
+        if: always() && steps.image.outcome == 'success'
+        env:
+          DEPLOYMENT_PROJECT: airmux-split
+          DEPLOYMENT_FILE: docker-compose.split.yml
+          AIRMUX_DEPLOYMENT_ARTIFACTS: ${{ runner.temp }}/docker-artifacts/split
+        run: |
+          docker compose -p "$DEPLOYMENT_PROJECT" -f "$DEPLOYMENT_FILE" up -d --wait --wait-timeout 180
+          uv run --no-sync pytest tests/deployment/test_docker.py tests/deployment/test_https.py --junitxml=docker-results/split.xml
+      - name: Preserve split logs
+        if: always() && steps.image.outcome == 'success'
+        continue-on-error: true
+        run: |
+          mkdir -p "$RUNNER_TEMP/docker-artifacts/split"
+          docker compose -p airmux-split -f docker-compose.split.yml logs --no-color 2>&1 | sed -e 's/deployment-test-key/[REDACTED]/g' -e 's/deployment-password/[REDACTED]/g' > "$RUNNER_TEMP/docker-artifacts/split/compose.log"
+      - name: Stop the split topology
+        if: always() && steps.image.outcome == 'success'
+        run: docker compose -p airmux-split -f docker-compose.split.yml down -v
+      - name: Exercise standalone image roles
+        if: always() && steps.image.outcome == 'success'
+        run: uv run --no-sync pytest tests/deployment/test_gateway_container.py tests/deployment/test_volume.py --junitxml=docker-results/standalone.xml
+      - name: Publish the validated main image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMAGE: ghcr.io/michel-tricot/airmux
+        run: |
+          candidate="$IMAGE:sha-$GITHUB_SHA"
+          echo "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          docker tag "$AIRMUX_IMAGE" "$candidate"
+          push_output="$(docker push "$candidate")"
+          echo "$push_output"
+          digest="$(printf '%s\n' "$push_output" | sed -n 's/^.*digest: \(sha256:[0-9a-f]*\).*$/\1/p' | tail -1)"
+          test -n "$digest"
+          mkdir -p container
+          printf '%s@%s\n' "$IMAGE" "$digest" > container/image
+          cd container
+          sha256sum image > SHA256SUMS
+      - name: Upload the validated image reference
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: container-${{ github.sha }}
+          path: container
+          if-no-files-found: error
+          retention-days: ${{ github.ref == 'refs/heads/main' && 30 || 7 }}
+      - name: Summarize Docker results
+        if: always()
+        continue-on-error: true
+        run: uv run --no-sync python tests/acceptance/gateway/ci_report.py docker-results --summary "$GITHUB_STEP_SUMMARY"
+      - name: Upload Docker results and diagnostics
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: docker-${{ github.sha }}
+          path: |
+            docker-results
+            ${{ runner.temp }}/docker-artifacts
+          retention-days: 7
+
+  required:
+    name: Main CI required
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    needs: [quality, python-unit, python-integration, frontend, package, gateway, full-stack, browser, docker]
+    if: always()
+    steps:
+      - name: Require every correctness job to succeed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: jq -e 'length > 0 and all(.[]; .result == "success")' <<< "$NEEDS"

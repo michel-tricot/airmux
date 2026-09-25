@@ -58,7 +58,7 @@ def test_compose_topologies_project_the_same_image_into_roles() -> None:
 
 
 def test_ci_builds_the_image_once_before_exercising_both_topologies() -> None:
-    workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
+    workflow = yaml.safe_load((ROOT / ".github/workflows/main-ci.yml").read_text(encoding="utf-8"))
     job = workflow["jobs"]["docker"]
     commands = "\n".join(step.get("run", "") for step in job["steps"])
 
