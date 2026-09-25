@@ -3,12 +3,7 @@ title: 'Usage and activity'
 description: 'Inspect model usage, cost, latency, request status, gateway health, and audited management changes.'
 ---
 
-`airmux` records one usage event for each upstream attempt, including failed and cancelled attempts. Gateways accept events
-without waiting for local persistence. SQLite deployments export durable events to the control plane in batches.
-
-The event ingestion endpoint accepts a list of usage events. Structurally malformed events reject the whole request
-with HTTP 422 before any events are stored. Semantically inconsistent or unauthorized events are rejected individually
-and counted in `rejected`; valid events in the same batch are stored.
+`airmux` records one usage event for each upstream attempt, including failed and cancelled attempts.
 
 ## Usage event fields
 
