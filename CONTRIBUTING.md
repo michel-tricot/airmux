@@ -44,15 +44,7 @@ git switch -c describe-your-change upstream/main
 Contributors with repository write access may use a branch in the upstream repository instead. Keep unrelated work on
 separate branches or worktrees.
 
-Install Python 3.13 or newer, [uv](https://docs.astral.sh/uv/), Bun, and Docker with Compose. From the repository root, run:
-
-```bash
-uv sync --all-packages --frozen
-bun install --frozen-lockfile
-docker compose -f docker-compose.dev.yml up -d --wait
-```
-
-Continue with the [development guide](docs/development.mdx) to initialize the database and run each service.
+Continue with the [development guide](docs/development.mdx) for dependencies, local services, and your first request.
 
 ## Make a focused change
 

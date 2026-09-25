@@ -58,7 +58,7 @@ COPY --from=selected-python-build /app /app
 COPY --from=console-build /app/apps/console/dist/public /usr/share/nginx/html
 COPY deploy/docker /app/deploy/docker
 COPY taxonomy/taxonomy.yml /app/taxonomy/taxonomy.yml
-ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 AIRMUX_CONFIG=/app/deploy/docker/airmux.yml \
+ENV PATH="/app/.venv/bin:$PATH" HOME=/state PYTHONUNBUFFERED=1 AIRMUX_CONFIG=/app/deploy/docker/airmux.yml \
     CONTROL_PLANE_UPSTREAM=127.0.0.1:8000 DATA_PLANE_UPSTREAM=127.0.0.1:8081 \
     AIRMUX_DATAPLANE_CONTROL_PLANE_URL=http://127.0.0.1:8000 FORWARDED_ALLOW_IPS=127.0.0.1
 WORKDIR /state

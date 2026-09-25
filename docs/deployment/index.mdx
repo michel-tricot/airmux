@@ -25,7 +25,8 @@ not permit mixed releases: every role must use the same image digest until cross
   </Card>
 </Columns>
 
-Install the [`airmux` CLI](/docs/reference/cli#installation) on the machine you use to manage the instance.
+For the recommended single-container deployment, run the CLI inside the image with `docker compose exec airmux airmux ...`.
+See [Docker customization](/docs/deployment/customization) to override the bundled runtime YAML.
 
 ## Full-platform production requirements
 
@@ -43,10 +44,10 @@ The image defaults to the `airmux` role. Its container listens on port `8080` an
 
 ## Claim the instance
 
-The first human account becomes the instance owner. Claim a new public instance immediately after it becomes reachable:
+The first human account becomes the instance owner. Claim a new single-container instance immediately after it becomes reachable:
 
 ```bash
-airmux quickstart --url https://llm.example.com
+docker compose exec airmux airmux quickstart --url http://localhost:8080
 ```
 
 Until the first account is created, anyone who can reach the sign-up page can claim ownership. Public sign-up is
@@ -65,10 +66,11 @@ Never clone a live gateway identity or share its SQLite outbox between replicas.
 ```bash
 curl --fail https://llm.example.com/healthz
 curl --fail https://llm.example.com/readyz
-airmux doctor --control-plane-url https://llm.example.com --gateway-url https://llm.example.com
+docker compose exec airmux airmux doctor
 ```
 
-`quickstart` is the final proof because it performs a real inference request through the public route.
+`quickstart` verifies a real inference request through the packaged proxy. Check the external HTTPS route separately
+when deploying behind another proxy.
 
 Continue with [operations](/docs/deployment/operations), [security](/docs/deployment/security), and
 [upgrade and rollback](/docs/deployment/upgrades) before production traffic.

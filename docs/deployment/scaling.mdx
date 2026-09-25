@@ -19,6 +19,7 @@ Every service and short-lived startup job references `AIRMUX_IMAGE`, so pin that
 coordinated deployments. The split stack follows the same [database and catalog startup sequence](/docs/deployment/docker#startup-and-database-changes)
 as the default stack. Both gateways start after the control plane becomes healthy. The webapp proxy distributes `/inf/`
 requests between them.
+The same optional [Docker configuration directory](/docs/deployment/customization) is mounted in every role.
 
 Install the [`airmux` CLI](/docs/reference/cli#installation) on the machine you use to manage the instance.
 

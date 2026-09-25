@@ -3,7 +3,11 @@ title: "Use the CLI"
 description: "Sign in to airmux and manage workspaces, credentials, inference keys, and usage from the command line."
 ---
 
-Use the `airmux` CLI to sign in to a deployment and manage its resources. Install it with `uv`:
+The [Docker quickstart](/docs/quickstart) includes the CLI in the image. From its Compose directory, prefix commands
+with `docker compose exec airmux`, for example `docker compose exec airmux airmux doctor`. Its saved profile persists
+in the `state` volume.
+
+To manage a remote deployment from your own machine, install the CLI with `uv`:
 
 ```bash
 uv tool install airmux

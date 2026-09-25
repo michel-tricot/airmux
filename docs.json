@@ -38,6 +38,7 @@
             "pages": [
               "docs/deployment/index",
               "docs/deployment/docker",
+              "docs/deployment/customization",
               "docs/deployment/gateway",
               "docs/deployment/scaling",
               "docs/deployment/security",
@@ -58,7 +59,7 @@
           },
           {
             "group": "Contributing",
-            "pages": ["docs/development"]
+            "pages": ["docs/development", "docs/releasing"]
           }
         ]
       },

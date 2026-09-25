@@ -3,6 +3,11 @@ set -eu
 
 AIRMUX_CONSOLE_URL=${AIRMUX_CONSOLE_URL:-http://localhost:8080}
 export AIRMUX_CONSOLE_URL
+if [ -f /config/airmux.yml ] && [ -s /config/airmux.yml ]; then
+  AIRMUX_CONFIG=/config/airmux.yml
+fi
+export AIRMUX_CONFIG
+printf 'Using configuration %s\n' "$AIRMUX_CONFIG" >&2
 
 start_control_plane() {
   umask 077
@@ -38,6 +43,12 @@ start_data_plane_after_control_plane() {
 }
 
 case "${1:-}" in
+  migrate)
+    exec airmux control-plane migrate --config "$AIRMUX_CONFIG"
+    ;;
+  taxonomy)
+    exec airmux control-plane taxonomy --config "$AIRMUX_CONFIG" --file /app/taxonomy/taxonomy.yml
+    ;;
   control-plane)
     start_control_plane 0.0.0.0
     ;;
@@ -56,7 +67,7 @@ case "${1:-}" in
     console_pid=$!
     ;;
   *)
-    echo 'Expected airmux, console, control-plane, or data-plane' >&2
+    echo 'Expected airmux, console, control-plane, data-plane, migrate, or taxonomy' >&2
     exit 2
     ;;
 esac

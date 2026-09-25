@@ -29,10 +29,9 @@ def test_compose_topologies_project_the_same_image_into_roles() -> None:
     assert compact_services["airmux"]["command"] == "airmux"
     for name in ("migrate", "taxonomy"):
         assert compact_services[name]["image"] == "${AIRMUX_IMAGE:-airmux:local}"
-        assert compact_services[name]["entrypoint"] == ["/usr/bin/tini", "--", "airmux"]
         assert compact_services[name]["restart"] == "no"
-    assert compact_services["migrate"]["command"][:2] == ["control-plane", "migrate"]
-    assert compact_services["taxonomy"]["command"][:2] == ["control-plane", "taxonomy"]
+        assert compact_services[name]["command"] == name
+        assert compact_services[name]["volumes"] == ["./airmux-config:/config:ro"]
     assert compact_services["migrate"]["depends_on"]["postgres"]["condition"] == "service_healthy"
     assert compact_services["taxonomy"]["depends_on"]["migrate"]["condition"] == "service_completed_successfully"
     assert compact_services["airmux"]["depends_on"]["taxonomy"]["condition"] == "service_completed_successfully"

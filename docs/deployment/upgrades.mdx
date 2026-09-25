@@ -17,10 +17,11 @@ rolling-compatible path.
 Before replacing any process:
 
 1. Read the [target release notes](https://github.com/michel-tricot/airmux/releases) and configuration changes
-2. Record the current release or image digest
-3. Stop new inference traffic and allow active streams to finish
-4. Back up Postgres, runtime credentials, provider secrets, and every gateway state directory together
-5. Confirm that the database backup and state snapshot can be restored on isolated infrastructure
+2. Compare a [custom runtime YAML](/docs/deployment/customization), if present, with the target image's bundled default
+3. Record the current release or image digest
+4. Stop new inference traffic and allow active streams to finish
+5. Back up Postgres, runtime credentials, provider secrets, and every gateway state directory together
+6. Confirm that the database backup and state snapshot can be restored on isolated infrastructure
 
 Include each gateway's identity, accepted bundle, and SQLite usage outbox in the state snapshot. Restoring only the
 database or only `/state` can leave credential metadata, secret values, bundles, and pending usage out of sync.

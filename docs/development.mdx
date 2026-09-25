@@ -1,20 +1,30 @@
 ---
 title: "Development"
-description: "Set up airmux, make and verify a change, open a pull request, and publish a release."
+description: "Install source dependencies, run local services, and contribute a change."
 ---
+
+Use this guide to change the source. To run airmux without a development toolchain, follow the
+[Docker quickstart](/docs/quickstart).
 
 ## Clone and install
 
-Install Python 3.13+, [uv](https://docs.astral.sh/uv/), Bun, and Docker with Compose. The development stack uses ports 5432, 8000, 8080, and 5000; stop any service already using them. Clone the repository and install its dependencies:
+Install Python 3.13+, [uv](https://docs.astral.sh/uv/), Bun, and Docker with Compose. Clone the repository and install
+its dependencies:
 
 ```bash
 git clone https://github.com/michel-tricot/airmux.git
 cd airmux
 uv sync --all-packages --frozen
 bun install --frozen-lockfile
-cp .env.example .env
+```
+
+This is enough for code-only changes and unit tests. Start Postgres when you need the full stack or integration tests:
+
+```bash
 docker compose -f docker-compose.dev.yml up -d --wait
 ```
+
+The development stack uses ports 5432, 8000, 8080, and 5000.
 
 ## Start the development environment
 
@@ -32,7 +42,7 @@ Start each service in its own terminal:
 | Gateway | `uv run airmux gateway serve --config airmux.yml --dev` | `http://127.0.0.1:8080` |
 | Webapp | `bun run dev` | `http://127.0.0.1:5000` |
 
-Finish local setup through the webapp origin:
+To make a real inference request, run quickstart through the webapp origin and enter a provider key when prompted:
 
 ```bash
 uv run --package airmux airmux quickstart --url http://127.0.0.1:5000
@@ -63,30 +73,11 @@ Before editing, read [CONTRIBUTING.md](https://github.com/michel-tricot/airmux/b
 
 Open a pull request against `main` with a concise summary of user impact and the checks you ran. Draft and ready pull requests run the same fast checks. Main CI runs the broader checks after merge. Address review feedback and merge after the required CI and security checks pass.
 
-## Publish a release
+## Release
 
-The root `VERSION` file is the public package version. Publish Release requires the full SHA of the version pull request's merge commit on `main`. It checks Main CI and Security for that exact commit. The other workspace projects stay at `0.0.0`.
+Follow the [release guide](/docs/releasing) to prepare and publish a version.
 
-### Checklist
-
-1. Run **Actions → Prepare Release** on `main`, then merge its pull request
-2. Wait for **Main CI** and **Security** to pass
-3. Run **Actions → Publish Release** on `main` with the version PR's merge commit SHA; wait for it to finish
-4. Check the GitHub release, PyPI package, and GHCR version and `latest` tags
-
-Prepare Release opens a pull request that changes `VERSION`. Publish Release confirms that the supplied commit changed `VERSION` and has not already been tagged. It uses the validated Python and container artifacts from that commit's successful Main CI run; it does not rebuild them. It checks installation and live providers before creating the tag, then publishes and verifies the package and image. The `release` environment supplies provider credentials and `RELEASE_GITHUB_TOKEN`; PyPI uses its trusted publisher for `release.yml`.
-
-### If a release fails
-
-| Failed stage | Action |
-| --- | --- |
-| Main CI or Security | Fix the failure on a PR. If the release source changed, prepare a new version, wait for its checks, then dispatch **Publish Release** |
-| `prepare` | Confirm the full SHA is the version pull request's merge commit on `main`, the version tag is unused, and both main checks passed; then dispatch **Publish Release** again |
-| `installation` or `live-providers` before the tag | Retry transient failures. If the release source must change, fix it on a PR and prepare a new version before dispatching again |
-| After the tag or during publication | Rerun failed jobs on the original **Publish Release** run while its Main CI artifacts are available. Keep the tag on its original commit |
-| After PyPI or GHCR publication | Inspect the published version and digest, then rerun failed verification or announcement jobs on the original run. If the source must change, prepare a new version; published package bytes and release tags cannot be replaced |
-
-### Install a local build
+## Install a local build
 
 Build and install an unreleased checkout, then run its portable installation smoke test outside the repository:
 

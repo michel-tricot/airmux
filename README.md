@@ -32,43 +32,40 @@ persistent usage history with estimated cost.
 
 ## Quickstart
 
-Run the full platform on one machine. You need Docker with Compose 2.24.4+, Python 3.13+, [uv](https://docs.astral.sh/uv/),
-and an API key for at least one provider.
-
-Use one release for both the CLI and the deployment files. A CLI and an image from different commits do not share a
-management API contract.
+Run the full platform on one machine. You need Docker with Compose 2.24.4+ and an API key for at least one provider.
+Choose a [published release](https://github.com/michel-tricot/airmux/releases) and use its version for both the Compose
+file and image:
 
 ```bash
-export AIRMUX_VERSION=0.1.2
-uv tool install "airmux==$AIRMUX_VERSION"
-git clone --branch "v$AIRMUX_VERSION" https://github.com/michel-tricot/airmux.git
-cd airmux
+export AIRMUX_VERSION=X.Y.Z
+mkdir airmux && cd airmux
+curl -fsSLo docker-compose.yml "https://raw.githubusercontent.com/michel-tricot/airmux/v${AIRMUX_VERSION}/docker-compose.yml"
+curl -fsSLo .env.example "https://raw.githubusercontent.com/michel-tricot/airmux/v${AIRMUX_VERSION}/.env.example"
 cp .env.example .env
 ```
 
-Set one provider key in `.env`, such as `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`, then start the stack and claim it:
+In `.env`, replace `X.Y.Z` with the same release version and set `POSTGRES_PASSWORD`. Then start the stack and claim it:
 
 ```bash
-docker build -t airmux:local .
 docker compose up -d --wait
-airmux quickstart --url http://localhost:8080
+docker compose exec airmux airmux quickstart --url http://localhost:8080
 ```
 
-`quickstart` creates the owner account, organization, and workspace; imports provider credentials; mints an inference
-key; and proves the installation with a real model request. Open [localhost:8080](http://localhost:8080) for the
-console, where the request appears with its model, tokens, and estimated cost.
+Enter a provider key when prompted. `quickstart` creates the owner account, organization, and workspace; stores the
+provider credential; mints an inference key; and proves the installation with a real model request. Open
+[localhost:8080](http://localhost:8080) for the console, where the request appears with its model, tokens, and estimated cost.
 
 > [!IMPORTANT]
 > Requests through `airmux` call real providers and are billed by them.
 
-The [quickstart guide](docs/quickstart.mdx) continues through finding that request in the console and enforcing your
-first workspace policy.
+The [quickstart guide](docs/quickstart.mdx) continues through finding that request in the console. See
+[customize the Docker deployment](docs/deployment/customization.mdx) when you need to change runtime settings.
 
 | Goal | Command |
 | --- | --- |
-| List catalog models | `airmux models list` |
-| Inspect the installation | `airmux doctor` |
-| Follow gateway activity | `airmux events tail --interval 2 --keep 30` |
+| List catalog models | `docker compose exec airmux airmux models list` |
+| Inspect the installation | `docker compose exec airmux airmux doctor` |
+| Follow gateway activity | `docker compose exec airmux airmux events tail --interval 2 --keep 30` |
 | Follow service logs | `docker compose logs -f airmux` |
 | Stop while preserving state | `docker compose down` |
 
@@ -170,6 +167,7 @@ shapes.
 | Control routing, access, and spending | [Workspace policies](docs/policies.mdx) |
 | Understand usage and cost | [Usage and activity](docs/features/usage.mdx) |
 | Deploy `airmux` | [Deployment overview](docs/deployment/index.mdx) |
+| Customize a Docker deployment | [Docker customization](docs/deployment/customization.mdx) |
 | Upgrade or roll back a deployment | [Upgrade and rollback](docs/deployment/upgrades.mdx) |
 | Call the management API | [Management API](docs/reference/management-api.mdx) |
 | Work on the project | [Contributing](CONTRIBUTING.md) and [Development guide](docs/development.mdx) |

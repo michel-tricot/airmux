@@ -16,24 +16,26 @@ services:
 
   migrate:
     image: ${AIRMUX_IMAGE:-airmux:local}
-    entrypoint: ["/usr/bin/tini", "--", "airmux"]
-    command: ["control-plane", "migrate", "--config", "/app/deploy/docker/airmux.yml"]
+    command: migrate
     environment:
       DATABASE_URL: postgresql+asyncpg://airmux:${POSTGRES_PASSWORD:-airmux}@postgres:5432/airmux
     depends_on:
       postgres:
         condition: service_healthy
+    volumes:
+      - ./airmux-config:/config:ro
     restart: "no"
 
   taxonomy:
     image: ${AIRMUX_IMAGE:-airmux:local}
-    entrypoint: ["/usr/bin/tini", "--", "airmux"]
-    command: ["control-plane", "taxonomy", "--config", "/app/deploy/docker/airmux.yml", "--file", "/app/taxonomy/taxonomy.yml"]
+    command: taxonomy
     environment:
       DATABASE_URL: postgresql+asyncpg://airmux:${POSTGRES_PASSWORD:-airmux}@postgres:5432/airmux
     depends_on:
       migrate:
         condition: service_completed_successfully
+    volumes:
+      - ./airmux-config:/config:ro
     restart: "no"
 
   airmux:
@@ -47,6 +49,7 @@ services:
       - "${AIRMUX_PORT:-8080}:8080"
     volumes:
       - state:/state
+      - ./airmux-config:/config:ro
     depends_on:
       taxonomy:
         condition: service_completed_successfully

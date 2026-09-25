@@ -1,0 +1,28 @@
+---
+title: "Release airmux"
+description: "Prepare, publish, and recover a release."
+---
+
+## Publish a release
+
+The root `VERSION` file is the public package version. Publish Release requires the full SHA of the version pull request's merge commit on `main`. It checks Main CI and Security for that exact commit. The other workspace projects stay at `0.0.0`.
+
+### Checklist
+
+1. Run **Actions → Prepare Release** on `main`, then merge its pull request
+2. Wait for **Main CI** and **Security** to pass
+3. Run **Actions → Publish Release** on `main` with the version PR's merge commit SHA; wait for it to finish
+4. Check the GitHub release, PyPI package, and GHCR version and `latest` tags
+
+Prepare Release opens a pull request that changes `VERSION`. Publish Release confirms that the supplied commit changed `VERSION` and has not already been tagged. It uses the validated Python and container artifacts from that commit's successful Main CI run; it does not rebuild them. It checks installation and live providers before creating the tag, then publishes and verifies the package and image. The `release` environment supplies provider credentials and `RELEASE_GITHUB_TOKEN`; PyPI uses its trusted publisher for `release.yml`.
+
+### If a release fails
+
+| Failed stage | Action |
+| --- | --- |
+| Main CI or Security | Fix the failure on a PR. If the release source changed, prepare a new version, wait for its checks, then dispatch **Publish Release** |
+| `prepare` | Confirm the full SHA is the version pull request's merge commit on `main`, the version tag is unused, and both main checks passed; then dispatch **Publish Release** again |
+| `installation` or `live-providers` before the tag | Retry transient failures. If the release source must change, fix it on a PR and prepare a new version before dispatching again |
+| After the tag or during publication | Rerun failed jobs on the original **Publish Release** run while its Main CI artifacts are available. Keep the tag on its original commit |
+| After PyPI or GHCR publication | Inspect the published version and digest, then rerun failed verification or announcement jobs on the original run. If the source must change, prepare a new version; published package bytes and release tags cannot be replaced |
+

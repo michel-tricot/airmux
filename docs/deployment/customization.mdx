@@ -1,0 +1,43 @@
+---
+title: "Customize a Docker deployment"
+description: "Change Compose settings or override the runtime YAML while retaining the image defaults."
+---
+
+The [quickstart](/docs/quickstart) runs with the YAML bundled in the image. Start there. Most installations only need
+changes to `.env`: `AIRMUX_IMAGE` selects the release, `POSTGRES_PASSWORD` sets the initial database password,
+`AIRMUX_PORT` selects the published port, and `AIRMUX_PUBLIC_URL` sets the browser origin. Changing the Compose
+password after Postgres has initialized does not rotate the database password.
+
+## Override the runtime YAML
+
+Use this when you need to change the control-plane or data-plane settings in the
+[configuration reference](/docs/reference/configuration). Copy the default YAML from your running image:
+
+```bash
+mkdir -p airmux-config
+docker compose exec -T airmux cat /app/deploy/docker/airmux.yml > airmux-config/airmux.yml
+```
+
+Edit `airmux-config/airmux.yml`. Keep its `/state` paths unless you also provide suitable persistent storage, and keep
+the control plane and data plane on the same secret store. The Compose file mounts `./airmux-config` read-only into the
+migration, catalog, and serving containers. Each role uses `/config/airmux.yml` when it is a nonempty regular file.
+If the file is absent or empty, each role uses the YAML bundled in the image. A nonempty invalid YAML file causes
+startup to fail; it does not silently fall back.
+
+Runtime `${env:...}` references use each container's environment, not values read directly from `.env`. Paths in the
+custom YAML resolve relative to `/config`, so use absolute `/state/...` paths for persistent data as the bundled file
+does. Compare your custom file with the new image's default YAML when upgrading.
+
+Restart all roles after editing the YAML:
+
+```bash
+docker compose down
+docker compose up -d --wait
+```
+
+`down` keeps the database and state volumes. If startup fails, inspect `docker compose logs migrate taxonomy airmux`.
+To return to the image default, remove `airmux-config/airmux.yml` and run the same two commands. The split Compose
+example uses the same directory for its migration, catalog, control-plane, and gateway containers.
+
+See [Docker Compose](/docs/deployment/docker) for state, updates, and the public origin, and
+[Configuration reference](/docs/reference/configuration) for every YAML section.

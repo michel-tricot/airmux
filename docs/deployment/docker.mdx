@@ -3,28 +3,23 @@ title: "Docker Compose"
 description: "Run the airmux image and Postgres with persistent named volumes."
 ---
 
-The default `docker-compose.yml` runs one long-lived `airmux` container and Postgres. Before `airmux` starts, two short-lived
-containers migrate the database and apply the shipped [model catalog](/docs/reference/models-and-providers).
-
-Install the [`airmux` CLI](/docs/reference/cli#installation) on the machine you use to manage the instance.
-
-Build from a checkout as shown below, or pull a published image from
-`ghcr.io/michel-tricot/airmux`. Release tags use `X.Y.Z`, and `latest` moves to the most recent successful release.
-Main CI also publishes tested candidates as `sha-<commit>`. For example, run `docker pull ghcr.io/michel-tricot/airmux:latest`
-or replace `latest` with a release version. Use a digest for reproducible production deployment. Published images include
-OCI version and source revision labels.
+The versioned `docker-compose.yml` runs one `airmux` container and Postgres. Short-lived containers migrate the database
+and apply the shipped [model catalog](/docs/reference/models-and-providers) before airmux starts. The CLI is in the image.
+Release images use `ghcr.io/michel-tricot/airmux:X.Y.Z`; pin a digest for a reproducible production deployment.
 
 ## Start
 
+Follow the [quickstart](/docs/quickstart) to download a release's Compose and environment files, set the image version
+and database password, and start the stack:
+
 ```bash
-cp .env.example .env
-docker build -t airmux:local .
 docker compose up -d --wait
-airmux quickstart --url http://localhost:8080
+docker compose exec airmux airmux quickstart --url http://localhost:8080
 ```
 
-The CLI reads provider keys from the checkout's `.env` and stores missing credentials through the management API. The
-application container does not receive the provider-key variables from that file.
+The CLI prompts for provider keys and stores them through the management API. The keys do not go in `.env`.
+The image's runtime YAML works without any local configuration file. To override it, follow
+[Customize the Docker deployment](/docs/deployment/customization).
 
 ## Configure the public origin
 
@@ -35,7 +30,8 @@ AIRMUX_PORT=9000
 AIRMUX_PUBLIC_URL=http://localhost:9000
 ```
 
-Set these in `.env`, restart Compose, and pass the same URL to `quickstart`. For a public deployment, terminate TLS at a
+Set these in `.env` and restart Compose. The container's quickstart still connects to port 8080 inside the container.
+For a public deployment, terminate TLS at a
 reverse proxy and set `AIRMUX_PUBLIC_URL` to the exact HTTPS origin.
 
 The packaged proxy replaces incoming forwarding headers and uses the configured public URL for the request scheme. API
@@ -77,10 +73,10 @@ tells you to run the migration command.
 
 ## Update
 
-Check out the intended release, take a backup, then build the image once and replace the stack:
+Back up the database and state volumes together. Download the Compose file for the target release and set
+`AIRMUX_IMAGE` in `.env` to that release's image digest, then replace the stack:
 
 ```bash
-docker build -t airmux:local .
 docker compose up -d --wait
 ```
 

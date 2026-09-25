@@ -3,7 +3,6 @@ from __future__ import annotations
 import ast
 import json
 import re
-import shutil
 import subprocess
 import tomllib
 from collections import Counter
@@ -133,12 +132,14 @@ def test_contributor_documentation_has_a_repository_entry_point() -> None:
 def test_documentation_tracks_current_ci_entry_points() -> None:
     policy = (ROOT / ".github/policy/README.md").read_text(encoding="utf-8")
     development = (DOCS / "development.mdx").read_text(encoding="utf-8")
+    releasing = (DOCS / "releasing.mdx").read_text(encoding="utf-8")
 
     assert "tests/ci/test_merge_policy.py" in policy
     assert "tests/documentation/test_merge_policy.py" not in policy
     assert "uv run pytest -n auto" in development
-    assert "Prepare Release" in development
-    assert "Publish Release" in development
+    assert "/docs/releasing" in development
+    assert "Prepare Release" in releasing
+    assert "Publish Release" in releasing
 
 
 def test_local_distribution_installation_recipe_is_documented() -> None:
@@ -227,32 +228,25 @@ def test_full_platform_instructions_pin_one_release() -> None:
     assert len(declared) == 1, declared
     version = declared.pop()
 
+    assert version == "X.Y.Z"
     for document in (readme, quickstart):
-        assert 'git clone --branch "v$AIRMUX_VERSION"' in document
-
-    assert 'uv tool install "airmux==$AIRMUX_VERSION"' in readme
-    assert "uv sync --package airmux --frozen" in quickstart
-
-    git = shutil.which("git")
-    assert git is not None
-    tags = subprocess.run(  # noqa: S603 resolved Git executable only lists local tags
-        [git, "tag", "--list", f"v{version}"], cwd=ROOT, text=True, capture_output=True, check=False
-    )
-    assert tags.stdout.split() == [f"v{version}"], f"documented release v{version} is not a tag in this repository"
+        assert 'v${AIRMUX_VERSION}/docker-compose.yml' in document
+        assert 'v${AIRMUX_VERSION}/.env.example' in document
+        assert "docker compose exec airmux airmux quickstart" in document
+    assert "ghcr.io/michel-tricot/airmux:X.Y.Z" in (ROOT / ".env.example").read_text(encoding="utf-8")
 
 
-def test_quickstart_walks_through_the_webapp_and_a_verified_policy() -> None:
+def test_quickstart_walks_through_the_webapp_and_links_to_customization() -> None:
     quickstart = (DOCS / "quickstart.mdx").read_text(encoding="utf-8")
 
     assert "airmux quickstart --url" in quickstart
-    assert "/inf/v1/chat/completions" in quickstart
-    assert "airmux policies create" in quickstart
-    assert "policy_denied" in quickstart
+    assert "/inf/v1" in quickstart
+    assert "/docs/guides/policy-workflow" in quickstart
+    assert "/docs/deployment/customization" in quickstart
     assert "docker compose down" in quickstart
-    assert "/docs/deployment/gateway" in quickstart
 
     steps = re.findall(r'<Step title="([^"]+)">', quickstart)
-    assert steps.index("Find the request in the webapp") < steps.index("Add a workspace policy and prove it works")
+    assert steps == ["Get one release's deployment files", "Start and claim the instance", "See the request"]
 
 
 def test_public_links_use_the_current_repository() -> None:
@@ -357,9 +351,9 @@ def test_curl_request_bodies_are_valid_json(path: Path) -> None:
         json.loads(match.group("body"))
 
 
-def test_quickstart_runs_the_installed_cli_against_the_public_url() -> None:
+def test_quickstart_runs_the_image_cli() -> None:
     documents = "\n".join(path.read_text(encoding="utf-8") for path in [ROOT / "README.md", *documentation_files()])
-    commands = re.findall(r"^\s*airmux quickstart --url \S+$", documents, re.MULTILINE)
+    commands = re.findall(r"^\s*docker compose exec airmux airmux quickstart --url http://localhost:8080$", documents, re.MULTILINE)
 
     assert commands
     assert "docker compose run" not in documents
