@@ -11,6 +11,47 @@ Policies control which requests a workspace accepts, which models and credential
 - All matching policies compose
 - Policies are traversed by ID for deterministic evaluation
 
+## Create a workspace policy
+
+This walkthrough creates a self-contained policy that caps every request in the active workspace at 1,024 output tokens, then verifies the behavior from the CLI.
+
+<Steps>
+  <Step title="Create the policy configuration">
+    Save this as `output-limit-policy.json`:
+
+    ```json
+    {
+      "name": "Production output limit",
+      "enabled": true,
+      "definition": {
+        "target": {"kind": "workspace"},
+        "rules": [
+          {
+            "match": {"kind": "all_requests"},
+            "action": {"kind": "request_limits", "max_output_tokens": 1024}
+          }
+        ]
+      }
+    }
+    ```
+  </Step>
+  <Step title="Create and inspect the policy">
+    The CLI uses your active organization and workspace context. Use `--workspace` to target a specific workspace:
+
+    ```bash
+    airmux policies create output-limit-policy.json --workspace production -f json
+    airmux policies list
+    ```
+
+    The webapp can also create and edit policies with the same target, match, and action options.
+  </Step>
+  <Step title="Verify behavior">
+    With the policy active, a Chat Completions request with `max_completion_tokens` greater than `1024` returns `403 policy_denied`. A request that omits the field sends `1024` upstream and reports a `defaulted` adjustment with `source: policy`. If several matching policies set limits, the tightest ceiling applies.
+  </Step>
+</Steps>
+
+To restrict a principal across their credentials in this workspace, replace the target with `{"kind": "selected_users", "user_ids": ["USER_UUID"]}`. Use `{"kind": "selected_keys", "key_ids": ["KEY_ID"]}` for specific credentials. Key inspection lists all applicable policies.
+
 ## Configure a policy
 
 ### Choose a target
@@ -157,44 +198,3 @@ Try backup models for rate limits, upstream errors, or timeouts:
 ```
 
 Invalid requests, policy denials, and authentication failures do not trigger model fallback. An upstream authentication failure may try another credential in the selected scope.
-
-## Create a workspace policy
-
-This walkthrough creates a self-contained policy that caps every request in the active workspace at 1,024 output tokens, then verifies the behavior from the CLI.
-
-<Steps>
-  <Step title="Create the policy configuration">
-    Save this as `output-limit-policy.json`:
-
-    ```json
-    {
-      "name": "Production output limit",
-      "enabled": true,
-      "definition": {
-        "target": {"kind": "workspace"},
-        "rules": [
-          {
-            "match": {"kind": "all_requests"},
-            "action": {"kind": "request_limits", "max_output_tokens": 1024}
-          }
-        ]
-      }
-    }
-    ```
-  </Step>
-  <Step title="Create and inspect the policy">
-    The CLI uses your active organization and workspace context. Use `--workspace` to target a specific workspace:
-
-    ```bash
-    airmux policies create output-limit-policy.json --workspace production -f json
-    airmux policies list
-    ```
-
-    The webapp can also create and edit policies with the same target, match, and action options.
-  </Step>
-  <Step title="Verify behavior">
-    With the policy active, a Chat Completions request with `max_completion_tokens` greater than `1024` returns `403 policy_denied`. A request that omits the field sends `1024` upstream and reports a `defaulted` adjustment with `source: policy`. If several matching policies set limits, the tightest ceiling applies.
-  </Step>
-</Steps>
-
-To restrict a principal across their credentials in this workspace, replace the target with `{"kind": "selected_users", "user_ids": ["USER_UUID"]}`. Use `{"kind": "selected_keys", "key_ids": ["KEY_ID"]}` for specific credentials. Key inspection lists all applicable policies.
