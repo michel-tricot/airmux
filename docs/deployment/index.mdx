@@ -26,7 +26,7 @@ release for every service in a split deployment.
   </Card>
 </Columns>
 
-For the recommended single-container deployment, run the CLI inside the image with `docker compose exec airmux airmux ...`.
+For the recommended single-container deployment, run the CLI inside the image with `docker compose exec app airmux ...`.
 See [Docker Compose](/docs/deployment/docker#customize-the-runtime-yaml) to override the bundled runtime YAML.
 
 ## Full-platform production requirements
@@ -48,7 +48,7 @@ The default Docker deployment listens on port `8080` and serves the webapp, `/ap
 The first human account becomes the instance owner. Claim a new single-container instance immediately after it becomes reachable:
 
 ```bash
-docker compose exec airmux airmux quickstart --url http://localhost:8080
+docker compose exec app airmux quickstart --url http://localhost:8080
 ```
 
 Until the first account is created, anyone who can reach the sign-up page can claim ownership. Public sign-up is
@@ -67,7 +67,7 @@ Never clone a live gateway identity or share its SQLite outbox between replicas.
 ```bash
 curl --fail https://llm.example.com/healthz
 curl --fail https://llm.example.com/readyz
-docker compose exec airmux airmux doctor
+docker compose exec app airmux doctor
 ```
 
 `quickstart` sends a real inference request. Check the external HTTPS route separately

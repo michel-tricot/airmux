@@ -63,7 +63,7 @@ def test_gateway_container_healthchecks_do_not_require_onboarding():
     compact = yaml.safe_load((root / "docker-compose.yml").read_text())
     split = yaml.safe_load((root / "docker-compose.split.yml").read_text())
 
-    assert "/healthz" in compact["services"]["airmux"]["healthcheck"]["test"][-1]
+    assert "/healthz" in compact["services"]["app"]["healthcheck"]["test"][-1]
     assert "/healthz" in split["services"]["data-plane-1"]["healthcheck"]["test"][-1]
     assert "/healthz" in split["services"]["data-plane-2"]["healthcheck"]["test"][-1]
     assert "/readyz" in split["services"]["control-plane"]["healthcheck"]["test"][-1]
@@ -79,5 +79,5 @@ def test_layouts_complete_database_jobs_before_serving():
     compact_services = compact["services"]
     assert compact_services["migrate"]["depends_on"]["postgres"]["condition"] == "service_healthy"
     assert compact_services["taxonomy"]["depends_on"]["migrate"]["condition"] == "service_completed_successfully"
-    assert compact_services["airmux"]["depends_on"]["taxonomy"]["condition"] == "service_completed_successfully"
+    assert compact_services["app"]["depends_on"]["taxonomy"]["condition"] == "service_completed_successfully"
     assert split["services"]["control-plane"]["depends_on"]["taxonomy"]["condition"] == "service_completed_successfully"

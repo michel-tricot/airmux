@@ -37,7 +37,7 @@ Run the full platform on one machine. You need Docker with Compose 2.24.4+ and a
 ```bash
 curl -fsSLO https://github.com/michel-tricot/airmux/releases/latest/download/docker-compose.yml
 docker compose up -d --wait
-docker compose exec airmux airmux quickstart --url http://localhost:8080
+docker compose exec app airmux quickstart --url http://localhost:8080
 ```
 
 Enter a provider key when prompted. `quickstart` sets up your account and workspace, prints an inference key, and sends
@@ -52,10 +52,10 @@ The [quickstart guide](docs/quickstart.mdx) continues through finding that reque
 
 | Goal | Command |
 | --- | --- |
-| List catalog models | `docker compose exec airmux airmux models list` |
-| Inspect the installation | `docker compose exec airmux airmux doctor` |
-| Follow gateway activity | `docker compose exec airmux airmux events tail --interval 2 --keep 30` |
-| Follow service logs | `docker compose logs -f airmux` |
+| List catalog models | `docker compose exec app airmux models list` |
+| Inspect the installation | `docker compose exec app airmux doctor` |
+| Follow gateway activity | `docker compose exec app airmux events tail --interval 2 --keep 30` |
+| Follow service logs | `docker compose logs -f app` |
 | Stop while preserving state | `docker compose down` |
 
 ## Use your existing client

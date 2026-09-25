@@ -38,7 +38,7 @@ services:
       - ./airmux-config:/config:ro
     restart: "no"
 
-  airmux:
+  app:
     image: ${AIRMUX_IMAGE:-airmux:local}
     command: airmux
     environment:

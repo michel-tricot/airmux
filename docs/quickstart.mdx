@@ -25,7 +25,7 @@ You need Docker with Compose 2.24.4 or newer and an API key for a provider in th
   <Step title="Start and claim the instance">
     ```bash
     docker compose up -d --wait
-    docker compose exec airmux airmux quickstart --url http://localhost:8080
+    docker compose exec app airmux quickstart --url http://localhost:8080
     ```
 
     Wait for the stack to become healthy. Quickstart asks for an owner account and provider keys. Enter one provider

@@ -21,8 +21,8 @@ def https_deployment(tmp_path_factory):
     project = f"airmux-https-{uuid.uuid4().hex[:10]}"
     compose_file = os.environ["DEPLOYMENT_FILE"]
     compact = compose_file == "docker-compose.yml"
-    gateway = "airmux" if compact else "console"
-    control_plane = "airmux" if compact else "control-plane"
+    gateway = "app" if compact else "console"
+    control_plane = "app" if compact else "control-plane"
     compose = ("compose", "-p", project, "-f", compose_file)
     environment = {**os.environ, "AIRMUX_PORT": "127.0.0.1:0", "AIRMUX_PUBLIC_URL": "https://localhost"}
     certificate = directory / "certificate.pem"
@@ -194,7 +194,7 @@ def test_forged_forwarded_host_cannot_change_redirect_origin(https_deployment):
 
 def test_internal_plane_ports_are_not_published(https_deployment):
     _, _, compose, control_plane, _ = https_deployment
-    services = (control_plane,) if control_plane == "airmux" else (control_plane, "data-plane-1", "data-plane-2")
+    services = (control_plane,) if control_plane == "app" else (control_plane, "data-plane-1", "data-plane-2")
     for service in services:
         container = docker(*compose, "ps", "-q", service)
         bindings = json.loads(docker("inspect", "--format", "{{json .HostConfig.PortBindings}}", container))

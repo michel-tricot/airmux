@@ -226,7 +226,7 @@ def test_full_platform_instructions_download_the_release_compose_file() -> None:
     quickstart = (DOCS / "quickstart.mdx").read_text(encoding="utf-8")
     for document in (readme, quickstart):
         assert "releases/latest/download/docker-compose.yml" in document
-        assert "docker compose exec airmux airmux quickstart" in document
+        assert "docker compose exec app airmux quickstart" in document
 
 
 def test_quickstart_walks_through_the_webapp_and_links_to_customization() -> None:
@@ -346,7 +346,7 @@ def test_curl_request_bodies_are_valid_json(path: Path) -> None:
 
 def test_quickstart_runs_the_image_cli() -> None:
     documents = "\n".join(path.read_text(encoding="utf-8") for path in [ROOT / "README.md", *documentation_files()])
-    commands = re.findall(r"^\s*docker compose exec airmux airmux quickstart --url http://localhost:8080$", documents, re.MULTILINE)
+    commands = re.findall(r"^\s*docker compose exec app airmux quickstart --url http://localhost:8080$", documents, re.MULTILINE)
 
     assert commands
     assert "docker compose run" not in documents

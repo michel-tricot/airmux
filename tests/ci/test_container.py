@@ -24,9 +24,9 @@ def test_compose_topologies_project_the_same_image_into_roles() -> None:
     split = yaml.safe_load(split_text)
 
     compact_services = compact["services"]
-    assert "build" not in compact_services["airmux"]
-    assert compact_services["airmux"]["image"] == "${AIRMUX_IMAGE:-airmux:local}"
-    assert compact_services["airmux"]["command"] == "airmux"
+    assert "build" not in compact_services["app"]
+    assert compact_services["app"]["image"] == "${AIRMUX_IMAGE:-airmux:local}"
+    assert compact_services["app"]["command"] == "airmux"
     for name in ("migrate", "taxonomy"):
         assert compact_services[name]["image"] == "${AIRMUX_IMAGE:-airmux:local}"
         assert compact_services[name]["restart"] == "no"
@@ -34,7 +34,7 @@ def test_compose_topologies_project_the_same_image_into_roles() -> None:
         assert compact_services[name]["volumes"] == ["./airmux-config:/config:ro"]
     assert compact_services["migrate"]["depends_on"]["postgres"]["condition"] == "service_healthy"
     assert compact_services["taxonomy"]["depends_on"]["migrate"]["condition"] == "service_completed_successfully"
-    assert compact_services["airmux"]["depends_on"]["taxonomy"]["condition"] == "service_completed_successfully"
+    assert compact_services["app"]["depends_on"]["taxonomy"]["condition"] == "service_completed_successfully"
 
     services = split["services"]
     assert "setup" not in services
