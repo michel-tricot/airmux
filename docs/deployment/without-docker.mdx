@@ -45,7 +45,7 @@ Use the public HTTPS origin for `--console-url` when deploying behind TLS. The g
 beside `deployment/airmux.yml`; persist and back up that directory with Postgres. Both planes must read the same
 bootstrap key and secret store. The control-plane and gateway ports below should remain private to the host.
 
-Render the same Nginx proxy template used by the container, pointing it at the built console and local services:
+Render the Nginx configuration for the built console and local services:
 
 ```bash
 export AIRMUX_CONSOLE_ROOT="$PWD/apps/console/dist/public"

@@ -12,8 +12,7 @@ You need Docker with Compose 2.24.4 or newer and an API key for a provider in th
 
 <Steps>
   <Step title="Download the release's Compose file">
-    From an empty directory, download the latest [published release's](https://github.com/michel-tricot/airmux/releases)
-    Compose file. It is pinned to the image verified for that release:
+    From an empty directory, download the latest release's Compose file:
 
     ```bash
     curl -fsSLO https://github.com/michel-tricot/airmux/releases/latest/download/docker-compose.yml
@@ -29,12 +28,12 @@ You need Docker with Compose 2.24.4 or newer and an API key for a provider in th
     docker compose exec airmux airmux quickstart --url http://localhost:8080
     ```
 
-    Compose starts Postgres, migrates the database, and loads the model catalog before starting airmux. Quickstart asks
-    for an owner account and provider keys. Enter one provider key and press Enter to skip providers you do not use.
-    It creates an organization, a `default` workspace, and an inference key, then verifies it with a real request.
+    Wait for the stack to become healthy. Quickstart asks for an owner account and provider keys. Enter one provider
+    key and press Enter to skip providers you do not use. It sets up your workspace, prints an inference key, and sends
+    a real request.
 
-    Copy the inference key when it appears. It is shown once. The command always connects to port 8080 inside the
-    container. If you changed the host port, replace port 8080 in its printed example request with your host port.
+    Copy the inference key when it appears. It is shown once. If you changed the host port, use that port in the printed
+    example request.
   </Step>
 
   <Step title="See the request">

@@ -3,9 +3,7 @@ title: "Docker Compose"
 description: "Run the airmux image and Postgres with persistent named volumes."
 ---
 
-The release's `docker-compose.yml` runs one `airmux` container and Postgres. Short-lived containers migrate the database
-and apply the shipped [model catalog](/docs/reference/models-and-providers) before airmux starts. The CLI is in the image.
-Release images use `ghcr.io/michel-tricot/airmux:X.Y.Z`; pin a digest for a reproducible production deployment.
+Docker Compose runs airmux and Postgres. The CLI is available inside the airmux container.
 
 ## Start
 
@@ -108,8 +106,8 @@ Read the target release notes and compare any [custom runtime YAML](#customize-t
 default. Record the current image digest, stop new traffic, and back up Postgres and `/state` together. The migration
 job may change the database schema; an older image cannot safely use a database migrated by a newer release.
 
-Download the Compose file for the target release. It pins that release's verified image digest. Remove any older
-`AIRMUX_IMAGE` override from `.env`, then replace the stack:
+Download the Compose file for the target release. Remove any older `AIRMUX_IMAGE` override from `.env`, then replace
+the stack:
 
 ```bash
 docker compose up -d --wait
@@ -120,8 +118,5 @@ and streaming request. Confirm that the requests appear in usage. If verificatio
 stack, restore Postgres and `/state` from the same backup, and redeploy the recorded previous release. Do not roll
 back only the image against the newer database.
 
-The migration and catalog jobs use the same image as the serving container. The image defaults to the `airmux` role, which
-starts the control plane, gateway, and webapp. The control plane verifies the migrated schema and creates its internal
-gateway credential only when absent. Application processes run as UID `10001`.
-Docker initializes fresh named volumes from the image's private state directories. Bind mounts and custom configured
-paths must be writable by the selected container user; overriding the container user does not change the startup path.
+Application processes run as UID `10001`. Docker initializes fresh named volumes from the image's state directories.
+Bind mounts and custom paths must be writable by the selected container user.

@@ -3,7 +3,7 @@ title: "Deployment overview"
 description: "Choose an airmux or split deployment and identify the required database, state, network, and public URL."
 ---
 
-One release provides one Python distribution and one container image. Choose how to run that release:
+Choose how to run airmux:
 
 | Shape | Purpose | Guide |
 | --- | --- | --- |
@@ -14,8 +14,8 @@ One release provides one Python distribution and one container image. Choose how
 
 To evaluate `airmux` first, follow the [quickstart](/docs/quickstart), which uses the recommended shape.
 
-For the full platform, start with `airmux` unless you need to size or restart the services independently. Split does
-not permit mixed releases: every role must use the same image digest until cross-version bundle compatibility is defined.
+For the full platform, start with `airmux` unless you need to size or restart the services independently. Use the same
+release for every service in a split deployment.
 
 <Columns cols={2}>
   <Card title="Docker Compose" icon="container-storage" href="/docs/deployment/docker">
@@ -40,8 +40,8 @@ See [Docker Compose](/docs/deployment/docker#customize-the-runtime-yaml) to over
 | HTTPS ingress | Protects sessions, management keys, inference keys, and model traffic |
 | One provider credential | Required before inference can succeed |
 
-The image defaults to the `airmux` role. Its container listens on port `8080` and serves the webapp, `/api/v1`,
-`/inf/v1`, `/healthz`, and `/readyz` from one origin.
+The default Docker deployment listens on port `8080` and serves the webapp, `/api/v1`, `/inf/v1`, `/healthz`, and
+`/readyz` from one origin.
 
 ## Claim the instance
 
@@ -70,7 +70,7 @@ curl --fail https://llm.example.com/readyz
 docker compose exec airmux airmux doctor
 ```
 
-`quickstart` verifies a real inference request through the packaged proxy. Check the external HTTPS route separately
+`quickstart` sends a real inference request. Check the external HTTPS route separately
 when deploying behind another proxy.
 
 Continue with [operations](/docs/deployment/operations), [security](/docs/deployment/security), and the

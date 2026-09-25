@@ -33,8 +33,6 @@ persistent usage history with estimated cost.
 ## Quickstart
 
 Run the full platform on one machine. You need Docker with Compose 2.24.4+ and an API key for at least one provider.
-The latest [published release](https://github.com/michel-tricot/airmux/releases) includes a Compose file pinned to its
-verified image:
 
 ```bash
 curl -fsSLO https://github.com/michel-tricot/airmux/releases/latest/download/docker-compose.yml
@@ -42,9 +40,9 @@ docker compose up -d --wait
 docker compose exec airmux airmux quickstart --url http://localhost:8080
 ```
 
-Enter a provider key when prompted. `quickstart` creates the owner account, organization, and workspace; stores the
-provider credential; mints an inference key; and proves the installation with a real model request. Open
-[localhost:8080](http://localhost:8080) for the console, where the request appears with its model, tokens, and estimated cost.
+Enter a provider key when prompted. `quickstart` sets up your account and workspace, prints an inference key, and sends
+a real model request. Open [localhost:8080](http://localhost:8080) for the console, where the request appears with its
+model, tokens, and estimated cost.
 
 > [!NOTE]
 > Requests through `airmux` call real providers and are billed by them.
