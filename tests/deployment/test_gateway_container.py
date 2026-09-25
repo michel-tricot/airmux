@@ -44,11 +44,13 @@ def test_documented_gateway_container_serves_from_a_fresh_configuration_director
     key = inference_key.read_text().strip()
     guide = (ROOT / "docs/deployment/gateway.mdx").read_text()
     recipe = next(block for block in re.findall(r"```bash\n(.*?)```", guide, re.DOTALL) if "docker run" in block)
+    documented_image = f"airmux:documented-{uuid4().hex[:12]}"
     command = (
         recipe.replace("docker run", f"docker run -d --name {gateway} --network {network}")
         .replace("-p 8080:8081", "-p 127.0.0.1::8081")
-        .replace("airmux:local", quote(image))
+        .replace("airmux:local", documented_image)
     )
+    assert f"docker build -t {quote(image)} " not in command
     docker("network", "create", network)
     try:
         docker(

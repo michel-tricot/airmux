@@ -161,6 +161,8 @@ jobs:
           version="$(cat VERSION)"
           docker build --build-arg AIRMUX_PYTHON_BUILD="$AIRMUX_PYTHON_BUILD" --build-arg AIRMUX_VERSION="$version" \
             --build-arg AIRMUX_REVISION="$GITHUB_SHA" --tag "$AIRMUX_IMAGE" .
+          image_id="$(docker image inspect "$AIRMUX_IMAGE" --format '{{.Id}}')"
+          echo "image-id=$image_id" >> "$GITHUB_OUTPUT"
       - name: Exercise the airmux topology
         env:
           DEPLOYMENT_PROJECT: airmux
@@ -205,6 +207,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           IMAGE: ghcr.io/michel-tricot/airmux
         run: |
+          test "$(docker image inspect "$AIRMUX_IMAGE" --format '{{.Id}}')" = "${{ steps.image.outputs.image-id }}"
+          test "$(docker run --rm --entrypoint airmux "$AIRMUX_IMAGE" --version)" = "airmux $(cat VERSION)"
+          test "$(docker image inspect "$AIRMUX_IMAGE" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = "$(cat VERSION)"
+          test "$(docker image inspect "$AIRMUX_IMAGE" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "$GITHUB_SHA"
           candidate="$IMAGE:sha-$GITHUB_SHA"
           echo "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
           docker tag "$AIRMUX_IMAGE" "$candidate"
