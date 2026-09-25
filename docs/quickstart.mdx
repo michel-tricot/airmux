@@ -6,10 +6,6 @@ description: "Run airmux with Docker Compose and send a real request."
 You need Docker with Compose 2.24.4 or newer and an API key for a provider in the
 [shipped catalog](/docs/reference/models-and-providers).
 
-<Info>
-  Quickstart sends a real request that your provider bills.
-</Info>
-
 <Steps>
   <Step title="Download the release's Compose file">
     From an empty directory, download the latest release's Compose file:
@@ -23,6 +19,10 @@ You need Docker with Compose 2.24.4 or newer and an API key for a provider in th
   </Step>
 
   <Step title="Start and claim the instance">
+    <Info>
+      Quickstart sends a real request that your provider bills.
+    </Info>
+
     ```bash
     docker compose up -d --wait
     docker compose exec app airmux quickstart --url http://localhost:8080
