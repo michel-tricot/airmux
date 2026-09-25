@@ -159,7 +159,7 @@ Changes enter `main` through a squash merge.
 
 [PR CI](.github/workflows/ci.yml) runs on draft and ready pull requests. It checks quality, Python unit and integration tests, frontend, and package metadata. Its `required` job passes only when all five jobs succeed. [Security](.github/workflows/security.yml) runs Python and Bun dependency audits.
 
-[Main CI](.github/workflows/main-ci.yml) runs after merge and on manual dispatch. It repeats the five fast checks, then tests the built candidate through the gateway matrix, full-stack scenarios, Chromium, and Docker deployments. Its `required` job covers all nine jobs. [Nightly](.github/workflows/nightly.yml) checks platform compatibility and live providers on a schedule; performance and soak checks run on manual dispatch. See the [CI design](notes/design/CI.md) for the artifact and release gates.
+[Main CI](.github/workflows/main-ci.yml) runs after merge and on manual dispatch. It calls the shared PR CI jobs, then tests their candidate through the gateway matrix, full-stack scenarios, Chromium, and Docker deployments. Its `required` job covers the shared checks and all four broader jobs. [Nightly](.github/workflows/nightly.yml) checks platform compatibility and live providers on a schedule; performance and soak checks run on manual dispatch. See the [CI design](notes/design/CI.md) for the artifact and release gates.
 
 ## Main branch protection
 

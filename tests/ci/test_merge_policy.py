@@ -10,7 +10,7 @@ import yaml
 
 ROOT = Path(__file__).parents[2]
 FAST_JOBS = {"quality", "python-unit", "python-integration", "frontend", "package"}
-MAIN_JOBS = FAST_JOBS | {"gateway", "full-stack", "browser", "docker"}
+MAIN_JOBS = {"fast", "gateway", "full-stack", "browser", "docker"}
 
 
 @pytest.mark.parametrize(("filename", "expected"), [("ci.yml", FAST_JOBS), ("main-ci.yml", MAIN_JOBS)])
@@ -19,7 +19,8 @@ def test_required_gate_rejects_unsuccessful_jobs(filename, expected, failure):
     workflow = yaml.safe_load((ROOT / ".github/workflows" / filename).read_text())
     gate = workflow["jobs"]["required"]
     assert set(gate["needs"]) == expected
-    assert gate["if"] == "always()"
+    expected_condition = "always() && github.event_name == 'pull_request'" if filename == "ci.yml" else "always()"
+    assert gate["if"] == expected_condition
     for failed_job in expected:
         needs = {name: {"result": "success"} for name in expected}
         needs[failed_job] = {"result": failure}
@@ -54,15 +55,18 @@ def test_ci_events_and_candidate_coverage():
     main = yaml.safe_load((ROOT / ".github/workflows/main-ci.yml").read_text())
     assert set(pull_request["jobs"]) == FAST_JOBS | {"required"}
     assert set(main["jobs"]) == MAIN_JOBS | {"required"}
-    assert set(pull_request[True]) == {"pull_request"}
+    assert set(pull_request[True]) == {"pull_request", "workflow_call"}
+    assert pull_request[True]["workflow_call"]["outputs"]["artifact-id"]["value"] == "${{ jobs.package.outputs.artifact-id }}"
     assert set(main[True]) == {"push", "workflow_dispatch"}
     assert main[True]["push"] == {"branches": ["main"]}
     assert pull_request["name"] == "PR CI"
     assert main["name"] == "Main CI"
     assert main["jobs"]["required"]["name"] == "Main CI required"
+    assert main["jobs"]["fast"]["uses"] == "./.github/workflows/ci.yml"
     for name in ("gateway", "full-stack", "browser", "docker"):
-        assert "package" in main["jobs"][name]["needs"]
-    assert main["jobs"]["package"]["outputs"]["artifact-id"] == "${{ steps.candidate.outputs.artifact-id }}"
+        assert "fast" in main["jobs"][name]["needs"]
+        assert "${{ needs.fast.outputs.artifact-id }}" in str(main["jobs"][name])
+    assert pull_request["jobs"]["package"]["outputs"]["artifact-id"] == "${{ steps.candidate.outputs.artifact-id }}"
 
 
 def test_branch_protection_uses_pr_and_security_gates():

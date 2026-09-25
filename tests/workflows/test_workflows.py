@@ -78,6 +78,11 @@ def test_workflow_security_boundaries(path):
     workflow = yaml.safe_load(path.read_text())
     assert workflow["permissions"] == {"contents": "read"}
     for name, job in workflow["jobs"].items():
+        if "uses" in job:
+            assert path.name == "main-ci.yml"
+            assert name == "fast"
+            assert job["uses"] == "./.github/workflows/ci.yml"
+            continue
         permissions = job.get("permissions", workflow["permissions"])
         expected_permissions = {
             "prepare": {"contents": "read", "actions": "read"},
@@ -92,7 +97,6 @@ def test_workflow_security_boundaries(path):
         if path.name == "release.yml" and name == "live-providers":
             expected_permissions = {"contents": "read", "actions": "read"}
         assert permissions == expected_permissions
-        assert "uses" not in job
         assert 0 < job["timeout-minutes"] <= 30
         for step in job["steps"]:
             if "uses" not in step:

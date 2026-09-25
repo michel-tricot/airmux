@@ -3,10 +3,15 @@ name: PR CI
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+  workflow_call:
+    outputs:
+      artifact-id:
+        description: Built candidate artifact ID
+        value: ${{ jobs.package.outputs.artifact-id }}
 
 concurrency:
-  group: pr-ci-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  group: checks-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -149,6 +154,8 @@ jobs:
   package:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      artifact-id: ${{ steps.candidate.outputs.artifact-id }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -170,11 +177,20 @@ jobs:
         if: always()
         continue-on-error: true
         run: uv run --no-sync python tests/acceptance/gateway/ci_report.py package-results --summary "$GITHUB_STEP_SUMMARY"
+      - name: Upload candidate distributions
+        id: candidate
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: candidate-${{ github.sha }}
+          path: candidate
+          if-no-files-found: error
+          retention-days: ${{ github.ref == 'refs/heads/main' && 30 || 7 }}
+
   required:
     runs-on: ubuntu-latest
     timeout-minutes: 1
     needs: [quality, python-unit, python-integration, frontend, package]
-    if: always()
+    if: always() && github.event_name == 'pull_request'
     steps:
       - name: Require every correctness job to succeed
         env:
