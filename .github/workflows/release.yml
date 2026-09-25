@@ -47,7 +47,7 @@ jobs:
             echo "version=$version"
             echo "tag=$RELEASE_TAG"
           } >> "$GITHUB_OUTPUT"
-          printf 'Release candidate: `%s` from `%s` (latest main commit changing `VERSION`).\n' "$version" "$RELEASE_SHA" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Release candidate: %s from %s (latest main commit changing VERSION).\n' "$version" "$RELEASE_SHA" >> "$GITHUB_STEP_SUMMARY"
       - name: Require successful stable checks for the exact main commit
         id: checks
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
