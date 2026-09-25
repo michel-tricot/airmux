@@ -154,7 +154,7 @@ Try backup models for rate limits, upstream errors, or timeouts:
 }
 ```
 
-A policy may contain one fallback rule with up to four backup models. `max_attempts` is 2–5 and includes the primary call. `timeout_ms` is 100–120,000. Invalid requests, policy denials, and authentication failures do not trigger model fallback. An upstream authentication failure may try another credential in the selected scope.
+Invalid requests, policy denials, and authentication failures do not trigger model fallback. An upstream authentication failure may try another credential in the selected scope.
 
 ## Create a policy
 
