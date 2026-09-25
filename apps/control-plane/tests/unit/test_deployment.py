@@ -10,13 +10,13 @@ def test_default_deployment_has_one_application_and_explicit_database_jobs():
     compose = yaml.safe_load((root / "docker-compose.yml").read_text())
     services = compose["services"]
     assert "name" not in compose
-    assert set(services) == {"airmux", "migrate", "taxonomy", "postgres"}
-    assert services["airmux"]["image"] == "${AIRMUX_IMAGE:-airmux:local}"
-    assert services["airmux"]["command"] == "airmux"
-    assert "build" not in services["airmux"]
-    assert "env_file" not in services["airmux"]
-    assert services["airmux"]["environment"]["AIRMUX_PUBLIC_SIGNUP"] == "${AIRMUX_PUBLIC_SIGNUP:-false}"
-    assert services["airmux"]["depends_on"] == {"taxonomy": {"condition": "service_completed_successfully"}}
+    assert set(services) == {"app", "migrate", "taxonomy", "postgres"}
+    assert services["app"]["image"] == "${AIRMUX_IMAGE:-airmux:local}"
+    assert services["app"]["command"] == "airmux"
+    assert "build" not in services["app"]
+    assert "env_file" not in services["app"]
+    assert services["app"]["environment"]["AIRMUX_PUBLIC_SIGNUP"] == "${AIRMUX_PUBLIC_SIGNUP:-false}"
+    assert services["app"]["depends_on"] == {"taxonomy": {"condition": "service_completed_successfully"}}
     assert services["migrate"]["depends_on"] == {"postgres": {"condition": "service_healthy"}}
     assert services["taxonomy"]["depends_on"] == {"migrate": {"condition": "service_completed_successfully"}}
     assert all(services[name]["restart"] == "no" for name in ("migrate", "taxonomy"))
