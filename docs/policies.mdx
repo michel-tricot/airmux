@@ -10,11 +10,6 @@ Policies control which requests a workspace accepts, which models and credential
 - Every matching restriction must pass
 - All matching policies compose
 - Policies are traversed by ID for deterministic evaluation
-- The first matching fallback policy in that order supplies the fallback plan
-- Exact duplicate rules are invalid
-- Editing one policy cannot change another policy
-
-Routing changes take effect after gateways adopt the updated workspace bundle. Budget state refreshes separately. See the [budget tutorial](/docs/guides/budgets) for spending and status checks.
 
 ## Configure a policy
 
