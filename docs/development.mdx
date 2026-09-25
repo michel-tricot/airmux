@@ -69,13 +69,12 @@ The root `VERSION` file is the public package version. Release publishing is a m
 
 ### Checklist
 
-1. On `main`, run **Actions → Prepare Release** and choose patch, minor, or major
-2. Open the pull request link in the workflow summary. Confirm that only `VERSION` changed, then merge after PR CI and Security pass
-3. Wait for **Main CI** and **Security** to pass on the version commit. Main CI includes gateway, full-stack, browser, and Docker validation
-4. Run **Actions → Publish Release** from `main`. Confirm its `prepare`, `installation`, and `live-providers` jobs pass before the tag and publication jobs start
-5. Confirm the `vX.Y.Z` tag and GitHub release point to that commit, PyPI contains the package, and GHCR `X.Y.Z` and `latest` resolve to the verified image digest
+1. Run **Actions → Prepare Release** on `main`, then merge its pull request
+2. Wait for **Main CI** and **Security** to pass
+3. Run **Actions → Publish Release** on `main` and wait for it to finish
+4. Check the GitHub release, PyPI package, and GHCR version and `latest` tags
 
-The workflow uses the Python and container candidates from that exact Main CI run. The `release` environment supplies provider credentials and `RELEASE_GITHUB_TOKEN`; PyPI uses its trusted publisher for `release.yml`.
+Prepare Release opens a pull request that changes `VERSION`. Publish Release uses the Python and container candidates from the successful Main CI run for that commit. It checks installation and live providers before creating the tag, then publishes and verifies the package and image. The `release` environment supplies provider credentials and `RELEASE_GITHUB_TOKEN`; PyPI uses its trusted publisher for `release.yml`.
 
 ### If a release fails
 
