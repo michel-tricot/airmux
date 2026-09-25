@@ -23,13 +23,12 @@ def test_documented_portable_recipe_runs_outside_checkout(installation, tmp_path
     constraints.write_text("\n".join(f"{package['name']}=={package['version']}" for package in locked["package"] if "registry" in package["source"]))
     recipe = code_block("docs/development.mdx", "cp tests/installation/")
     _, recipe = recipe.split("uv tool install --python 3.13 dist/airmux-*.whl\n", 1)
-    result = subprocess.run(  # noqa: S603 execute the trusted recipe using the already installed candidate and cached dependencies
+    result = subprocess.run(  # noqa: S603 execute the trusted recipe using the already installed candidate
         ["/bin/bash", "-eu", "-o", "pipefail", "-c", "(\n" + recipe],
         cwd=ROOT,
         env={
             **os.environ,
             "PATH": f"{Path(executable).parent}{os.pathsep}{environment['PATH']}",
-            "UV_OFFLINE": "1",
             "UV_CONSTRAINT": str(constraints),
             "UV_TOOL_BIN_DIR": str(Path(executable).parent),
             "smoke_dir": str(tmp_path),

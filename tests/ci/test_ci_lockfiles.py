@@ -14,7 +14,7 @@ def test_quality_checkout_includes_release_tags_for_documentation_validation():
     assert checkout.get("with", {}).get("fetch-tags") is True
 
 
-def test_workspace_preparation_is_frozen_and_lock_drift_is_checked_once():
+def test_workspace_preparation_is_frozen_and_lock_drift_is_checked_in_reused_ci_workflow():
     workflows = [yaml.safe_load(path.read_text()) for path in (ROOT / ".github/workflows").glob("*.yml")]
     actions = [yaml.safe_load(path.read_text()) for path in (ROOT / ".github/actions").glob("*/action.yml")]
     drift_checks = []

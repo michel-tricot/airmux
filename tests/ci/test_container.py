@@ -58,7 +58,7 @@ def test_compose_topologies_project_the_same_image_into_roles() -> None:
 
 
 def test_ci_builds_the_image_once_before_exercising_both_topologies() -> None:
-    workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
+    workflow = yaml.safe_load((ROOT / ".github/workflows/main-ci.yml").read_text(encoding="utf-8"))
     job = workflow["jobs"]["docker"]
     commands = "\n".join(step.get("run", "") for step in job["steps"])
 
@@ -68,3 +68,13 @@ def test_ci_builds_the_image_once_before_exercising_both_topologies() -> None:
     assert "docker compose" in commands
     assert not re.search(r"docker compose .* --build", commands)
     assert "docker image save " not in commands
+
+
+def test_main_ci_dispatch_uploads_the_release_image_reference() -> None:
+    workflow = yaml.safe_load((ROOT / ".github/workflows/main-ci.yml").read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["docker"]["steps"]
+    publish = next(step for step in steps if step.get("name") == "Publish the validated main image")
+    upload = next(step for step in steps if step.get("name") == "Upload the validated image reference")
+
+    assert publish["if"] == "github.ref == 'refs/heads/main'"
+    assert upload["if"] == publish["if"]

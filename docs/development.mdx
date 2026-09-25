@@ -61,27 +61,30 @@ Control-plane unit tests can run without Docker using `uv run pytest apps/contro
 
 Before editing, read [CONTRIBUTING.md](https://github.com/michel-tricot/airmux/blob/main/CONTRIBUTING.md), `AGENTS.md`, and any relevant design record. Update generated contracts when their source changes, and commit generated outputs with the change.
 
-Open a pull request against `main` with a concise summary of user impact and the checks you ran. Draft pull requests run the initial CI checks; mark the PR ready for review to run the full required checks. Address review feedback and merge after the required CI and security checks pass.
+Open a pull request against `main` with a concise summary of user impact and the checks you ran. Draft and ready pull requests run the same fast checks. Main CI runs the broader checks after merge. Address review feedback and merge after the required CI and security checks pass.
 
 ## Publish a release
 
-The root `VERSION` file is the source of truth for the public release number. The `airmux` package metadata reads it
-during builds; the other workspace projects remain at `0.0.0` and are not updated for releases.
+The root `VERSION` file is the public package version. Release publishing is a manual action after Main CI and Security pass on the same `main` commit. The other workspace projects stay at `0.0.0`.
 
-1. On `main`, open **Actions → Prepare release**, select a patch, minor, or major increment, and run the workflow
-2. Open the pull request link from its summary, review the `VERSION` change, and merge the release PR after CI passes
-3. Merging the version change starts **Publish release** automatically; it waits for `required` and `dependency-security` on that exact main commit
-4. Follow the release workflow through installation and provider checks, package publication, registry verification, and the GitHub announcement
+### Checklist
 
-The release workflow publishes the tested Python and container candidates. The container receives the release version tag
-and `latest`, and its OCI labels identify the version and source commit. The initial `VERSION` value may match an
-existing release; that merge is skipped. The `release` environment must have provider credentials and
-`RELEASE_GITHUB_TOKEN`, and PyPI must have a trusted publisher configured for `release.yml`. See the
-[PyPI trusted publisher setup](https://docs.pypi.org/trusted-publishers/) when configuring a new project.
+1. Run **Actions → Prepare Release** on `main`, then merge its pull request
+2. Wait for **Main CI** and **Security** to pass
+3. Run **Actions → Publish Release** on `main` and wait for it to finish
+4. Check the GitHub release, PyPI package, and GHCR version and `latest` tags
 
-If publication succeeds but verification fails, rerun failed jobs on the original Actions run while its candidate
-artifacts are available, or dispatch **Publish release** on `main` to retry. Do not rebuild an already published
-version; fix the source and prepare a new version.
+Prepare Release opens a pull request that changes `VERSION`. Publish Release uses the Python and container candidates from the successful Main CI run for that commit. It checks installation and live providers before creating the tag, then publishes and verifies the package and image. The `release` environment supplies provider credentials and `RELEASE_GITHUB_TOKEN`; PyPI uses its trusted publisher for `release.yml`.
+
+### If a release fails
+
+| Failed stage | Action |
+| --- | --- |
+| Main CI or Security | Fix the failure on a PR, merge it, wait for both checks on the new main commit, then dispatch **Publish Release** |
+| `prepare` | Wait for both required main checks to finish, then dispatch **Publish Release** again. Confirm the workflow was started from `main` |
+| `installation` or `live-providers` before the tag | Fix the cause on a PR, merge it, wait for green main checks, then dispatch **Publish Release** again |
+| After the tag or during publication | Rerun failed jobs on the original **Publish Release** run while its Main CI artifacts are available. Keep the tag on its original commit |
+| After PyPI or GHCR publication | Inspect the published version and digest, then rerun failed verification or announcement jobs on the original run. If the source must change, prepare a new version; published package bytes and release tags cannot be replaced |
 
 ### Install a local build
 

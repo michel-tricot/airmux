@@ -135,7 +135,7 @@ Keep each pull request limited to one user-visible outcome. Its description shou
 - The checks and real-world verification performed
 - Any documentation or generated contracts updated
 
-When the change and local checks are complete, select **Ready for review**. This starts the full correctness checks.
+When the change and local checks are complete, select **Ready for review**. PR CI runs the same fast checks on draft and ready pull requests.
 Read failures in the pull request's Checks tab and use the job logs and uploaded diagnostics to investigate. Workflow
 runs from forks may need [maintainer approval](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/approve-runs-from-forks);
 if GitHub shows that they are awaiting approval, ask a maintainer in the pull request.
@@ -157,25 +157,9 @@ Changes enter `main` through a squash merge.
 
 ## What CI runs
 
-The [correctness workflow](.github/workflows/ci.yml) and [security workflow](.github/workflows/security.yml) run when a
-pull request is opened, updated, reopened, or marked ready for review. They do not filter by changed paths, so
-documentation changes receive the same checks as code changes at the same pull-request stage.
+[PR CI](.github/workflows/ci.yml) runs on draft and ready pull requests. It checks quality, Python unit and integration tests, frontend, and package metadata. Its `required` job passes only when all five jobs succeed. [Security](.github/workflows/security.yml) runs Python and Bun dependency audits.
 
-| Stage | Checks |
-| --- | --- |
-| Draft pull request | `quality`, `python-unit`, `frontend`, and `package`, plus the security workflow |
-| Ready-for-review pull request | All draft checks plus `python-integration`, `gateway`, `full-stack`, `browser`, `docker`, and the `required` aggregate |
-| Push to `main` | The full correctness graph and security audits |
-
-Drafts deliberately skip the integration and acceptance jobs and the `required` aggregate. Passing draft checks is
-early feedback; mark the pull request ready to obtain the full result needed for merge. On ready pull requests and
-`main`, `required` runs even after an upstream failure and rejects failed, cancelled, missing, or skipped dependencies.
-
-The security workflow runs `pip-audit` and `bun-audit` for both draft and ready pull requests. It also checks whether
-GitHub dependency review is available and runs it when enabled; otherwise the two ecosystem audits remain the fallback.
-Its `dependency-security` aggregate requires both audits to pass. Ordinary pull-request CI does not require provider
-API keys or release credentials. Compatibility, performance, live-provider, soak, and cold-build checks run separately
-in [nightly.yml](.github/workflows/nightly.yml). See the [CI design](notes/design/CI.md) for job contracts and diagnostics.
+[Main CI](.github/workflows/main-ci.yml) runs after merge and on manual dispatch. It calls the shared PR CI jobs, then tests their candidate through the gateway matrix, full-stack scenarios, Chromium, and Docker deployments. Its `required` job covers the shared checks and all four broader jobs. [Nightly](.github/workflows/nightly.yml) checks platform compatibility and live providers on a schedule; performance and soak checks run on manual dispatch. See the [CI design](notes/design/CI.md) for the artifact and release gates.
 
 ## Main branch protection
 
@@ -189,18 +173,10 @@ Two stable checks are required:
 | Required check | Coverage |
 | --- | --- |
 | `required` | Quality, Python, frontend, packaged gateway, full-stack, browser, and Docker correctness |
-| `dependency-security` | Python and JavaScript audits plus pull-request dependency review when available |
+| `dependency-security` | Python and JavaScript dependency audits |
 
 The versioned ruleset currently requires no approving reviews, but contributions still go through maintainer review.
 
 ## Releasing
 
-The root `VERSION` file is the source of truth for the public release version. Start a release from the
-`prepare release` workflow, open its generated pull request, and merge it after the normal main checks pass. The
-release workflow waits for the main CI and dependency security workflows for that exact commit, then publishes the
-Python package, container image, and GitHub release. It also updates the container's `latest` tag.
-
-Wait for the automatic release workflow to finish before preparing or merging another version bump. Releases run
-serially so an older image cannot move `latest` after a newer release.
-Contributors do not need repository administration access. Ruleset maintenance, approval-policy changes, and
-exception handling belong in the [maintainer policy guide](.github/policy/README.md).
+Follow the [release checklist and error guide](docs/development.mdx#publish-a-release). After the version pull request merges, wait for Main CI and Security to pass on the same `main` commit, then dispatch **Publish Release**. Publishing is manual and serialized. The workflow verifies the package and container before creating the GitHub release.

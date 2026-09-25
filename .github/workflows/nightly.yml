@@ -1,4 +1,4 @@
-name: nightly
+name: Nightly
 
 on:
   schedule:
@@ -19,6 +19,7 @@ concurrency:
 
 jobs:
   resolve:
+    name: Nightly resolve
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -37,6 +38,7 @@ jobs:
           echo "sha=$CANDIDATE_SHA" >> "$GITHUB_OUTPUT"
 
   package:
+    name: Nightly package
     needs: resolve
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -64,6 +66,7 @@ jobs:
           retention-days: 7
 
   compatibility:
+    name: Nightly compatibility
     needs: [resolve, package]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
@@ -123,6 +126,8 @@ jobs:
           retention-days: 7
 
   performance:
+    name: Nightly performance
+    if: github.event_name == 'workflow_dispatch'
     needs: [resolve, package]
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -145,9 +150,11 @@ jobs:
         env:
           UV_TOOL_DIR: ${{ runner.temp }}/base-tools
           UV_TOOL_BIN_DIR: ${{ runner.temp }}/base-bin
-      - uses: ./.github/actions/install-candidate
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
-          artifact-id: ${{ needs.package.outputs.artifact-id }}
+          artifact-ids: ${{ needs.package.outputs.artifact-id }}
+          path: candidate
+      - uses: ./.github/actions/install-candidate
       - name: Validate performance harness coverage
         run: uv run --no-sync pytest -m performance tests/acceptance/gateway --junitxml=performance-results/tests.xml
       - name: Compare repeated performance samples
@@ -167,6 +174,8 @@ jobs:
           retention-days: 90
 
   performance-scaling:
+    name: Nightly performance-scaling
+    if: github.event_name == 'workflow_dispatch'
     needs: [resolve, package]
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -179,9 +188,11 @@ jobs:
           persist-credentials: false
           ref: ${{ needs.resolve.outputs.sha }}
       - uses: ./.github/actions/setup-python
-      - uses: ./.github/actions/install-candidate
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
-          artifact-id: ${{ needs.package.outputs.artifact-id }}
+          artifact-ids: ${{ needs.package.outputs.artifact-id }}
+          path: candidate
+      - uses: ./.github/actions/install-candidate
       - name: Measure gateway worker and connection pool scaling
         run: |
           uv run --no-sync python tests/acceptance/gateway/performance_scaling.py \
@@ -197,6 +208,7 @@ jobs:
           retention-days: 90
 
   live-providers:
+    name: Nightly live-providers
     needs: [resolve, package]
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -207,9 +219,11 @@ jobs:
           persist-credentials: false
           ref: ${{ needs.resolve.outputs.sha }}
       - uses: ./.github/actions/setup-python
-      - uses: ./.github/actions/install-candidate
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
-          artifact-id: ${{ needs.package.outputs.artifact-id }}
+          artifact-ids: ${{ needs.package.outputs.artifact-id }}
+          path: candidate
+      - uses: ./.github/actions/install-candidate
       - run: uv run --no-sync pytest tests/acceptance/live_providers --junitxml=provider-results/providers.xml
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -232,6 +246,8 @@ jobs:
           retention-days: 7
 
   soak:
+    name: Nightly soak
+    if: github.event_name == 'workflow_dispatch'
     needs: [resolve, package]
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -241,9 +257,11 @@ jobs:
           persist-credentials: false
           ref: ${{ needs.resolve.outputs.sha }}
       - uses: ./.github/actions/setup-python
-      - uses: ./.github/actions/install-candidate
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
-          artifact-id: ${{ needs.package.outputs.artifact-id }}
+          artifact-ids: ${{ needs.package.outputs.artifact-id }}
+          path: candidate
+      - uses: ./.github/actions/install-candidate
       - name: Repeat discovered concurrency scenarios
         run: |
           for round in 1 2 3; do
@@ -266,43 +284,3 @@ jobs:
             soak-results
             ${{ runner.temp }}/soak-artifacts
           retention-days: 7
-
-  cold-docker:
-    needs: [resolve, package]
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      AIRMUX_PYTHON_BUILD: python-candidate
-      AIRMUX_IMAGE: airmux:local
-      DEPLOYMENT_IMAGE: airmux:local
-      DEPLOYMENT_PROJECT: airmux-nightly
-      DEPLOYMENT_FILE: docker-compose.yml
-      DEPLOYMENT_URL: http://localhost:8080
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          persist-credentials: false
-          ref: ${{ needs.resolve.outputs.sha }}
-      - uses: ./.github/actions/setup-python
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
-        with:
-          artifact-ids: ${{ needs.package.outputs.artifact-id }}
-          path: candidate
-      - run: cd candidate && sha256sum --check SHA256SUMS
-      - run: docker build --no-cache --build-arg AIRMUX_PYTHON_BUILD="$AIRMUX_PYTHON_BUILD" --tag "$AIRMUX_IMAGE" .
-      - run: docker compose -p "$DEPLOYMENT_PROJECT" up -d --wait --wait-timeout 180
-      - run: uv run --no-sync pytest tests/deployment --junitxml=cold-docker-results/docker.xml
-      - name: Summarize cold-build results
-        if: always()
-        continue-on-error: true
-        run: uv run --no-sync python tests/acceptance/gateway/ci_report.py cold-docker-results --summary "$GITHUB_STEP_SUMMARY"
-      - name: Upload cold-build results
-        if: always()
-        continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        with:
-          name: cold-docker-${{ needs.resolve.outputs.sha }}
-          path: cold-docker-results
-          retention-days: 7
-      - if: always()
-        run: docker compose -p "$DEPLOYMENT_PROJECT" down -v

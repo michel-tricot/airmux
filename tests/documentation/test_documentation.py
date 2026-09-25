@@ -137,8 +137,8 @@ def test_documentation_tracks_current_ci_entry_points() -> None:
     assert "tests/ci/test_merge_policy.py" in policy
     assert "tests/documentation/test_merge_policy.py" not in policy
     assert "uv run pytest -n auto" in development
-    assert "Prepare release" in development
-    assert "Publish release" in development
+    assert "Prepare Release" in development
+    assert "Publish Release" in development
 
 
 def test_local_distribution_installation_recipe_is_documented() -> None:
