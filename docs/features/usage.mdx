@@ -29,9 +29,7 @@ description: 'Inspect model usage, cost, latency, request status, gateway health
 - `not_applicable`: the request was denied before routing, with zero token counts and cost
 
 All `cost_*_usd` fields are estimates using catalog prices at request time, including when `token_usage_source` is
-`provider`. Token-count provenance does not make the calculated cost a provider invoice amount. The source is preserved
-in local event files, durable export, management API responses, and generated clients. Webapp activity lists and CLI
-event tables show the token source; webapp costs are labeled separately as estimates.
+`provider`. Token-count provenance does not make the calculated cost a provider invoice amount.
 
 ## Reports
 
