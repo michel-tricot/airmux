@@ -84,6 +84,16 @@ Limit primary and fallback routes to the listed providers:
 {"kind": "providers", "names": ["openai", "anthropic"]}
 ```
 
+#### Budget
+
+Limit matching usage to a USD amount per UTC calendar day or month. Use `shared` to combine spend across the target or `per_key` to track each inference key separately:
+
+```json
+{"kind": "budget", "amount_usd": "20.00", "period": "month", "aggregation": "shared"}
+```
+
+See the [budget tutorial](/docs/guides/budgets) to create a budget and inspect spend.
+
 #### Credential access
 
 Allow credentials from the listed scopes. Matching credential rules intersect. `airmux` chooses the most specific populated allowed scope in workspace, organization, instance order:
@@ -121,8 +131,6 @@ Reject a request that explicitly asks for more output tokens than the limit. If 
 ```json
 {"kind": "request_limits", "max_output_tokens": 4096}
 ```
-
-#### Budget
 
 Limit matching usage to a USD amount per UTC calendar day or month. Use `shared` to combine spend across the target or `per_key` to track each inference key separately:
 
