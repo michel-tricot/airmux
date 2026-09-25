@@ -112,8 +112,6 @@ print(response.content)
   </Tab>
 </Tabs>
 
-Vercel AI SDK uses its [OpenAI-compatible provider](https://ai-sdk.dev/providers/openai-compatible-providers). LangChain uses the [OpenAI integration](https://docs.langchain.com/oss/python/integrations/chat/openai) with `airmux`'s Chat Completions endpoint.
-
 List models with the OpenAI SDK using `client.models.list()`. Results reflect the models visible to the key's workspace policies and configured credential scopes. See the [model discovery reference](/docs/reference/models-and-providers#inference-model-discovery).
 
-Inference keys begin with `sk-inf-`. Management keys (`sk-cp-`) cannot be used for inference. The [Messages reference](/docs/reference/messages), [Chat Completions reference](/docs/reference/chat-completions), and [Responses reference](/docs/reference/responses) describe supported request fields.
+Inference keys begin with `sk-inf-`. The [Messages reference](/docs/reference/messages), [Chat Completions reference](/docs/reference/chat-completions), and [Responses reference](/docs/reference/responses) describe supported request fields.
