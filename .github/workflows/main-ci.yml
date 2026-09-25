@@ -200,7 +200,7 @@ jobs:
         if: always() && steps.image.outcome == 'success'
         run: uv run --no-sync pytest tests/deployment/test_gateway_container.py tests/deployment/test_volume.py --junitxml=docker-results/standalone.xml
       - name: Publish the validated main image
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
           IMAGE: ghcr.io/michel-tricot/airmux
@@ -217,7 +217,7 @@ jobs:
           cd container
           sha256sum image > SHA256SUMS
       - name: Upload the validated image reference
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: container-${{ github.sha }}
