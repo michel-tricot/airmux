@@ -3,7 +3,7 @@ title: "Model routing and failover"
 description: "Route catalog model IDs across provider families, select healthy credentials, and define bounded fallback plans."
 ---
 
-Every inference request names one catalog model. `airmux` resolves that model to a provider profile, validates the
+Every inference request specifies one catalog model. `airmux` resolves that model to a provider profile, validates the
 request, chooses a credential, and translates the request into the provider's wire format.
 
 ## Model IDs
