@@ -65,7 +65,7 @@ Open a pull request against `main` with a concise summary of user impact and the
 
 ## Publish a release
 
-The root `VERSION` file is the public package version. Release publishing is a manual action after Main CI and Security pass on the same `main` commit. The other workspace projects stay at `0.0.0`.
+The root `VERSION` file is the public package version. Publish Release selects the latest `main` commit that changed `VERSION` and waits for Main CI and Security on that commit. Later commits on `main` do not change which source is released. The other workspace projects stay at `0.0.0`.
 
 ### Checklist
 
@@ -74,15 +74,15 @@ The root `VERSION` file is the public package version. Release publishing is a m
 3. Run **Actions → Publish Release** on `main` and wait for it to finish
 4. Check the GitHub release, PyPI package, and GHCR version and `latest` tags
 
-Prepare Release opens a pull request that changes `VERSION`. Publish Release uses the Python and container candidates from the successful Main CI run for that commit. It checks installation and live providers before creating the tag, then publishes and verifies the package and image. The `release` environment supplies provider credentials and `RELEASE_GITHUB_TOKEN`; PyPI uses its trusted publisher for `release.yml`.
+Prepare Release opens a pull request that changes `VERSION`. Publish Release shows the selected version and commit in its summary, then uses the Python and container candidates from that commit's successful Main CI run. It checks installation and live providers before creating the tag, then publishes and verifies the package and image. The `release` environment supplies provider credentials and `RELEASE_GITHUB_TOKEN`; PyPI uses its trusted publisher for `release.yml`.
 
 ### If a release fails
 
 | Failed stage | Action |
 | --- | --- |
-| Main CI or Security | Fix the failure on a PR, merge it, wait for both checks on the new main commit, then dispatch **Publish Release** |
+| Main CI or Security | Fix the failure on a PR. If the release source changed, prepare a new version, wait for its checks, then dispatch **Publish Release** |
 | `prepare` | Wait for both required main checks to finish, then dispatch **Publish Release** again. Confirm the workflow was started from `main` |
-| `installation` or `live-providers` before the tag | Fix the cause on a PR, merge it, wait for green main checks, then dispatch **Publish Release** again |
+| `installation` or `live-providers` before the tag | Retry transient failures. If the release source must change, fix it on a PR and prepare a new version before dispatching again |
 | After the tag or during publication | Rerun failed jobs on the original **Publish Release** run while its Main CI artifacts are available. Keep the tag on its original commit |
 | After PyPI or GHCR publication | Inspect the published version and digest, then rerun failed verification or announcement jobs on the original run. If the source must change, prepare a new version; published package bytes and release tags cannot be replaced |
 

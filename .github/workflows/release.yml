@@ -29,14 +29,14 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Resolve the public version and main commit
+      - name: Resolve the latest version commit on main
         id: source
         run: |
-          RELEASE_SHA="$GITHUB_SHA"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          RELEASE_SHA="$(git log -1 --first-parent --format=%H -- VERSION)"
           [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
-          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           git merge-base --is-ancestor "$RELEASE_SHA" origin/main
-          version="$(cat VERSION)"
+          version="$(git show "$RELEASE_SHA:VERSION")"
           [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
           RELEASE_TAG="v$version"
           if git show-ref --verify --quiet "refs/tags/$RELEASE_TAG"; then
@@ -47,6 +47,7 @@ jobs:
             echo "version=$version"
             echo "tag=$RELEASE_TAG"
           } >> "$GITHUB_OUTPUT"
+          printf 'Release candidate: `%s` from `%s` (latest main commit changing `VERSION`).\n' "$version" "$RELEASE_SHA" >> "$GITHUB_STEP_SUMMARY"
       - name: Require successful stable checks for the exact main commit
         id: checks
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd

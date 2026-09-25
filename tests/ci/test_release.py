@@ -26,7 +26,9 @@ def test_release_branch_changes_only_the_public_version():
 def test_release_is_manual_and_requires_complete_checks_on_the_exact_main_commit():
     assert RELEASE[True] == {"workflow_dispatch": {}}
     prepare = steps("prepare")
-    assert 'RELEASE_SHA="$GITHUB_SHA"' in prepare
+    assert 'RELEASE_SHA="$(git log -1 --first-parent --format=%H -- VERSION)"' in prepare
+    assert 'version="$(git show "$RELEASE_SHA:VERSION")"' in prepare
+    assert 'test "$(git rev-parse HEAD)" = "$GITHUB_SHA"' in prepare
     assert "main-ci.yml" in prepare
     assert "Main CI required" in prepare
     assert "security.yml" in prepare
