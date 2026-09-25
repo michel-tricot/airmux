@@ -28,11 +28,6 @@ description: 'Inspect model usage, cost, latency, request status, gateway health
 - `estimated`: usage was absent or the adapter identified it as incomplete, so the gateway estimated missing counts from the request and observed response content
 - `not_applicable`: the request was denied before routing, with zero token counts and cost
 
-The source applies to the whole event. An `estimated` event can retain partial provider counts, such as Anthropic input
-and cache counts received before a stream disconnect, while estimating output. It does not identify the source of each
-individual count. Cache counts are retained when available and are never estimated. A `provider` source does not promise
-that the request finished successfully or that the provider reported every usage detail; check `status` as well.
-
 Adapters determine whether usage is usable. OpenAI Chat Completions and Anthropic currently treat an all-zero usage
 object as absent; OpenAI Responses accepts explicit zero counts as provider usage. Estimates cover observable content
 and do not establish how many tokens a provider processed after a timeout or disconnect.
