@@ -78,3 +78,13 @@ def test_main_ci_dispatch_uploads_the_release_image_reference() -> None:
 
     assert publish["if"] == "github.ref == 'refs/heads/main'"
     assert upload["if"] == publish["if"]
+
+
+def test_main_ci_publishes_the_image_it_built() -> None:
+    workflow = yaml.safe_load((ROOT / ".github/workflows/main-ci.yml").read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["docker"]["steps"]
+    build = next(step for step in steps if step.get("name") == "Build the candidate image once")
+    publish = next(step for step in steps if step.get("name") == "Publish the validated main image")
+
+    assert 'echo "image-id=$image_id" >> "$GITHUB_OUTPUT"' in build["run"]
+    assert 'test "$(docker image inspect "$AIRMUX_IMAGE" --format \'{{.Id}}\')" = "${{ steps.image.outputs.image-id }}"' in publish["run"]
