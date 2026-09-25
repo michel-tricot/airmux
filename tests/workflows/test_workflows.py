@@ -87,7 +87,7 @@ def test_workflow_security_boundaries(path):
         expected_permissions = {
             "prepare": {"contents": "read", "actions": "read"},
             "docker": {"contents": "read", "packages": "write"},
-            "installation": {"contents": "read", "actions": "read"},
+            "installation": {"contents": "read", "actions": "read", "packages": "read"},
             "release-branch": {"contents": "write"},
             "publish": {"contents": "read", "actions": "read", "id-token": "write", "packages": "write"},
             "verify-pypi": {"contents": "read", "actions": "read"},
