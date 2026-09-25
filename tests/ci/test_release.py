@@ -62,6 +62,9 @@ def test_release_consumes_main_ci_artifacts_without_copying_them():
 def test_release_checks_candidate_before_tag_and_registry_before_announcement():
     jobs = RELEASE["jobs"]
     assert set(jobs["tag"]["needs"]) == {"prepare", "installation", "live-providers"}
+    assert "container-${{ needs.prepare.outputs.sha }}" in str(jobs["installation"]["steps"])
+    assert 'docker run --rm --entrypoint airmux "$image" --version' in steps("installation")
+    assert "org.opencontainers.image.revision" in steps("installation")
     assert jobs["publish"]["needs"] == ["prepare", "tag"]
     assert set(jobs["announce"]["needs"]) == {"prepare", "verify-pypi", "verify-container"}
     assert "pypi_artifacts.py" in steps("verify-pypi")

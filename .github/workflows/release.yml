@@ -99,6 +99,7 @@ jobs:
     permissions:
       contents: read
       actions: read
+      packages: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -117,6 +118,27 @@ jobs:
         with:
           no-cache: 'true'
       - run: uv run --no-sync pytest tests/installation/portable tests/installation/integration --junitxml=installation-results/installation.xml
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: container-${{ needs.prepare.outputs.sha }}
+          run-id: ${{ needs.prepare.outputs.ci-run-id }}
+          github-token: ${{ github.token }}
+          path: container
+      - name: Verify the candidate container before tagging
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+          RELEASE_SHA: ${{ needs.prepare.outputs.sha }}
+        run: |
+          cd container
+          sha256sum --check SHA256SUMS
+          image="$(cat image)"
+          [[ "$image" =~ ^ghcr\.io/michel-tricot/airmux@sha256:[0-9a-f]{64}$ ]]
+          echo "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          docker pull "$image"
+          test "$(docker run --rm --entrypoint airmux "$image" --version)" = "airmux $VERSION"
+          test "$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = "$VERSION"
+          test "$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "$RELEASE_SHA"
       - name: Summarize installation results
         if: always()
         continue-on-error: true
