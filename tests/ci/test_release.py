@@ -24,9 +24,15 @@ def test_release_branch_changes_only_the_public_version():
 
 
 def test_release_is_manual_and_requires_complete_checks_on_the_exact_main_commit():
-    assert RELEASE[True] == {"workflow_dispatch": {}}
+    dispatch = RELEASE[True]["workflow_dispatch"]
+    assert set(dispatch["inputs"]) == {"commit"}
+    assert dispatch["inputs"]["commit"]["required"] is True
+    assert dispatch["inputs"]["commit"]["type"] == "string"
+    source = next(step for step in RELEASE["jobs"]["prepare"]["steps"] if step.get("id") == "source")
+    assert source["env"]["RELEASE_SHA"] == "${{ inputs.commit }}"
     prepare = steps("prepare")
-    assert 'RELEASE_SHA="$(git log -1 --first-parent --format=%H -- VERSION)"' in prepare
+    assert 'git merge-base --is-ancestor "$RELEASE_SHA" "$GITHUB_SHA"' in prepare
+    assert 'git diff --quiet "$RELEASE_SHA^" "$RELEASE_SHA" -- VERSION' in prepare
     assert 'version="$(git show "$RELEASE_SHA:VERSION")"' in prepare
     assert 'test "$(git rev-parse HEAD)" = "$GITHUB_SHA"' in prepare
     assert "main-ci.yml" in prepare
