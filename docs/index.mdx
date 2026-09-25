@@ -3,9 +3,9 @@ title: "airmux"
 description: "Run one self-hosted endpoint for LLM API calls across providers, with routing, access controls, and usage accounting built in."
 ---
 
-`airmux` is a self-hosted LLM gateway. Agents send requests using the `Chat Completions`, `Responses`, or `Messages` API. 
+`airmux` is a self-hosted LLM gateway. Agents can send requests using the `Chat Completions`, `Responses`, or `Messages` APIs to a single endpoint that handles everything for you. 
 
-`airmux` handles provider's authentication, applies policy, makes the request to the model and provider, records usage, and gives you a persistent usage history with cost trakcing.
+`airmux` handles provider's authentication, applies policy, makes the request to the model and provider, records usage, and gives you a persistent usage history with cost tracking.
 
 The managed catalog currently includes 9 providers and 243 models.
 
@@ -16,8 +16,8 @@ The managed catalog currently includes 9 providers and 243 models.
 ## What `airmux` provides
 
 - One inference origin for multiple upstream provider families
-- Usage, estimated cost, latency, status, credential scope, and audit records
 - Compatible Chat Completions, Responses, and Messages surfaces
+- Usage, estimated cost, latency, status, credential scope, and audit records
 - Workspace-scoped inference keys and permission-limited management keys
 - Instance, organization, and workspace provider credentials
 - Model, provider, price, budget, parameter, request, denial, and fallback policies
