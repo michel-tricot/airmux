@@ -36,14 +36,6 @@ The managed catalog currently includes 9 providers and 243 models.
 | Call the management API | [Management API](/docs/reference/management-api) |
 | Understand the design | [Architecture](/docs/concepts/architecture) |
 
-## Run `airmux` another way
-
-The quickstart deploys the full platform using docker. Two alternatives trade capability for
-simplicity or scale:
-
-- [Gateway only](/docs/deployment/gateway) serves inference from local files, with no Docker, Postgres, webapp, or usage history
-- [Separate services](/docs/deployment/scaling) splits the webapp, control plane, and gateways so gateways scale and restart independently
-
 <Info>
   `airmux` is pre-1.0. Configuration, APIs, and migrations may change before the first stable release.
 </Info>
