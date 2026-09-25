@@ -17,13 +17,13 @@ def prepare_steps() -> str:
     return "\n".join(step.get("run", "") for step in PREPARE_RELEASE["jobs"]["release-branch"]["steps"])
 
 
-def test_release_branch_bumps_only_the_public_project_and_links_to_a_pull_request():
+def test_release_branch_bumps_only_the_root_version_and_links_to_a_pull_request():
     bump = PREPARE_RELEASE[True]["workflow_dispatch"]["inputs"]["bump"]
     assert bump["type"] == "choice"
     assert bump["options"] == ["patch", "minor", "major"]
     commands = prepare_steps()
-    assert 'uv version --project packaging/airmux --bump "$BUMP" --frozen' in commands
-    assert 'test "$(git diff --name-only)" = "packaging/airmux/pyproject.toml"' in commands
+    assert 'version_file = Path("VERSION")' in commands
+    assert 'test "$(git diff --name-only)" = "VERSION"' in commands
     assert 'test -z "$(git ls-files --others --exclude-standard)"' in commands
     assert "refs/heads/$RELEASE_BRANCH" in commands
     assert "compare/main...$RELEASE_BRANCH?expand=1" in commands
@@ -33,9 +33,11 @@ def test_release_branch_bumps_only_the_public_project_and_links_to_a_pull_reques
 
 def test_release_derives_sha_and_consumes_exact_successful_main_artifact():
     assert RELEASE[True]["workflow_dispatch"] == {}
+    assert RELEASE[True]["push"] == {"branches": ["main"], "paths": ["VERSION"]}
     prepare = steps("prepare")
     assert 'RELEASE_SHA="$GITHUB_SHA"' in prepare
     assert 'RELEASE_TAG="v$version"' in prepare
+    assert 'version="$(cat VERSION)"' in prepare
     assert "ci.yml" in prepare
     assert "security.yml" in prepare
     assert "candidate-${RELEASE_SHA}" in prepare

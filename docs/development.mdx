@@ -65,14 +65,23 @@ Open a pull request against `main` with a concise summary of user impact and the
 
 ## Publish a release
 
-1. On `main`, open **Actions → Prepare release**, select a patch, minor, or major version increment, and run the workflow
-2. Open the pull request link from its summary, review the version change, and merge the release PR after CI passes
-3. After the merged commit passes the `required` and `dependency-security` checks, run **Actions → Publish release** on `main`
-4. Follow the workflow through package verification and publication; it creates the protected version tag and GitHub release
+The root `VERSION` file is the source of truth for the public release number. The `airmux` package metadata reads it
+during builds; the other workspace projects remain at `0.0.0` and are not updated for releases.
 
-The release workflow publishes the tested Python and container artifacts. The `release` environment must have the provider credentials and `RELEASE_GITHUB_TOKEN`, and PyPI must have a trusted publisher configured for `release.yml`. See the [PyPI trusted publisher setup](https://docs.pypi.org/trusted-publishers/) when configuring a new project.
+1. On `main`, open **Actions → Prepare release**, select a patch, minor, or major increment, and run the workflow
+2. Open the pull request link from its summary, review the `VERSION` change, and merge the release PR after CI passes
+3. Merging the version change starts **Publish release** automatically; it waits for `required` and `dependency-security` on that exact main commit
+4. Follow the release workflow through installation and provider checks, package publication, registry verification, and the GitHub announcement
 
-If publication succeeds but verification fails, rerun failed jobs on the original Actions run while its candidate artifacts are available. Do not rebuild an already published version; fix the source and prepare a new version.
+The release workflow publishes the tested Python and container candidates. The container receives the release version tag
+and `latest`, and its OCI labels identify the version and source commit. The initial `VERSION` value may match an
+existing release; that merge is skipped. The `release` environment must have provider credentials and
+`RELEASE_GITHUB_TOKEN`, and PyPI must have a trusted publisher configured for `release.yml`. See the
+[PyPI trusted publisher setup](https://docs.pypi.org/trusted-publishers/) when configuring a new project.
+
+If publication succeeds but verification fails, rerun failed jobs on the original Actions run while its candidate
+artifacts are available, or dispatch **Publish release** on `main` to retry. Do not rebuild an already published
+version; fix the source and prepare a new version.
 
 ### Install a local build
 

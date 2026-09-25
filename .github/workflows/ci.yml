@@ -319,7 +319,10 @@ jobs:
       - run: cd candidate && sha256sum --check SHA256SUMS
       - name: Build the candidate image once
         id: image
-        run: docker build --build-arg AIRMUX_PYTHON_BUILD="$AIRMUX_PYTHON_BUILD" --tag "$AIRMUX_IMAGE" .
+        run: |
+          version="$(cat VERSION)"
+          docker build --build-arg AIRMUX_PYTHON_BUILD="$AIRMUX_PYTHON_BUILD" --build-arg AIRMUX_VERSION="$version" \
+            --build-arg AIRMUX_REVISION="$GITHUB_SHA" --tag "$AIRMUX_IMAGE" .
       - name: Exercise the airmux topology
         env:
           DEPLOYMENT_PROJECT: airmux

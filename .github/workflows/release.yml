@@ -1,10 +1,13 @@
 name: publish release
 
 on:
+  push:
+    branches: [main]
+    paths: [VERSION]
   workflow_dispatch: {}
 
 concurrency:
-  group: release-${{ github.sha }}
+  group: release-${{ github.repository }}
   cancel-in-progress: false
 
 permissions:
@@ -14,7 +17,7 @@ jobs:
   prepare:
     if: github.repository == 'michel-tricot/airmux' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 90
     permissions:
       contents: read
       actions: read
@@ -22,6 +25,7 @@ jobs:
       sha: ${{ steps.source.outputs.sha }}
       version: ${{ steps.source.outputs.version }}
       tag: ${{ steps.source.outputs.tag }}
+      skip: ${{ steps.source.outputs.skip }}
       artifact-id: ${{ steps.candidate.outputs.artifact-id }}
       container-artifact-id: ${{ steps.container.outputs.artifact-id }}
     steps:
@@ -29,46 +33,60 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Resolve the current public version and main commit
+      - name: Resolve the public version and main commit
         id: source
         run: |
           RELEASE_SHA="$GITHUB_SHA"
           [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
-          version="$(python -c 'import tomllib; print(tomllib.load(open("packaging/airmux/pyproject.toml", "rb"))["project"]["version"])')"
+          version="$(cat VERSION)"
           [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
           RELEASE_TAG="v$version"
+          skip=false
           if git show-ref --verify --quiet "refs/tags/$RELEASE_TAG"; then
-            test "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" = "$RELEASE_SHA"
+            tag_sha="$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"
+            if [[ "$GITHUB_EVENT_NAME" == push && "$tag_sha" != "$RELEASE_SHA" ]]; then
+              skip=true
+              echo "Version $version already has a release tag; skipping the bootstrap version commit" >> "$GITHUB_STEP_SUMMARY"
+            else
+              test "$tag_sha" = "$RELEASE_SHA"
+            fi
           fi
           {
             echo "sha=$RELEASE_SHA"
             echo "version=$version"
             echo "tag=$RELEASE_TAG"
+            echo "skip=$skip"
             echo "candidate=candidate-${RELEASE_SHA}"
           } >> "$GITHUB_OUTPUT"
       - name: Require successful stable checks for the exact main commit
         id: checks
+        if: steps.source.outputs.skip != 'true'
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
         env:
           RELEASE_SHA: ${{ steps.source.outputs.sha }}
         with:
           script: |
             const required = new Map([['ci.yml', 'required'], ['security.yml', 'dependency-security']]);
+            const deadline = Date.now() + 75 * 60 * 1000;
             for (const [filename, check] of required) {
               const {data: workflow} = await github.rest.actions.getWorkflow({...context.repo, workflow_id: filename});
               if (workflow.path !== `.github/workflows/${filename}` || workflow.state !== 'active') {
                 throw new Error(`Untrusted or inactive workflow: ${filename}`);
               }
-              const {data} = await github.rest.actions.listWorkflowRuns({
-                ...context.repo, workflow_id: workflow.id, branch: 'main', event: 'push',
-                head_sha: process.env.RELEASE_SHA, per_page: 1
-              });
-              const run = data.workflow_runs[0];
-              if (!run || run.head_sha !== process.env.RELEASE_SHA || run.event !== 'push' || run.head_branch !== 'main' ||
-                  run.head_repository?.full_name !== `${context.repo.owner}/${context.repo.repo}` ||
-                  run.status !== 'completed' || run.conclusion !== 'success') {
+              let run;
+              while (!run || run.status !== 'completed') {
+                const {data} = await github.rest.actions.listWorkflowRuns({
+                  ...context.repo, workflow_id: workflow.id, branch: 'main', event: 'push',
+                  head_sha: process.env.RELEASE_SHA, per_page: 1
+                });
+                run = data.workflow_runs[0];
+                if (Date.now() >= deadline) throw new Error(`${filename} did not finish within 75 minutes`);
+                if (!run || run.status !== 'completed') await new Promise(resolve => setTimeout(resolve, 15000));
+              }
+              if (run.head_sha !== process.env.RELEASE_SHA || run.event !== 'push' || run.head_branch !== 'main' ||
+                  run.head_repository?.full_name !== `${context.repo.owner}/${context.repo.repo}` || run.conclusion !== 'success') {
                 throw new Error(`${filename} must succeed on main for ${process.env.RELEASE_SHA}`);
               }
               const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {...context.repo, run_id: run.id});
@@ -79,6 +97,7 @@ jobs:
               if (filename === 'ci.yml') core.setOutput('ci-run-id', run.id);
             }
       - name: Download the exact candidate produced by main CI
+        if: steps.source.outputs.skip != 'true'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: ${{ steps.source.outputs.candidate }}
@@ -86,6 +105,7 @@ jobs:
           github-token: ${{ github.token }}
           path: candidate
       - name: Verify candidate digests
+        if: steps.source.outputs.skip != 'true'
         env:
           RELEASE_SHA: ${{ steps.source.outputs.sha }}
         run: |
@@ -94,6 +114,7 @@ jobs:
           echo "Source commit: $RELEASE_SHA" >> "$GITHUB_STEP_SUMMARY"
           cat SHA256SUMS >> "$GITHUB_STEP_SUMMARY"
       - name: Download the exact container validated by main CI
+        if: steps.source.outputs.skip != 'true'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: container-${{ steps.source.outputs.sha }}
@@ -101,6 +122,7 @@ jobs:
           github-token: ${{ github.token }}
           path: container
       - name: Verify the container candidate digest
+        if: steps.source.outputs.skip != 'true'
         env:
           RELEASE_SHA: ${{ steps.source.outputs.sha }}
         run: |
@@ -109,6 +131,7 @@ jobs:
           echo "Container candidate: container-${RELEASE_SHA}" >> "$GITHUB_STEP_SUMMARY"
       - name: Retain the verified release candidate in this run
         id: candidate
+        if: steps.source.outputs.skip != 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: release-candidate-${{ steps.source.outputs.sha }}
@@ -117,6 +140,7 @@ jobs:
           retention-days: 30
       - name: Retain the verified container candidate in this run
         id: container
+        if: steps.source.outputs.skip != 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: release-container-${{ steps.source.outputs.sha }}
@@ -126,6 +150,7 @@ jobs:
 
   installation:
     needs: prepare
+    if: needs.prepare.outputs.skip != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -156,6 +181,7 @@ jobs:
 
   live-providers:
     needs: prepare
+    if: needs.prepare.outputs.skip != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: release
@@ -194,6 +220,7 @@ jobs:
 
   tag:
     needs: [prepare, installation, live-providers]
+    if: needs.prepare.outputs.skip != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment: release
@@ -218,6 +245,7 @@ jobs:
 
   publish:
     needs: [prepare, tag]
+    if: needs.prepare.outputs.skip != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: release
@@ -257,13 +285,14 @@ jobs:
           echo "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
           candidate="$(cat image)"
           [[ "$candidate" =~ ^ghcr\.io/michel-tricot/airmux@sha256:[0-9a-f]{64}$ ]]
-          docker buildx imagetools create --prefer-index=false --tag "$IMAGE:$VERSION" "$candidate"
+          docker buildx imagetools create --prefer-index=false --tag "$IMAGE:$VERSION" --tag "$IMAGE:latest" "$candidate"
           digest="$(docker buildx imagetools inspect "$IMAGE:$VERSION" --format '{{json .Manifest}}' | jq -r .digest)"
           [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
           echo "image=$IMAGE@$digest" >> "$GITHUB_OUTPUT"
 
   verify-pypi:
     needs: [prepare, publish]
+    if: needs.prepare.outputs.skip != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -310,6 +339,7 @@ jobs:
 
   verify-container:
     needs: [prepare, publish]
+    if: needs.prepare.outputs.skip != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -324,14 +354,21 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           IMAGE: ${{ needs.publish.outputs.image }}
           VERSION: ${{ needs.prepare.outputs.version }}
+          RELEASE_SHA: ${{ needs.prepare.outputs.sha }}
         run: |
           echo "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
           docker pull "$IMAGE"
           test "$(docker run --rm --entrypoint airmux "$IMAGE" --version)" = "airmux $VERSION"
+          test "$(docker image inspect "$IMAGE" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = "$VERSION"
+          test "$(docker image inspect "$IMAGE" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "$RELEASE_SHA"
+          docker buildx imagetools inspect "$IMAGE" --format '{{json .Manifest}}' | jq -e --arg digest "${IMAGE##*@}" '.digest == $digest'
+          latest_digest="$(docker buildx imagetools inspect "ghcr.io/michel-tricot/airmux:latest" --format '{{json .Manifest}}' | jq -r .digest)"
+          test "$latest_digest" = "${IMAGE##*@}"
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
 
   announce:
     needs: [prepare, verify-pypi, verify-container]
+    if: needs.prepare.outputs.skip != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment: release

@@ -8,8 +8,11 @@ containers migrate the database and apply the shipped [model catalog](/docs/refe
 
 Install the [`airmux` CLI](/docs/reference/cli#installation) on the machine you use to manage the instance.
 
-Build from a checkout as shown below, or set `AIRMUX_IMAGE` to a published version or digest such as
-`ghcr.io/michel-tricot/airmux:X.Y.Z`. Use a digest for reproducible production deployment.
+Build from a checkout as shown below, or pull a published image from
+`ghcr.io/michel-tricot/airmux`. Release tags use `X.Y.Z`, and `latest` moves to the most recent successful release.
+Main CI also publishes tested candidates as `sha-<commit>`. For example, run `docker pull ghcr.io/michel-tricot/airmux:latest`
+or replace `latest` with a release version. Use a digest for reproducible production deployment. Published images include
+OCI version and source revision labels.
 
 ## Start
 
