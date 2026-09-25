@@ -79,7 +79,6 @@ jobs:
               if (filename === 'main-ci.yml') core.setOutput('ci-run-id', run.id);
             }
 
-
   installation:
     name: Release installation
     needs: prepare
