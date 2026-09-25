@@ -94,13 +94,11 @@ Allow credentials from the listed scopes. Matching credential rules intersect. `
 
 #### Strict parameter support
 
-Reject a route if `airmux` would otherwise remove an unsupported caller-supplied parameter:
+Reject a route if `airmux` would otherwise clamp an unsupported caller-supplied parameter:
 
 ```json
 {"kind": "strict_parameters"}
 ```
-
-Capability and input-modality checks always run.
 
 #### Model price limit
 
