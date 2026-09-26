@@ -37,38 +37,5 @@ release for every service in a split deployment.
 | HTTPS ingress | Protects sessions, management keys, inference keys, and model traffic |
 | One provider credential | Required before inference can succeed |
 
-The default Docker deployment listens on port `8080` and serves the webapp, `/api/v1`, `/inf/v1`, `/healthz`, and
-`/readyz` from one origin.
-
-## Claim the instance
-
-The first human account becomes the instance owner. Claim a new single-container instance immediately after it becomes reachable:
-
-```bash
-docker compose exec app airmux quickstart --url http://localhost:8080
-```
-
-Until the first account is created, anyone who can reach the sign-up page can claim ownership. Public sign-up is
-disabled after claim unless `AIRMUX_PUBLIC_SIGNUP=true`; invitation links still work for their invited email.
-
-## Persist and back up
-
-Back up Postgres and `/state` together. The state directory contains plaintext provider credential files in the default
-secret-store configuration as well as gateway identity, cached bundles, and queued usage.
-
-The `airmux` layout owns one gateway state directory. Every split gateway must have a distinct persistent directory.
-Never clone a live gateway identity or share its SQLite outbox between replicas.
-
-## Verify a deployment
-
-```bash
-curl --fail https://llm.example.com/healthz
-curl --fail https://llm.example.com/readyz
-docker compose exec app airmux doctor
-```
-
-`quickstart` sends a real inference request. Check the external HTTPS route separately
-when deploying behind another proxy.
-
 Continue with [operations](/docs/deployment/operations), [security](/docs/deployment/security), and the
 [upgrade steps for Docker](/docs/deployment/docker#upgrade-and-roll-back) before production traffic.
