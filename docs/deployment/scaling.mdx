@@ -75,7 +75,3 @@ the migrated database.
 The default and split Compose files use different named volumes. Migration requires a database dump plus a stopped copy
 of `/state/runtime`, `/state/secrets`, and one gateway's `/state/data-plane`. Restore each into the corresponding split
 volume before the first split startup.
-
-<Warning>
-  Do not start the split stack against a partial copy. Database metadata and provider secrets must move together.
-</Warning>
