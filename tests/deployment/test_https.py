@@ -116,7 +116,7 @@ def https_deployment(tmp_path_factory):
             headers={"X-Requested-With": "XMLHttpRequest"},
             timeout=10,
         ) as client:
-            eventually(lambda: client.get("/healthz").status_code == 503)
+            eventually(lambda: client.get("/healthz").status_code == 200)
             signup = client.post(
                 "/api/v1/auth/signup",
                 json={"email": "owner@proxy.test", "name": "Owner", "password": "local-https-test-password"},

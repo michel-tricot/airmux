@@ -63,9 +63,9 @@ def test_container_healthchecks_allow_initial_setup():
     compact = yaml.safe_load((root / "docker-compose.yml").read_text())
     split = yaml.safe_load((root / "docker-compose.split.yml").read_text())
 
-    assert "/api/v1/instance/oss/claim" in compact["services"]["cli"]["healthcheck"]["test"][-1]
-    assert "/metrics" in split["services"]["data-plane-1"]["healthcheck"]["test"][-1]
-    assert "/metrics" in split["services"]["data-plane-2"]["healthcheck"]["test"][-1]
+    assert "/healthz" in compact["services"]["cli"]["healthcheck"]["test"][-1]
+    assert "/healthz" in split["services"]["data-plane-1"]["healthcheck"]["test"][-1]
+    assert "/healthz" in split["services"]["data-plane-2"]["healthcheck"]["test"][-1]
     assert "/healthz" in split["services"]["control-plane"]["healthcheck"]["test"][-1]
 
 

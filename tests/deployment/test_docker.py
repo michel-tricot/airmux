@@ -71,7 +71,7 @@ def deployment():
     )
     try:
         with httpx.Client(base_url=url, headers={"X-Requested-With": "XMLHttpRequest"}, timeout=10) as client:
-            eventually(lambda: client.get("/healthz").status_code == 503)
+            eventually(lambda: client.get("/healthz").status_code == 200)
             yield client, compose, gateways, compact
     finally:
         try:

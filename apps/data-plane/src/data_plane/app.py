@@ -40,8 +40,8 @@ logger = logging.getLogger("data_plane")
 async def healthz(request: Request) -> JSONResponse:
     runtime = runtime_of(request)
     holder = runtime.holder
-    if not holder.current.snapshots:
-        return JSONResponse({"status": "no bundle"}, status_code=503)
+    if not holder.initialized:
+        return JSONResponse({"status": "no configuration"}, status_code=503)
     if not runtime.outbox.accepting:
         return JSONResponse({"status": "metering unavailable"}, status_code=503)
     return JSONResponse({"status": "ready"})

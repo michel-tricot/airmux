@@ -163,7 +163,7 @@ async def test_readiness_keeps_serving_after_rejecting_a_new_manifest():
     assert (await healthz(request)).status_code == 200
 
 
-async def test_health_requires_an_accepted_bundle():
+async def test_health_requires_an_accepted_configuration():
     request = Request({"type": "http"})
     request.state.runtime = SimpleNamespace(holder=BundleHolder(DataPlaneMetrics()), outbox=SimpleNamespace(accepting=True))
 
@@ -171,9 +171,34 @@ async def test_health_requires_an_accepted_bundle():
     assert response.status_code == 503
 
 
-async def test_readiness_fails_when_metering_cannot_accept_work():
+async def test_first_empty_manifest_is_accepted_and_cached(http_mock, tmp_path, http_client):
+    http_mock.get("http://cp.test/api/v1/bundles/manifest", callback=lambda _url, **_kwargs: manifest_response(), repeat=False)
     holder = BundleHolder(DataPlaneMetrics())
-    holder.swap(BundleSet.from_bundles((make_remote_bundle(),)), "cached")
+    source = _remote_source(tmp_path, holder, http_client)
+    request = Request({"type": "http"})
+    request.state.runtime = SimpleNamespace(holder=holder, outbox=SimpleNamespace(accepting=True))
+
+    await source.once()
+
+    assert (await healthz(request)).status_code == 200
+    cached = read_cached_bundles(tmp_path)
+    assert cached is not None
+    assert not cached.bundles
+
+    restarted_holder = BundleHolder(DataPlaneMetrics())
+    restarted_source = _remote_source(tmp_path, restarted_holder, http_client)
+    restarted_source._load_cached()
+    request.state.runtime = SimpleNamespace(holder=restarted_holder, outbox=SimpleNamespace(accepting=True))
+    http_mock.get("http://cp.test/api/v1/bundles/manifest", exception=TimeoutError())
+    with pytest.raises(TimeoutError):
+        await restarted_source.once()
+    assert (await healthz(request)).status_code == 200
+
+
+@pytest.mark.parametrize("populated", [False, True])
+async def test_readiness_fails_when_metering_cannot_accept_work(populated):
+    holder = BundleHolder(DataPlaneMetrics())
+    holder.swap(BundleSet.from_bundles((make_remote_bundle(),) if populated else ()), "cached")
     request = Request({"type": "http"})
     request.state.runtime = SimpleNamespace(holder=holder, outbox=SimpleNamespace(accepting=False))
 

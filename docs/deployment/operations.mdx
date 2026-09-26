@@ -10,7 +10,7 @@ description: "Monitor readiness, preserve state, update safely, and diagnose con
 | Plane | Endpoint | Healthy response | `503` meaning |
 | --- | --- | --- | --- |
 | Control plane | `/healthz` | `200 {"status":"ready"}` | Postgres is unavailable |
-| Data plane | `/healthz` | `200 {"status":"ready"}` | No accepted bundle snapshot is available, or the metering writer cannot accept work |
+| Data plane | `/healthz` | `200 {"status":"ready"}` | No accepted configuration is available, or the metering writer cannot accept work |
 | Combined listener | `/healthz` | `200 {"status":"ready"}` | The control plane or data plane cannot perform its role |
 
 ## Metrics

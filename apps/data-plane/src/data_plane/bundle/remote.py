@@ -49,7 +49,7 @@ class RemoteBundleSource(BundleSource):
                 payload = await response.json(content_type=None)
             manifest = BundleManifest.model_validate(payload["data"])
             current_refs = tuple(sorted(self._bundles_by_ref))
-            if _manifest_refs(manifest) != current_refs:
+            if not self._holder.initialized or _manifest_refs(manifest) != current_refs:
                 bundles = list(await asyncio.gather(*(self._resolve(entry) for entry in manifest.bundles)))
                 self._adopt(bundles, source="polled", persist=True, expected=manifest.bundles)
                 changed = True
