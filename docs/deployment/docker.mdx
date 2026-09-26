@@ -14,9 +14,7 @@ docker compose up -d --wait
 docker compose exec app airmux quickstart --url http://localhost:8080
 ```
 
-The CLI prompts for provider keys and stores them through the management API. The keys do not go in `.env`.
-The image's runtime YAML works without any local configuration file. See [Customize the runtime YAML](#customize-the-runtime-yaml)
-for an override.
+The CLI prompts for provider keys and stores them through the management API. The image's runtime YAML works without any local configuration file. See [Customize the runtime YAML](#customize-the-runtime-yaml) for an override.
 
 ## Configure the public origin
 
