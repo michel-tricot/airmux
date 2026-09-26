@@ -28,9 +28,9 @@ Install the [`airmux` CLI](/docs/reference/cli#installation) on the machine you 
 | Volume | Owner |
 | --- | --- |
 | `split-pgdata` | Postgres |
-| `runtime-credentials` | Control plane writes; gateways read |
-| `provider-secrets` | Control plane writes; gateways read |
-| `gateway-1`, `gateway-2` | One gateway each; identity, bundle cache, usage outbox |
+| `runtime-credentials` | Control plane writes and gateways read |
+| `provider-secrets` | Control plane writes and gateways read |
+| `gateway-1`, `gateway-2` | One gateway each: identity, bundle cache, usage outbox |
 
 Every additional gateway needs a new persistent state volume.
 
