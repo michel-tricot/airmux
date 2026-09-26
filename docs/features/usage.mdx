@@ -41,10 +41,7 @@ One `request_id` is one logical request, even when fallback creates several prov
 
 The Requests page supports exact `request_id` lookup and pagination. Detail shows approximate attempt order from start timestamps. Key owner means the owner of the inference key. Deleted resources remain identifiable by their recorded IDs when names are unavailable.
 
-Costs are gateway estimates recorded at request time.
-Events arrive asynchronously, so a refreshed report can change as late events arrive. The report cannot infer a
-request or attempt that never produced an accepted event. A reported status is the latest status observed in stored
-events, not proof that no later event will arrive.
+Costs are gateway estimates recorded at request time. Events arrive asynchronously, so a refreshed report can change as late events arrive. 
 
 The shared API includes `/usage`, `/attribution`, `/filter-options`, `/requests`, and `/requests/{request_id}`.
 Periods include Today, 7 days, 30 days, month to date, and custom dates. Reports compare with the
