@@ -35,13 +35,9 @@ All `cost_*_usd` fields are estimates using catalog prices at request time, incl
 
 The webapp's Usage and Requests pages are available at organization and workspace scope. Usage defaults to the last 30 days. 
 
-The summary
-shows estimated spend, distinct requests, input and output tokens, and average cost per request. The trend and
-attribution table use the same recorded events. Attribution can group by workspace, key owner, inference key, served
-model, provider, or provider credential. Selecting a group opens the matching Requests view.
+The summary shows estimated spend, distinct requests, input and output tokens, and average cost per request. The trend and attribution table use the same recorded events. Attribution can group by workspace, key owner, inference key, served model, provider, or provider credential. 
 
-One `request_id` is one logical request, even when fallback creates several provider attempts. A denial before routing
-is one request with no provider attempt. Recorded cost and tokens add across attempts, including failed attempts with
+One `request_id` is one logical request, even when fallback creates several provider attempts. Recorded cost and tokens add across attempts, including failed attempts with
 recorded usage. A request belongs to the period of its request start time, even if an attempt finishes later. Model,
 provider, and credential filters select matching attempt contributions; a request can therefore appear in multiple
 groups. Its detail view shows all authorized attempts and identifies the matching contributions. Group request counts
