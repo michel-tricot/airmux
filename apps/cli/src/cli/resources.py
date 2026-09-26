@@ -204,7 +204,6 @@ class WorkspaceRoleOption(StrEnum):
     viewer = "viewer"
 
 
-@workspace_members_app.command("role")
 @workspace_members_app.command("add")
 def workspace_members_add(
     user_id: UUID,
@@ -219,6 +218,18 @@ def workspace_members_add(
         resp = c.put(org_path(f"/workspaces/{workspace_ref}/members/{user_id}"), json={"role": role})
         membership = payload(ensure_ok(resp), WorkspaceMembershipOut)
     print_rows("members", [membership], MEMBER_COLS, fmt)
+
+
+@workspace_members_app.command("role")
+def workspace_members_role(
+    user_id: UUID,
+    role: Annotated[WorkspaceRoleOption, typer.Option("--role", help="Workspace role")],
+    workspace: WorkspaceOption = "",
+    control_plane_url: str = "",
+    fmt: FormatOption = OutputFormat.table,
+) -> None:
+    """Set a workspace member's role."""
+    workspace_members_add(user_id, workspace, role, control_plane_url, fmt)
 
 
 @workspace_members_app.command("remove")
@@ -354,7 +365,6 @@ class OrgRoleOption(StrEnum):
     data_plane = "data_plane"
 
 
-@org_members_app.command("role")
 @org_members_app.command("add")
 def org_members_add(
     user_id: UUID,
@@ -367,6 +377,17 @@ def org_members_add(
         resp = c.put(org_path(f"/users/{user_id}"), json={"role": role})
         membership = payload(ensure_ok(resp), MembershipOut)
     print_rows("members", [membership], MEMBER_COLS, fmt)
+
+
+@org_members_app.command("role")
+def org_members_role(
+    user_id: UUID,
+    role: Annotated[OrgRoleOption, typer.Option("--role", help="Organization role")],
+    control_plane_url: str = "",
+    fmt: FormatOption = OutputFormat.table,
+) -> None:
+    """Set an organization member's role."""
+    org_members_add(user_id, role, control_plane_url, fmt)
 
 
 @org_members_app.command("remove")

@@ -96,3 +96,12 @@ def test_membership_role_command_rejects_roles_from_other_scopes(scope, role):
     result = runner.invoke(app, [scope, "members", "role", str(uuid4()), "--role", role])
     assert result.exit_code == 2
     assert "Invalid value" in result.output
+
+
+@pytest.mark.parametrize("scope", ["orgs", "workspaces"])
+@respx.mock
+def test_membership_role_command_requires_an_explicit_role(scope):
+    result = runner.invoke(app, [scope, "members", "role", str(uuid4())])
+    assert result.exit_code == 2
+    assert "Missing option" in result.output
+    assert "--role" in result.output
