@@ -119,7 +119,7 @@ def test_local_mode_serves_end_to_end(http_mock, tmp_path, monkeypatch):
     http_mock.post("https://api.openai.com/v1/chat/completions", status=200, payload=UPSTREAM_REPLY, repeat=True)
     config = Config(bundle=LocalBundleConfig(kind="local", path=_write(tmp_path)))
     with TestClient(create_app(config)) as client:
-        assert client.get("/readyz").status_code == 200
+        assert client.get("/healthz").status_code == 200
         response = client.post(
             "/inf/v1/chat/completions",
             headers={"Authorization": "Bearer sk-inf-local-dev"},

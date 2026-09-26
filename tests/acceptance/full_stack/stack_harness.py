@@ -465,7 +465,7 @@ class Stack:
         self._spawn("dp", [*cmd, "--workers", str(workers)])
         if self.dp_port is None:
             assert _poll(lambda: self._discover_port("dp"), READY_TIMEOUT), "data plane did not bind a port"
-        assert _poll(lambda: self._responds(f"{self.dp_url}/readyz"), READY_TIMEOUT), "data plane process did not start"
+        assert _poll(lambda: self._responds(f"{self.dp_url}/healthz"), READY_TIMEOUT), "data plane process did not start"
 
     def stop(self, name: str, sig: int = signal.SIGTERM) -> None:
         proc, log = self._procs.pop(name)
@@ -518,8 +518,8 @@ class Stack:
     def upstream_requests(self) -> int:
         return self._stub.request_count
 
-    def readyz(self) -> int:
-        return httpx.get(f"{self.dp_url}/readyz", timeout=5.0).status_code
+    def healthz(self) -> int:
+        return httpx.get(f"{self.dp_url}/healthz", timeout=5.0).status_code
 
     def events(self) -> list[dict]:
         events: list[dict] = []

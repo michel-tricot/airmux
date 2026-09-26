@@ -153,11 +153,7 @@ async def credential_handler(_request: Request, exc: Exception) -> JSONResponse:
     return JSONResponse(status_code=401, content={"detail": error.detail})
 
 
-async def healthz(_request: Request) -> JSONResponse:
-    return JSONResponse({"status": "ok"})
-
-
-async def readyz(request: Request) -> JSONResponse:
+async def healthz(request: Request) -> JSONResponse:
     try:
         async with request.app.state.session_factory() as session:
             await session.execute(text("SELECT 1"))
@@ -208,7 +204,7 @@ def create_app(settings: Settings | None = None, *, throttle_backend: ThrottleBa
     app.add_exception_handler(IdentityConflictError, identity_conflict_handler)
     app.add_exception_handler(UnknownProviderError, unknown_provider_handler)
     app.add_exception_handler(Exception, unexpected_handler)
-    admin = APIRouter(routes=[Route("/healthz", healthz), Route("/readyz", readyz), Route("/metrics", metrics_endpoint)])
+    admin = APIRouter(routes=[Route("/healthz", healthz), Route("/metrics", metrics_endpoint)])
     v1 = APIRouter(prefix="/api/v1", dependencies=[Depends(get_session, scope="function")])
     routers = (
         management_keys_router,

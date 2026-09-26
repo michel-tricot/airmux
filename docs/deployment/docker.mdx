@@ -100,7 +100,7 @@ the stack:
 docker compose up -d --wait
 ```
 
-Check `/healthz` and `/readyz` on the public origin, run `docker compose exec cli airmux doctor`, and send a buffered
+Check `/healthz` on the public origin, run `docker compose exec cli airmux doctor`, and send a buffered
 and streaming request. Confirm that the requests appear in usage. If verification fails after migration, stop the new
 stack, restore Postgres and `/state` from the same backup, and redeploy the recorded previous release. Do not roll
 back only the image against the newer database.

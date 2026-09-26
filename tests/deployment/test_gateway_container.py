@@ -77,7 +77,7 @@ def test_documented_gateway_container_serves_from_a_fresh_configuration_director
         assert result.returncode == 0, result.stderr
         address = docker("port", gateway, "8081/tcp")
         with httpx.Client(base_url=f"http://{address}", timeout=5) as client:
-            eventually(lambda: client.get("/readyz").status_code == 200)
+            eventually(lambda: client.get("/healthz").status_code == 200)
             body = {"model": "openai/gpt-5.4-mini", "messages": [{"role": "user", "content": "hello"}]}
             headers = {"Authorization": f"Bearer {key}"}
             assert client.post("/inf/v1/chat/completions", json=body).status_code == 401

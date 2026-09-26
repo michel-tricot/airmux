@@ -22,7 +22,7 @@ certificate, timeout, compression, and periodic export interval variables.
 ## Scrape with Prometheus
 
 Each standalone control-plane and data-plane listener exposes unauthenticated Prometheus metrics at `/metrics`. The
-all-in-one public listener does not proxy this path. Scrape the internal listeners from a monitoring network:
+public proxy does not expose this path. Scrape the internal listeners from a monitoring network:
 
 ```yaml
 scrape_configs:

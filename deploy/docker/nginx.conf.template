@@ -40,8 +40,22 @@ http {
     proxy_set_header X-Real-IP "";
     proxy_set_header Forwarded "";
     proxy_connect_timeout 2s;
-    location = /healthz { proxy_pass http://$control_plane/healthz; }
-    location = /readyz { proxy_pass http://$data_plane; }
+    location = /healthz {
+      auth_request /_control_healthz;
+      error_page 500 502 504 =503 /_health_unavailable;
+      proxy_pass http://$data_plane/healthz;
+    }
+    location = /_control_healthz {
+      internal;
+      proxy_pass http://$control_plane/healthz;
+      proxy_pass_request_body off;
+      proxy_set_header Content-Length "";
+    }
+    location = /_health_unavailable {
+      internal;
+      default_type application/json;
+      return 503 '{"status":"unavailable"}';
+    }
     location /api/ { proxy_pass http://$control_plane; }
     location /inf/ {
       proxy_pass http://$data_plane;

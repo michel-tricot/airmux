@@ -72,6 +72,30 @@ def remote_bundle(gateway: Gateway):
     }
 
 
+def test_empty_remote_configuration_is_healthy_before_onboarding(gateway: Gateway, bundle_server):
+    directory, url = bundle_server
+    manifest = directory / "api/v1/bundles/manifest"
+    manifest.write_text(json.dumps({"data": {"bundles": []}}))
+    gateway.write_files()
+    config = yaml.safe_load(gateway.config_path.read_text())
+    config["data_plane"]["bundle"] = {
+        "kind": "remote",
+        "control_plane": {"url": url, "management_key": "test-management"},
+        "cache_dir": "cache",
+        "poll_interval_s": 0.05,
+    }
+    gateway.config_path.write_text(yaml.safe_dump(config))
+    gateway.launch()
+    eventually(gateway.ready)
+    assert gateway.request().status_code == 401
+
+    gateway.stop()
+    manifest.unlink()
+    gateway.launch()
+    eventually(gateway.ready)
+    assert gateway.request().status_code == 401
+
+
 @pytest.mark.parametrize("invalid", ["context_window", "max_output_tokens", "unknown", "expires_at", "issued_at"])
 def test_remote_reload_rejects_invalid_bundle_and_keeps_serving(gateway: Gateway, bundle_server, invalid: str):
     gateway.add_provider()
@@ -116,4 +140,4 @@ def test_remote_reload_rejects_invalid_bundle_and_keeps_serving(gateway: Gateway
     assert gateway.request(key="sk-inf-replacement").status_code == 200
     assert gateway.request().status_code == 401
     assert str(gateway.events(3)[-1].bundle_id) == replacement["bundle_id"]
-    assert httpx.get(f"{gateway.url}/readyz").status_code == 200
+    assert httpx.get(f"{gateway.url}/healthz").status_code == 200

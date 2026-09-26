@@ -71,6 +71,7 @@ def deployment():
     )
     try:
         with httpx.Client(base_url=url, headers={"X-Requested-With": "XMLHttpRequest"}, timeout=10) as client:
+            eventually(lambda: client.get("/healthz").status_code == 200)
             yield client, compose, gateways, compact
     finally:
         try:
@@ -164,7 +165,11 @@ def assert_installed_packages(compose, gateway):
 
 def assert_control_plane_outage(client, compose, path, headers, request):
     service_action(compose, "stop", "control-plane")
-    eventually(lambda: client.get("/healthz").status_code >= 500)
+    eventually(lambda: client.get("/healthz").status_code == 503)
+    gateway = docker(*compose, "ps", "-q", "data-plane-1")
+    assert '"status":"ready"' in docker(
+        "exec", gateway, "python", "-c", "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8081/healthz').read().decode())"
+    )
     assert all(client.post(path, headers=headers, json=request).status_code == 200 for _ in range(10))
 
 

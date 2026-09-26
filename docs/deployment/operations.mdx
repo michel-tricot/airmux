@@ -5,19 +5,13 @@ description: "Monitor readiness, preserve state, update safely, and diagnose con
 
 ## Health endpoints
 
-Liveness only answers whether the process can serve HTTP. Readiness answers whether it can serve useful
-traffic. Configure process restarts from `/healthz` and traffic admission from `/readyz`.
+`/healthz` reports whether each process can perform its serving role. Use it for traffic admission and health monitoring.
 
 | Plane | Endpoint | Healthy response | `503` meaning |
 | --- | --- | --- | --- |
-| Control plane | `/healthz` | `200 {"status":"ok"}` | Never returned for a dependency failure |
-| Control plane | `/readyz` | `200 {"status":"ready"}` | Postgres is unavailable |
-| Data plane | `/healthz` | `200 {"status":"ok"}` | Never returned for a dependency failure |
-| Data plane | `/readyz` | `200 {"status":"ready"}` | No accepted bundle snapshot is available, or the metering writer cannot accept work |
-
-The all-in-one listener routes `/healthz` to the control plane and `/readyz` to the data plane. This makes the public
-liveness check independent of Postgres while readiness covers the inference path. A data plane that rejects a newer
-manifest keeps serving its last accepted snapshot and remains ready.
+| Control plane | `/healthz` | `200 {"status":"ready"}` | Postgres is unavailable |
+| Data plane | `/healthz` | `200 {"status":"ready"}` | No accepted configuration is available, or the metering writer cannot accept work |
+| Combined listener | `/healthz` | `200 {"status":"ready"}` | The control plane or data plane cannot perform its role |
 
 ## Metrics
 
@@ -70,7 +64,7 @@ compatibility between planes, deploy one image digest across all components. Fol
 | Symptom | Check |
 | --- | --- |
 | `bundle_unavailable` | Bundle poll authentication, control-plane URL, and cached state mount |
-| Data-plane `/readyz` returns `503` | Bundle poll authentication, control-plane reachability, and cached state mount |
+| Data-plane `/healthz` returns `503` | Bundle poll authentication, control-plane reachability, and cached state mount |
 | `bundle_manifest_rejected` is `1` | Gateway logs for an invalid provider, model, credential, or policy reference |
 | `credential_backend_unavailable` | Secret-store mount, permissions, and availability |
 | Usage missing from webapp | Metering outbox metrics, export failures, and control-plane event-ingest metrics |

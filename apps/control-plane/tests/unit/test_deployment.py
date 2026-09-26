@@ -58,7 +58,7 @@ def test_compose_layouts_do_not_share_database_volumes():
     assert split["services"]["postgres"]["volumes"] == ["split-pgdata:/var/lib/postgresql/data"]
 
 
-def test_gateway_container_healthchecks_do_not_require_onboarding():
+def test_container_healthchecks_allow_initial_setup():
     root = Path(__file__).resolve().parents[4]
     compact = yaml.safe_load((root / "docker-compose.yml").read_text())
     split = yaml.safe_load((root / "docker-compose.split.yml").read_text())
@@ -66,7 +66,7 @@ def test_gateway_container_healthchecks_do_not_require_onboarding():
     assert "/healthz" in compact["services"]["cli"]["healthcheck"]["test"][-1]
     assert "/healthz" in split["services"]["data-plane-1"]["healthcheck"]["test"][-1]
     assert "/healthz" in split["services"]["data-plane-2"]["healthcheck"]["test"][-1]
-    assert "/readyz" in split["services"]["control-plane"]["healthcheck"]["test"][-1]
+    assert "/healthz" in split["services"]["control-plane"]["healthcheck"]["test"][-1]
 
 
 def test_layouts_complete_database_jobs_before_serving():

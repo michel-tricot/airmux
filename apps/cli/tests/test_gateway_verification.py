@@ -23,7 +23,7 @@ def test_verification_waits_for_bundle_inputs_but_does_not_retry_provider_reques
     pending = iter(responses)
 
     def respond(request: httpx.Request) -> httpx.Response:
-        if request.url.path == "/readyz":
+        if request.url.path == "/healthz":
             return httpx.Response(200)
         assert json.loads(request.content) == {
             "model": "test-model",

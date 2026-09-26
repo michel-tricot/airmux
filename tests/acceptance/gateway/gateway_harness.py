@@ -197,7 +197,7 @@ class Gateway:
             if self.port is None:
                 return False
             self.url = f"http://127.0.0.1:{self.port}"
-        return httpx.get(f"{self.url}/readyz", timeout=1).status_code == 200
+        return httpx.get(f"{self.url}/healthz", timeout=1).status_code == 200
 
     def launch(self, workers: int = 1) -> None:
         self.process = subprocess.Popen(  # noqa: S603 executable is the installed gateway supplied by the test environment
@@ -279,7 +279,7 @@ class Gateway:
             destination.mkdir(parents=True, exist_ok=True)
             secrets = (*self.sensitive_values, UPSTREAM_KEY, INFERENCE_KEY, SECOND_KEY, *(key["token"] for key in self.bundle["keys"]))
             for path in self.directory.rglob("*"):
-                if path.is_file():
+                if path.is_file() and path.suffix in {".log", ".json", ".jsonl", ".yml", ".yaml"}:
                     contents = path.read_text(encoding="utf-8")
                     for secret in secrets:
                         contents = contents.replace(secret, "[REDACTED]")

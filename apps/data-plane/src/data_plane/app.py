@@ -37,15 +37,11 @@ if TYPE_CHECKING:
 logger = logging.getLogger("data_plane")
 
 
-async def healthz(_request: Request) -> JSONResponse:
-    return JSONResponse({"status": "ok"})
-
-
-async def readyz(request: Request) -> JSONResponse:
+async def healthz(request: Request) -> JSONResponse:
     runtime = runtime_of(request)
     holder = runtime.holder
-    if not holder.current.snapshots:
-        return JSONResponse({"status": "no bundle"}, status_code=503)
+    if not holder.initialized:
+        return JSONResponse({"status": "no configuration"}, status_code=503)
     if not runtime.outbox.accepting:
         return JSONResponse({"status": "metering unavailable"}, status_code=503)
     return JSONResponse({"status": "ready"})
@@ -114,7 +110,6 @@ def create_app(config: Config) -> ASGIApp:
             InferenceRoute("/inf/v1/models", models, ingress=INGRESS["openai_chat_completions"], methods=["GET"]),
             InferenceRoute("/inf/v1/models/{model_id:path}", models, ingress=INGRESS["openai_chat_completions"], methods=["GET"]),
             Route("/healthz", healthz),
-            Route("/readyz", readyz),
             Route("/metrics", metrics_endpoint),
         ],
         lifespan=lifespan,
