@@ -30,8 +30,6 @@ export DATABASE_URL='postgresql+asyncpg://airmux:<password>@127.0.0.1:5432/airmu
 
 ## Prepare the runtime
 
-Initialize the connected configuration once. It creates a private bootstrap key under `deployment/`:
-
 ```bash
 uv run airmux control-plane init --directory deployment --console-url http://localhost:8080
 uv run airmux control-plane validate --config deployment/airmux.yml
