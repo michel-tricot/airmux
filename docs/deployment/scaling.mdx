@@ -39,7 +39,7 @@ Every additional gateway needs a new persistent state volume.
 The checked-in split file demonstrates service boundaries, not a multi-host production topology. Across hosts, provide:
 
 - Reachable Postgres for the control plane
-- One secret store accessible to both planes, with the control plane able to write and data planes able to read
+- One secret store accessible to both planes, with the control plane able to write and data planes able to read (until we support vaults, we recommend that you use `insecure_database`)
 - A private authenticated control-plane URL for bundle polling, event ingestion, and heartbeat
 - One persistent cache and outbox directory per gateway
 - A streaming-capable load balancer with response buffering disabled
