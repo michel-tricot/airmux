@@ -6,6 +6,7 @@ from uuid import uuid4
 import httpx
 import pytest
 import respx
+from click import unstyle
 from typer.testing import CliRunner
 
 from cli.main import app
@@ -104,4 +105,4 @@ def test_membership_role_command_requires_an_explicit_role(scope):
     result = runner.invoke(app, [scope, "members", "role", str(uuid4())])
     assert result.exit_code == 2
     assert "Missing option" in result.output
-    assert "--role" in result.output
+    assert "--role" in unstyle(result.output)
