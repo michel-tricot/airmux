@@ -32,7 +32,7 @@ release for every service in a split deployment.
 | --- | --- |
 | Postgres 16+ | Control-plane state, bundles, usage, and audit activity |
 | Persistent `/state` | Gateway identity, bundle cache, provider-secret files, and pending usage |
-| `DATABASE_URL` | Async Postgres connection; plain `postgresql://` URLs are normalized for `asyncpg` |
+| `DATABASE_URL` | Postgres connection |
 | `AIRMUX_CONSOLE_URL` | Exact public origin used by browser and CLI flows |
 | HTTPS ingress | Protects sessions, management keys, inference keys, and model traffic |
 | One provider credential | Required before inference can succeed |
