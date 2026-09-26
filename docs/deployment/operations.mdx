@@ -13,9 +13,6 @@ description: "Monitor readiness, preserve state, update safely, and diagnose con
 | Data plane | `/healthz` | `200 {"status":"ready"}` | No accepted bundle snapshot is available, or the metering writer cannot accept work |
 | Combined listener | `/healthz` | `200 {"status":"ready"}` | The control plane or data plane cannot perform its role |
 
-The combined listener checks both planes. A data plane that rejects a newer manifest keeps serving its last accepted
-snapshot and remains healthy, even during a control-plane outage. The combined listener reports that outage as unhealthy.
-
 ## Metrics
 
 Configure OTLP export, Prometheus scraping, and alerting with the [OpenTelemetry guide](/docs/deployment/opentelemetry).
