@@ -1030,6 +1030,12 @@ class OrgRole(RootModel[Literal["owner", "admin", "member", "data_plane"]]):
     root: Annotated[Literal["owner", "admin", "member", "data_plane"], Field(title="OrgRole")]
 
 
+class OrgRoleAssignment(BaseModel):
+    org_id: Annotated[UUID, Field(title="Org Id")]
+    name: Annotated[str, Field(title="Name")]
+    role: OrgRole
+
+
 class OrgSummaryOut(BaseModel):
     total: Annotated[
         int,
@@ -2045,6 +2051,14 @@ class WorkspaceRoleModel(RootModel[Literal["admin", "member", "viewer"]]):
     root: Annotated[Literal["admin", "member", "viewer"], Field(title="WorkspaceRole")]
 
 
+class WorkspaceRoleAssignment(BaseModel):
+    workspace_id: Annotated[UUID, Field(title="Workspace Id")]
+    org_id: Annotated[UUID, Field(title="Org Id")]
+    name: Annotated[str, Field(title="Name")]
+    slug: Annotated[str, Field(title="Slug")]
+    role: WorkspaceRoleModel
+
+
 class WorkspaceTarget(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -2523,6 +2537,11 @@ class UsageReportOut(BaseModel):
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
 
 
+class UserMembershipsOut(BaseModel):
+    org_memberships: Annotated[list[OrgRoleAssignment], Field(title="Org Memberships")]
+    workspace_memberships: Annotated[list[WorkspaceRoleAssignment], Field(title="Workspace Memberships")]
+
+
 class WorkspaceMembershipIn(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -2584,6 +2603,10 @@ class EnvelopeTaxonomyApplyOut(BaseModel):
 
 class EnvelopeUsageReportOut(BaseModel):
     data: UsageReportOut
+
+
+class EnvelopeUserMembershipsOut(BaseModel):
+    data: UserMembershipsOut
 
 
 class EnvelopeWorkspaceMembershipOut(BaseModel):

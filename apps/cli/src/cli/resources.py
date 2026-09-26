@@ -3,8 +3,10 @@ from __future__ import annotations
 import sys
 import time
 from collections import deque
+from enum import StrEnum
 from pathlib import Path  # noqa: TC003 Typer resolves command annotations at runtime
 from typing import TYPE_CHECKING, Annotated
+from uuid import UUID  # noqa: TC003 Typer resolves command annotations at runtime
 
 import typer
 import yaml
@@ -17,6 +19,7 @@ from api_models import (
     InferenceKeyOut,
     ManagementKeyCreatedOut,
     ManagementKeyOut,
+    MembershipOut,
     MeOut,
     OrgMemberOut,
     OrgOut,
@@ -25,6 +28,7 @@ from api_models import (
     TaxonomyChangeCounts,
     TaxonomyOut,
     UsageEventOut,
+    UserMembershipsOut,
     UserOut,
     WorkspaceMembershipOut,
     WorkspaceOut,
@@ -87,6 +91,7 @@ WORKSPACE_COLS = [
 ]
 MEMBER_COLS = [
     Col("user_id", "User", style="dim", no_wrap=True),
+    Col("role", "Role"),
     Col("status", "Status", style="yellow"),
 ]
 PROVIDER_COLS = [
@@ -200,13 +205,15 @@ def workspace_members_add(
     workspace: WorkspaceOption = "",
     role: str = typer.Option("member", "--role", help="Workspace role: admin, member, or viewer"),
     control_plane_url: str = "",
+    fmt: FormatOption = OutputFormat.table,
 ) -> None:
-    """Give someone access to this workspace."""
+    """Add a workspace member or change their role."""
     workspace_ref = resolve_workspace(workspace)
     with access_client(control_plane_url) as c:
-        resp = c.put(org_path(f"/workspaces/{workspace_ref}/members/{user_id}"), json={"role": role})
-        ensure_ok(resp)
-    console.print(f"Added [bold]{user_id}[/bold] to [bold]{workspace_ref}[/bold]")
+        membership = payload(
+            ensure_ok(c.put(org_path(f"/workspaces/{workspace_ref}/members/{user_id}"), json={"role": role})), WorkspaceMembershipOut
+        )
+    print_rows("members", [membership], MEMBER_COLS, fmt)
 
 
 @workspace_members_app.command("remove")
@@ -267,6 +274,7 @@ USER_COLS = [
     Col("email", "Email"),
     Col("name", "Name", max_width=30),
     Col("service_account", "Kind", fmt=lambda v: "service" if v else "human"),
+    Col("instance_role", "Instance role", fmt=lambda v: str(v) if v else "none"),
     Col("orgs", "Orgs", style="cyan", max_width=40),
     Col("created_at", "Created", no_wrap=True, fmt=fmt_when),
 ]
@@ -308,6 +316,58 @@ def users_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.tab
     print_rows("users", access_get("/api/v1/users", control_plane_url, UserOut), USER_COLS, fmt)
 
 
+class InstanceRoleOption(StrEnum):
+    owner = "owner"
+    auditor = "auditor"
+    data_plane = "data_plane"
+    none = "none"
+
+
+@users_app.command("role")
+def users_role(user_id: UUID, role: InstanceRoleOption, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+    """Set an instance role, or use none to remove instance access."""
+    with access_client(control_plane_url) as client:
+        user = payload(
+            ensure_ok(
+                client.put(f"/api/v1/users/{user_id}/instance-role", json={"instance_role": None if role is InstanceRoleOption.none else role})
+            ),
+            UserOut,
+        )
+    print_rows("users", [user], USER_COLS, fmt)
+
+
+@users_app.command("show")
+def users_show(user_id: UUID, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+    """Show a user's direct roles across instance, organization, and workspace scopes."""
+    with access_client(control_plane_url) as client:
+        user = payload(ensure_ok(client.get(f"/api/v1/users/{user_id}")), UserOut)
+        memberships = payload(ensure_ok(client.get(f"/api/v1/users/{user_id}/memberships")), UserMembershipsOut)
+    assignments = [
+        {"scope": "instance", "id": str(user.id), "name": user.name, "org_id": None, "role": user.instance_role},
+        *[
+            {
+                "scope": "organization",
+                "id": str(membership.org_id),
+                "name": membership.name,
+                "org_id": str(membership.org_id),
+                "role": membership.role.root,
+            }
+            for membership in memberships.org_memberships
+        ],
+        *[
+            {
+                "scope": "workspace",
+                "id": str(membership.workspace_id),
+                "name": membership.name,
+                "org_id": str(membership.org_id),
+                "role": membership.role.root,
+            }
+            for membership in memberships.workspace_memberships
+        ],
+    ]
+    print_rows("roles", assignments, [Col("scope", "Scope"), Col("name", "Name"), Col("id", "ID"), Col("role", "Role")], fmt)
+
+
 @org_members_app.command("list")
 def org_members_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List the active org's members."""
@@ -319,12 +379,12 @@ def org_members_add(
     user_id: str,
     role: str = typer.Option("member", "--role", help="Organization role: owner, admin, member, or data_plane"),
     control_plane_url: str = "",
+    fmt: FormatOption = OutputFormat.table,
 ) -> None:
-    """Add a principal to the active organization."""
+    """Add an organization member or change their role."""
     with access_client(control_plane_url) as c:
-        resp = c.put(org_path(f"/users/{user_id}"), json={"role": role})
-        ensure_ok(resp)
-    console.print(f"Added [bold]{user_id}[/bold] to your organization")
+        membership = payload(ensure_ok(c.put(org_path(f"/users/{user_id}"), json={"role": role})), MembershipOut)
+    print_rows("members", [membership], MEMBER_COLS, fmt)
 
 
 @org_members_app.command("remove")

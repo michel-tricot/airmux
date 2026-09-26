@@ -1,17 +1,19 @@
 import { useState } from 'react';
 import * as z from 'zod';
 import { Avatar, AvatarFallback, Card, Button, Dropdown, Badge, ConfirmButton } from '@/components/ui/elements';
-import { ArrowLeft, Building2, KeyRound, Plus, UserMinus, Trash2 } from 'lucide-react';
-import { formatDate } from '@/lib/format';
+import { ArrowLeft, Building2, KeyRound, Plus, UserMinus, Trash2, Blocks } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { useOrgs } from '@/features/orgs/hooks';
 import { useInstanceManagementKeys } from '@/features/keys/hooks';
+import { useWorkspaces } from '@/features/workspaces/hooks';
 import {
   useUser,
+  useUserMemberships,
   useChangeInstanceRoleMutation,
   useDeleteUserMutation,
   useAddUserToOrgMutation,
   useRemoveUserFromOrgMutation,
+  useChangeOrgRoleMutation,
   orgRoleOptions,
 } from '@/features/users/hooks';
 import { LoadingState, ErrorState } from '@/components/shared/states';
@@ -22,10 +24,11 @@ import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useRequiredParam } from '@/lib/route';
 import { PageShell } from '@/components/shared/page-shell';
-import { InstanceRole, type OrgOut } from '@workspace/api-client-react';
+import { InstanceRole, type OrgRoleAssignment } from '@workspace/api-client-react';
 import { useAuthorization } from '@/features/permissions/hooks';
 import { managementKeyAccess } from '@/features/keys/policy';
-import { orgMemberAccess } from '@/features/members/policy';
+import { orgMemberAccess, workspaceMemberAccess } from '@/features/members/policy';
+import { useChangeWorkspaceRoleMutation, workspaceRoleOptions } from '@/features/members/hooks';
 import { userAccess } from '@/features/users/policy';
 import { AccountKindBadge } from '@/components/shared/account-display';
 import { ManagementKeysTable } from '@/components/shared/management-keys-table';
@@ -35,35 +38,55 @@ const addToOrgSchema = z.object({
   role: z.enum(['owner', 'admin', 'member', 'data_plane']),
 });
 
+const addToWorkspaceSchema = z.object({
+  orgId: z.string().min(1, 'Select an organization'),
+  workspaceRef: z.string().min(1, 'Select a workspace'),
+  role: z.enum(['admin', 'member', 'viewer']),
+});
+
 export default function UserDetail() {
   const userId = useRequiredParam('userId');
   const [, setLocation] = useLocation();
 
   const userQuery = useUser(userId);
   const user = userQuery.data;
+  const membershipsQuery = useUserMemberships(userId);
+  const memberships = membershipsQuery.data;
   const authorization = useAuthorization('instance');
   const canDeleteUser = authorization.can(userAccess.delete);
   const canAddMember = authorization.can(orgMemberAccess.add);
   const canRemoveMember = authorization.can(orgMemberAccess.remove);
+  const canManageWorkspaceMember = authorization.can(workspaceMemberAccess.add);
   const canReadKeys = authorization.can(managementKeyAccess.instance.read);
-  const orgsQuery = useOrgs();
+  const orgsQuery = useOrgs({ enabled: canAddMember && !user?.managing_org_id });
   const orgs = orgsQuery.data;
   const managementKeysQuery = useInstanceManagementKeys({ user_id: userId }, { enabled: canReadKeys });
 
   const [addOpen, setAddOpen] = useState(false);
+  const [addWorkspaceOpen, setAddWorkspaceOpen] = useState(false);
+  const [selectedOrgId, setSelectedOrgId] = useState('');
+  const workspacesQuery = useWorkspaces(selectedOrgId, { enabled: Boolean(selectedOrgId) && addWorkspaceOpen });
   const changeRole = useChangeInstanceRoleMutation();
 
   const addMember = useAddUserToOrgMutation();
   const removeMember = useRemoveUserFromOrgMutation();
+  const changeOrgRole = useChangeOrgRoleMutation();
+  const changeWorkspaceRole = useChangeWorkspaceRoleMutation();
   const deleteUser = useDeleteUserMutation();
 
   if (userQuery.isLoading) return <LoadingState label="Loading user..." />;
   if (userQuery.isError) return <ErrorState error={userQuery.error} resource="user" onRetry={() => userQuery.refetch()} />;
   if (!user) return <ErrorState message="User not found" />;
+  if (membershipsQuery.isLoading) return <LoadingState label="Loading memberships..." />;
+  if (membershipsQuery.isError)
+    return <ErrorState error={membershipsQuery.error} resource="memberships" onRetry={() => membershipsQuery.refetch()} />;
+  if (!memberships) return <ErrorState message="Memberships unavailable" />;
 
-  const memberOrgIds = new Set(user.orgs);
-  const memberships = orgs?.filter((org) => memberOrgIds.has(org.id));
+  const memberOrgIds = new Set(memberships.org_memberships.map((membership) => membership.org_id));
   const available = orgs?.filter((org) => !memberOrgIds.has(org.id));
+  const availableWorkspaces = workspacesQuery.data?.filter(
+    (workspace) => !memberships.workspace_memberships.some((membership) => membership.workspace_id === workspace.id),
+  );
   return (
     <PageShell>
       <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
@@ -130,7 +153,7 @@ export default function UserDetail() {
             <Building2 className="w-5 h-5 text-muted-foreground" />
             Organization Memberships
           </h2>
-          {canAddMember && (
+          {canAddMember && !user.managing_org_id && (
             <Button onClick={() => setAddOpen(true)} size="sm" disabled={orgsQuery.isLoading || orgsQuery.isError || available?.length === 0}>
               <Plus className="w-4 h-4" /> Add to Organization
             </Button>
@@ -138,23 +161,34 @@ export default function UserDetail() {
         </div>
         <Card>
           <DataTable
-            rows={memberships}
-            rowKey={(org) => org.id}
-            isLoading={orgsQuery.isLoading}
-            isError={orgsQuery.isError}
-            error={orgsQuery.error}
-            resource="organizations"
-            onRetry={() => orgsQuery.refetch()}
+            rows={memberships.org_memberships}
+            rowKey={(membership) => membership.org_id}
+            resource="organization memberships"
             empty="User does not belong to any organizations."
             columns={[
               {
                 key: 'org',
                 header: 'Organization',
                 cellClassName: 'font-medium',
-                cell: (org) => <TableLink href={`/instance/organizations/${org.id}`}>{org.name}</TableLink>,
+                cell: (membership) => <TableLink href={`/instance/organizations/${membership.org_id}`}>{membership.name}</TableLink>,
               },
-              { key: 'id', header: 'ID', cellClassName: 'font-mono text-xs text-muted-foreground', cell: (org) => org.id },
-              { key: 'created', header: 'Created', cellClassName: 'text-muted-foreground text-sm', cell: (org) => formatDate(org.created_at) },
+              {
+                key: 'role',
+                header: 'Role',
+                cell: (membership) =>
+                  canAddMember ? (
+                    <RoleSelect
+                      value={membership.role}
+                      label={`Organization role in ${membership.name}`}
+                      name={user.name}
+                      options={user.managing_org_id ? orgRoleOptions.filter((option) => option.value !== 'owner') : orgRoleOptions}
+                      pending={changeOrgRole.isPending}
+                      onSave={(role) => changeOrgRole.mutateAsync({ userId: user.id, orgId: membership.org_id, role })}
+                    />
+                  ) : (
+                    membership.role
+                  ),
+              },
               ...(canRemoveMember
                 ? [
                     {
@@ -162,21 +196,82 @@ export default function UserDetail() {
                       header: 'Actions',
                       headClassName: 'text-right',
                       cellClassName: 'text-right',
-                      cell: (org: OrgOut) => (
-                        <ConfirmButton
-                          title={`Remove ${user.name} from ${org.name}?`}
-                          description="They lose access to this organization, and their inference keys and playground sessions across it stop working immediately."
-                          confirmLabel="Remove membership"
-                          pending={removeMember.isPending}
-                          aria-label="Remove membership"
-                          onConfirm={() => removeMember.mutateAsync({ userId: user.id, orgId: org.id })}
-                        >
-                          <UserMinus className="w-4 h-4" />
-                        </ConfirmButton>
-                      ),
+                      cell: (membership: OrgRoleAssignment) =>
+                        user.managing_org_id === membership.org_id ? null : (
+                          <ConfirmButton
+                            title={`Remove ${user.name} from ${membership.name}?`}
+                            description="They lose access to this organization, and their inference keys and playground sessions across it stop working immediately."
+                            confirmLabel="Remove membership"
+                            pending={removeMember.isPending}
+                            aria-label="Remove membership"
+                            onConfirm={() => removeMember.mutateAsync({ userId: user.id, orgId: membership.org_id })}
+                          >
+                            <UserMinus className="w-4 h-4" />
+                          </ConfirmButton>
+                        ),
                     },
                   ]
                 : []),
+            ]}
+          />
+        </Card>
+        {canAddMember && orgsQuery.isError && (
+          <ErrorState error={orgsQuery.error} message="Organizations are unavailable for new memberships." onRetry={() => orgsQuery.refetch()} />
+        )}
+      </div>
+
+      <div className="mt-8">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Blocks className="w-5 h-5 text-muted-foreground" /> Workspace Memberships
+          </h2>
+          {canManageWorkspaceMember && (
+            <Button onClick={() => setAddWorkspaceOpen(true)} size="sm" disabled={memberships.org_memberships.length === 0}>
+              <Plus className="w-4 h-4" /> Add to Workspace
+            </Button>
+          )}
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          Direct workspace roles are shown below. Instance and organization roles can also grant access.
+        </p>
+        <Card>
+          <DataTable
+            rows={memberships.workspace_memberships}
+            rowKey={(membership) => membership.workspace_id}
+            resource="workspace memberships"
+            empty="User does not belong to any workspaces."
+            columns={[
+              {
+                key: 'workspace',
+                header: 'Workspace',
+                cell: (membership) => (
+                  <TableLink href={`/instance/organizations/${membership.org_id}/workspaces/${membership.slug}`}>{membership.name}</TableLink>
+                ),
+              },
+              {
+                key: 'organization',
+                header: 'Organization',
+                cell: (membership) => memberships.org_memberships.find((org) => org.org_id === membership.org_id)?.name ?? membership.org_id,
+              },
+              {
+                key: 'role',
+                header: 'Role',
+                cell: (membership) =>
+                  canManageWorkspaceMember ? (
+                    <RoleSelect
+                      value={membership.role}
+                      label={`Workspace role in ${membership.name}`}
+                      name={user.name}
+                      options={workspaceRoleOptions}
+                      pending={changeWorkspaceRole.isPending}
+                      onSave={(role) =>
+                        changeWorkspaceRole.mutateAsync({ userId: user.id, orgId: membership.org_id, workspaceRef: membership.slug, data: { role } })
+                      }
+                    />
+                  ) : (
+                    membership.role
+                  ),
+              },
             ]}
           />
         </Card>
@@ -203,7 +298,7 @@ export default function UserDetail() {
         </div>
       )}
 
-      {canAddMember && (
+      {canAddMember && !user.managing_org_id && (
         <FormDialog
           open={addOpen}
           onOpenChange={setAddOpen}
@@ -247,6 +342,97 @@ export default function UserDetail() {
                     <FormLabel>Role</FormLabel>
                     <FormControl>
                       <Dropdown aria-label="Role" value={field.value} onValueChange={field.onChange} options={orgRoleOptions} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </>
+          )}
+        </FormDialog>
+      )}
+      {canManageWorkspaceMember && (
+        <FormDialog
+          open={addWorkspaceOpen}
+          onOpenChange={(open) => {
+            setAddWorkspaceOpen(open);
+            if (!open) setSelectedOrgId('');
+          }}
+          title="Add to Workspace"
+          schema={addToWorkspaceSchema}
+          defaultValues={{ orgId: '', workspaceRef: '', role: 'member' }}
+          onSubmit={(values) => {
+            const role = workspaceRoleOptions.find((option) => option.value === values.role);
+            if (!role) throw new Error('Selected role is unavailable');
+            return changeWorkspaceRole.mutateAsync({
+              userId: user.id,
+              orgId: values.orgId,
+              workspaceRef: values.workspaceRef,
+              data: { role: role.value },
+            });
+          }}
+          submitLabel="Add"
+          pending={changeWorkspaceRole.isPending}
+        >
+          {(form) => (
+            <>
+              <FormField
+                control={form.control}
+                name="orgId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Organization</FormLabel>
+                    <FormControl>
+                      <Dropdown
+                        aria-label="Organization"
+                        value={field.value}
+                        onValueChange={(orgId) => {
+                          field.onChange(orgId);
+                          form.setValue('workspaceRef', '');
+                          setSelectedOrgId(orgId);
+                        }}
+                        placeholder="Select an organization"
+                        options={memberships.org_memberships.map((membership) => ({ value: membership.org_id, label: membership.name }))}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="workspaceRef"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Workspace</FormLabel>
+                    <FormControl>
+                      <Dropdown
+                        aria-label="Workspace"
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        placeholder="Select a workspace"
+                        disabled={!selectedOrgId || workspacesQuery.isLoading || workspacesQuery.isError}
+                        options={(availableWorkspaces ?? []).map((workspace) => ({ value: workspace.slug, label: workspace.name }))}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {workspacesQuery.isError && (
+                <ErrorState error={workspacesQuery.error} resource="workspaces" onRetry={() => workspacesQuery.refetch()} />
+              )}
+              {selectedOrgId && availableWorkspaces?.length === 0 && (
+                <p className="text-sm text-muted-foreground">No additional workspaces are available in this organization.</p>
+              )}
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Role</FormLabel>
+                    <FormControl>
+                      <Dropdown aria-label="Role" value={field.value} onValueChange={field.onChange} options={workspaceRoleOptions} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

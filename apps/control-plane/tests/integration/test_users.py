@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 from fastapi.testclient import TestClient
-from helpers import FIXTURE_ADMIN_EMAIL, make_admin, make_org, make_user, run_in_db, setup_control_plane
+from helpers import FIXTURE_ADMIN_EMAIL, make_admin, make_org, make_user, make_workspace, run_in_db, setup_control_plane
 
 from contract import uuid7
 from control_plane.authz import DATA_PLANE_PERMISSIONS, InstanceRole, Permission
@@ -169,6 +169,37 @@ def test_membership_lifecycle_and_listing(tmp_path):
         assert deleted["deleted_at"] is not None
         assert c.delete(f"/api/v1/organizations/{o2}/users/{uid}", headers=cp.headers(o2)).status_code == 404
         assert _users(c, root)[0]["orgs"] == [str(o1)]
+
+
+def test_user_detail_shows_roles_at_every_scope(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    user = make_user(tmp_path, "roles@example.com")
+    with TestClient(cp.app) as client:
+        path = f"/api/v1/users/{user.id}/memberships"
+        assert client.get(path, headers=root).json()["data"] == {"org_memberships": [], "workspace_memberships": []}
+        assert client.get(f"/api/v1/users/{uuid7()}/memberships", headers=root).status_code == 404
+        org_id = make_org(client, root, "roles-org")
+        workspace_id = make_workspace(client, cp.headers(org_id), "roles-workspace")
+        org_path = f"/api/v1/organizations/{org_id}"
+        assert client.put(f"{org_path}/users/{user.id}", json={"role": "admin"}, headers=root).status_code == 200
+        assert client.put(f"{org_path}/workspaces/{workspace_id}/members/{user.id}", json={"role": "viewer"}, headers=root).status_code == 200
+
+        assert client.get(path, headers=cp.headers(org_id)).status_code == 403
+        assert client.get(path, headers=cp.headers(permissions=[Permission.organizations_read])).status_code == 403
+        detail = client.get(path, headers=root)
+        assert detail.status_code == 200
+        assert detail.json()["data"]["org_memberships"] == [{"org_id": str(org_id), "name": "roles-org", "role": "admin"}]
+        assert detail.json()["data"]["workspace_memberships"] == [
+            {"workspace_id": str(workspace_id), "org_id": str(org_id), "name": "roles-workspace", "slug": "roles-workspace", "role": "viewer"}
+        ]
+        assert client.put(f"{org_path}/users/{user.id}", json={"role": "member"}, headers=root).status_code == 200
+        assert client.put(f"{org_path}/workspaces/{workspace_id}/members/{user.id}", json={"role": "admin"}, headers=root).status_code == 200
+        changed = client.get(path, headers=root).json()["data"]
+        assert changed["org_memberships"][0]["role"] == "member"
+        assert changed["workspace_memberships"][0]["role"] == "admin"
+        assert client.delete(f"{org_path}/users/{user.id}", headers=root).status_code == 200
+        assert client.get(path, headers=root).json()["data"] == {"org_memberships": [], "workspace_memberships": []}
 
 
 def test_org_user_listing_is_scoped_to_the_acting_org(tmp_path):

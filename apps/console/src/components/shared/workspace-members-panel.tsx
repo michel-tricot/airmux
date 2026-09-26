@@ -34,7 +34,7 @@ export function WorkspaceMembersPanel({
   const candidatesQuery = useWorkspaceMemberCandidates(orgId, workspaceRef, { enabled: canChooseMembers });
   const addMember = useAddWorkspaceMemberMutation(orgId, workspaceRef);
   const removeMember = useRemoveWorkspaceMemberMutation(orgId, workspaceRef);
-  const changeRole = useChangeWorkspaceRoleMutation(orgId, workspaceRef);
+  const changeRole = useChangeWorkspaceRoleMutation();
   const candidates = candidatesQuery.data;
 
   return (

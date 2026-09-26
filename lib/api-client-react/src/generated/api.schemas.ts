@@ -1390,6 +1390,12 @@ export interface OrgPolicyState {
   budgets: BudgetState[];
 }
 
+export interface OrgRoleAssignment {
+  org_id: string;
+  name: string;
+  role: OrgRole;
+}
+
 export interface UserOut {
   id: string;
   email: string;
@@ -2184,6 +2190,28 @@ export interface UsageReportOut {
   updated_at: string;
 }
 
+export type WorkspaceRole = typeof WorkspaceRole[keyof typeof WorkspaceRole];
+
+
+export const WorkspaceRole = {
+  admin: 'admin',
+  member: 'member',
+  viewer: 'viewer',
+} as const;
+
+export interface WorkspaceRoleAssignment {
+  workspace_id: string;
+  org_id: string;
+  name: string;
+  slug: string;
+  role: WorkspaceRole;
+}
+
+export interface UserMembershipsOut {
+  org_memberships: OrgRoleAssignment[];
+  workspace_memberships: WorkspaceRoleAssignment[];
+}
+
 export interface WorkspaceCreate {
   /**
      * Workspace name, e.g. Staging
@@ -2205,15 +2233,6 @@ export interface WorkspaceMemberCandidateOut {
   name: string;
   service_account: boolean;
 }
-
-export type WorkspaceRole = typeof WorkspaceRole[keyof typeof WorkspaceRole];
-
-
-export const WorkspaceRole = {
-  admin: 'admin',
-  member: 'member',
-  viewer: 'viewer',
-} as const;
 
 export interface WorkspaceMembershipIn {
   /** Workspace role to grant */

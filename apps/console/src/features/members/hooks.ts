@@ -11,6 +11,7 @@ import {
   getListOrgUsersQueryKey,
   getListOrgManagementKeysQueryKey,
   getListMembersQueryKey,
+  getGetUserMembershipsQueryKey,
   getMyPermissionsQueryKey,
   getListInferenceKeysQueryKey,
   getListActivityInfiniteQueryKey,
@@ -77,7 +78,11 @@ export function useAddWorkspaceMemberMutation(orgId: string, workspaceRef: strin
   const queryClient = useQueryClient();
   return useAddMember({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListMembersQueryKey(orgId, workspaceRef) }),
+      onSuccess: (_membership, { userId }) =>
+        Promise.all([
+          queryClient.invalidateQueries({ queryKey: getListMembersQueryKey(orgId, workspaceRef) }),
+          queryClient.invalidateQueries({ queryKey: getGetUserMembershipsQueryKey(userId) }),
+        ]),
       meta: { errorMessage: 'We couldn’t add the member. Please try again.' },
     },
   });
@@ -87,9 +92,10 @@ export function useRemoveWorkspaceMemberMutation(orgId: string, workspaceRef: st
   const queryClient = useQueryClient();
   return useRemoveMember({
     mutation: {
-      onSuccess: () =>
+      onSuccess: (_membership, { userId }) =>
         Promise.all([
           queryClient.invalidateQueries({ queryKey: getListMembersQueryKey(orgId, workspaceRef) }),
+          queryClient.invalidateQueries({ queryKey: getGetUserMembershipsQueryKey(userId) }),
           queryClient.invalidateQueries({ queryKey: getListInferenceKeysQueryKey(orgId, workspaceRef) }),
           queryClient.invalidateQueries({ queryKey: getListActivityInfiniteQueryKey(orgId) }),
         ]),
@@ -98,13 +104,14 @@ export function useRemoveWorkspaceMemberMutation(orgId: string, workspaceRef: st
   });
 }
 
-export function useChangeWorkspaceRoleMutation(orgId: string, workspaceRef: string) {
+export function useChangeWorkspaceRoleMutation() {
   const queryClient = useQueryClient();
   return useAddMember({
     mutation: {
-      onSuccess: () =>
+      onSuccess: (_membership, { orgId, workspaceRef, userId }) =>
         Promise.all([
           queryClient.invalidateQueries({ queryKey: getListMembersQueryKey(orgId, workspaceRef) }),
+          queryClient.invalidateQueries({ queryKey: getGetUserMembershipsQueryKey(userId) }),
           queryClient.invalidateQueries({ queryKey: getMyPermissionsQueryKey() }),
         ]),
       meta: { errorMessage: 'We couldn’t change the workspace role. Please try again.' },

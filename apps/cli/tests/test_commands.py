@@ -50,6 +50,8 @@ def test_a_command_takes_its_category_from_its_group():
     assert rows["airmux orgs mine"] == RESOURCES
     assert rows["airmux workspaces create"] == RESOURCES
     assert rows["airmux users list"] == RESOURCES
+    assert rows["airmux users show"] == RESOURCES
+    assert rows["airmux users role"] == RESOURCES
 
 
 def test_all_resource_commands_share_one_category():

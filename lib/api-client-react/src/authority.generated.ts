@@ -130,6 +130,14 @@ export const operationAuthority = {
       },
     ],
   },
+  getUserMemberships: {
+    checks: [
+      {
+        scope: "instance_scope",
+        anyOf: ["principals.read"],
+      },
+    ],
+  },
   listUsers: {
     checks: [
       {

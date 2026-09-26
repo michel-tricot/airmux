@@ -135,6 +135,7 @@ import type {
   TaxonomyOut,
   TaxonomySpec,
   UsageReportOut,
+  UserMembershipsOut,
   UserOut,
   WorkspaceCreate,
   WorkspaceMemberCandidateOut,
@@ -2911,6 +2912,108 @@ export const useDeleteUser = <TError = ErrorType<void | HTTPValidationError>,
       > => {
       return useMutation(getDeleteUserMutationOptions(options), queryClient);
     }
+
+export const getGetUserMembershipsUrl = (userId: string,) => {
+
+
+
+
+  return `/api/v1/users/${userId}/memberships`
+}
+
+/**
+ * Required permission: `principals.read`.
+ * @summary Get User Memberships
+ */
+export const getUserMemberships = async (userId: string, options?: Parameters<typeof customFetch>[1]): Promise<UserMembershipsOut> => {
+
+  return customFetch<UserMembershipsOut>(getGetUserMembershipsUrl(userId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetUserMembershipsQueryKey = (userId: string,) => {
+    return [
+    `/api/v1/users/${userId}/memberships`
+    ] as const;
+    }
+
+
+export const getGetUserMembershipsQueryOptions = <TData = Awaited<ReturnType<typeof getUserMemberships>>, TError = ErrorType<void | HTTPValidationError>>(userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserMemberships>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUserMembershipsQueryKey(userId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUserMemberships>>> = ({ signal }) => getUserMemberships(userId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: userId !== null && userId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUserMemberships>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetUserMembershipsQueryResult = NonNullable<Awaited<ReturnType<typeof getUserMemberships>>>
+export type GetUserMembershipsQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useGetUserMemberships<TData = Awaited<ReturnType<typeof getUserMemberships>>, TError = ErrorType<void | HTTPValidationError>>(
+ userId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserMemberships>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUserMemberships>>,
+          TError,
+          Awaited<ReturnType<typeof getUserMemberships>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetUserMemberships<TData = Awaited<ReturnType<typeof getUserMemberships>>, TError = ErrorType<void | HTTPValidationError>>(
+ userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserMemberships>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUserMemberships>>,
+          TError,
+          Awaited<ReturnType<typeof getUserMemberships>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetUserMemberships<TData = Awaited<ReturnType<typeof getUserMemberships>>, TError = ErrorType<void | HTTPValidationError>>(
+ userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserMemberships>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get User Memberships
+ */
+
+export function useGetUserMemberships<TData = Awaited<ReturnType<typeof getUserMemberships>>, TError = ErrorType<void | HTTPValidationError>>(
+ userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserMemberships>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetUserMembershipsQueryOptions(userId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getListUsersUrl = (params?: ListUsersParams,) => {
   const normalizedParams = new URLSearchParams();

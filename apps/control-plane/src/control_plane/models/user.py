@@ -9,7 +9,7 @@ from sqlalchemy import CheckConstraint, Column, ForeignKey, or_, text
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col, select
 
-from control_plane.authz import InstanceRole, OrgRole
+from control_plane.authz import InstanceRole, OrgRole, WorkspaceRole
 from control_plane.db import current_session
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, NotOwnedError, Tombstonable, slugify
@@ -77,6 +77,34 @@ class User(Record, Identified, Tombstonable, table=True):
         return await cls.find(
             col(cls.id).in_(select(OrgMembership.user_id).where(OrgMembership.org_id == org_id)),
             order_by=col(cls.email),
+        )
+
+    async def memberships(self) -> UserMembershipsOut:
+        from control_plane.models import Org, Workspace  # noqa: PLC0415 organization and workspace models import User
+
+        organizations = (
+            select(OrgMembership, Org)
+            .join(Org, col(Org.id) == col(OrgMembership.org_id))
+            .where(OrgMembership.user_id == self.id)
+            .order_by(col(Org.name), col(Org.id))
+        )
+        workspaces = (
+            select(WorkspaceMembership, Workspace)
+            .join(Workspace, col(Workspace.id) == col(WorkspaceMembership.workspace_id))
+            .where(WorkspaceMembership.user_id == self.id)
+            .order_by(col(Workspace.org_id), col(Workspace.name), col(Workspace.id))
+        )
+        return UserMembershipsOut(
+            org_memberships=[
+                OrgRoleAssignment(org_id=org.id, name=org.name, role=OrgRole(membership.role))
+                for membership, org in (await current_session().execute(organizations)).all()
+            ],
+            workspace_memberships=[
+                WorkspaceRoleAssignment(
+                    workspace_id=workspace.id, org_id=workspace.org_id, name=workspace.name, slug=workspace.slug, role=WorkspaceRole(membership.role)
+                )
+                for membership, workspace in (await current_session().execute(workspaces)).all()
+            ],
         )
 
     @classmethod
@@ -246,6 +274,25 @@ class UserOut(RecordOut[User]):
     orgs: list[UUID]
 
     api_extra: ClassVar[frozenset[str]] = frozenset({"orgs"})
+
+
+class OrgRoleAssignment(BaseModel):
+    org_id: UUID
+    name: str
+    role: OrgRole
+
+
+class WorkspaceRoleAssignment(BaseModel):
+    workspace_id: UUID
+    org_id: UUID
+    name: str
+    slug: str
+    role: WorkspaceRole
+
+
+class UserMembershipsOut(BaseModel):
+    org_memberships: list[OrgRoleAssignment]
+    workspace_memberships: list[WorkspaceRoleAssignment]
 
 
 class OrgServiceAccountCreatedOut(BaseModel):
