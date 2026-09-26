@@ -46,15 +46,21 @@ Start each service in its own terminal.
 
 Control plane (`http://127.0.0.1:8000`):
 
-Gateway:
+```bash
+uv run airmux control-plane serve --dev
+```
 
-Webapp
+Gateway (`http://127.0.0.1:8080`):
 
-| Service | Command | Address |
-| --- | --- | --- |
-| Control plane | `uv run airmux control-plane serve --dev` | `http://127.0.0.1:8000` |
-| Gateway | `uv run airmux gateway serve --config airmux.yml --dev` | `http://127.0.0.1:8080` |
-| Webapp | `bun run dev` | `http://127.0.0.1:5000` |
+```bash
+uv run airmux gateway serve --config airmux.yml --dev
+```
+
+Webapp (`http://127.0.0.1:5000`):
+
+```bash
+bun run dev
+```
 
 To make a real inference request, run quickstart through the webapp origin and enter a provider key when prompted:
 
