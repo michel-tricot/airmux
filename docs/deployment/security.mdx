@@ -19,9 +19,9 @@ description: "Harden a public airmux deployment and protect its management, infe
 
 - Give each agent its own workspace inference key owned by an organization-managed service account
 - Give automation a service account and a management key with the minimum scope and permissions
-- Never use a management key for inference or expose a provider credential to an application
-- Store one-time tokens immediately; `airmux` does not return them again
-- Rotate provider credentials through the API so their version invalidates gateway caches
+- Don't expose a provider credential to an agent
+- Store one-time tokens immediately, `airmux` does not return them again
+- Rotate provider credentials through the API
 - Revoke unused inference and management keys
 
 ## State and logs
