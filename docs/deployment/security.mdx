@@ -26,12 +26,15 @@ description: "Harden a public airmux deployment and protect its management, infe
 
 ## State and logs
 
-The default file-backed secret store writes one owner-readable file per provider credential under `/state/secrets`. Bundle
-caches contain token hashes and secret references, not plaintext tokens or provider values. Usage and audit records can
-still contain sensitive operational metadata such as model IDs, user IDs, credential IDs, cost, and timestamps.
+The default file-backed secret store writes one owner-readable file per provider credential under `/state/secrets`. 
 
-Do not log `Authorization`, `x-api-key`, authentication-cookie values, request bodies, provider keys, or one-time token
-responses. Limit access to application logs, database exports, volume snapshots, and support bundles.
+Bundle caches contain token hashes and secret references, not plaintext tokens or provider values. 
+
+Usage and audit records can still contain sensitive operational metadata such as model IDs, user IDs, credential IDs, cost, and timestamps.
+
+Do not log `Authorization`, `x-api-key`, authentication-cookie values, request bodies, provider keys, or one-time token responses. 
+
+Limit access to application logs, database exports, volume snapshots, and support bundles.
 
 ## Browser boundary
 
