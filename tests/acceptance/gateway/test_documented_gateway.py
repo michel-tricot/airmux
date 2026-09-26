@@ -21,7 +21,8 @@ def test_documented_gateway_initialization_and_curl(gateway, document):
         "HOME": str(gateway.directory),
         "OPENAI_API_KEY": UPSTREAM_KEY,
     }
-    initialize, serve = code_block(document, "airmux gateway init").split("airmux gateway serve")
+    initialize, serve = code_block(document, "airmux gateway init").strip().rsplit("\n", 1)
+    serve = serve.split("airmux gateway serve", 1)[1]
     initialize = initialize.removeprefix("uv tool install airmux\n").replace("'your-provider-key'", shlex.quote(UPSTREAM_KEY))
     subprocess.run(["/bin/bash", "-eu", "-c", initialize], cwd=gateway.directory, env=environment, check=True, capture_output=True)  # noqa: S603 trusted documentation with local fixture credentials
     directory = gateway.directory

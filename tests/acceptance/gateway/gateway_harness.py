@@ -279,7 +279,7 @@ class Gateway:
             destination.mkdir(parents=True, exist_ok=True)
             secrets = (*self.sensitive_values, UPSTREAM_KEY, INFERENCE_KEY, SECOND_KEY, *(key["token"] for key in self.bundle["keys"]))
             for path in self.directory.rglob("*"):
-                if path.is_file():
+                if path.is_file() and path.suffix in {".log", ".json", ".jsonl", ".yml", ".yaml"}:
                     contents = path.read_text(encoding="utf-8")
                     for secret in secrets:
                         contents = contents.replace(secret, "[REDACTED]")
