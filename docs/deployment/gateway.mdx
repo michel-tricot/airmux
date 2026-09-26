@@ -48,6 +48,39 @@ curl --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions \
 Change the `model` value to another ID in your taxonomy. See the [inference reference](/docs/reference/inference) for
 other request formats.
 
+Verify streaming with the same inference key. `--no-buffer` prints each event as it arrives; a successful stream ends with
+`data: [DONE]`:
+
+```bash
+export AIRMUX_INFERENCE_KEY="$(cat .airmux/inference.key)"
+curl --no-buffer --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions \
+  -H "Authorization: Bearer $AIRMUX_INFERENCE_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"openai/gpt-5.4-mini","messages":[{"role":"user","content":"Hello"}],"stream":true}'
+```
+
+## Run in a container
+
+Build the image from the checkout after running `gateway init`. The container reads the same `.airmux` directory and
+provider key as the local setup:
+
+```bash
+docker build -t airmux:local .
+```
+
+```bash
+docker run --rm -p 127.0.0.1:8080:8081 \
+  --user "$(id -u):$(id -g)" --workdir /tmp \
+  --mount "type=bind,source=${AIRMUX_CONFIG_DIR:-$PWD}/.airmux,target=/config,readonly" \
+  -e OPENAI_API_KEY \
+  airmux:local data-plane
+```
+
+Keep the container running and use the requests above against `http://127.0.0.1:8080`. The host user runs the gateway
+so it can read the private inference key. Set `AIRMUX_CONFIG_DIR` to the parent of `.airmux` if you initialized it outside
+the checkout. Stop the local Python gateway before using the same host port. Pass the matching provider key with `-e`
+if you use a provider other than OpenAI.
+
 ## Customize local setup
 
 `gateway init` creates the starter configuration and taxonomy in `.airmux`. Use `--directory` to choose another location
