@@ -5,7 +5,7 @@ description: "Monitor readiness, preserve state, update safely, and diagnose con
 
 ## Health endpoints
 
-Liveness only answers whether the process can serve HTTP. Readiness answers whether its role can currently serve useful
+Liveness only answers whether the process can serve HTTP. Readiness answers whether it can serve useful
 traffic. Configure process restarts from `/healthz` and traffic admission from `/readyz`.
 
 | Plane | Endpoint | Healthy response | `503` meaning |
