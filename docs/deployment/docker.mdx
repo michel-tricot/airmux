@@ -49,16 +49,14 @@ Runtime `${env:...}` references use each container's environment, not values rea
 
 Paths in the custom YAML resolve relative to `/config`, so use absolute `/state/...` paths for persistent data as the bundled file does. Compare your custom file with the new image's default YAML when upgrading.
 
-Restart all roles after editing the YAML:
+Restart the stack after editing the YAML:
 
 ```bash
 docker compose down
 docker compose up -d --wait
 ```
 
-`down` keeps the database and state volumes. If startup fails, inspect `docker compose logs migrate taxonomy app`.
-To return to the image default, remove `airmux-config/airmux.yml` and run the same two commands. The split Compose
-example uses the same directory for its migration, catalog, control-plane, and gateway containers.
+If startup fails, inspect `docker compose logs migrate taxonomy app`. To return to the image default, remove `airmux-config/airmux.yml` and run the same two commands.
 
 ## Startup and database changes
 
