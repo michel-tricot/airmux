@@ -698,13 +698,24 @@ def provider_credentials_rm(
 @provider_credentials_app.command("disable")
 def provider_credentials_disable(
     credential_id: str = typer.Argument(..., help="Credential id from `airmux provider-credentials list`"),
-    enable: bool = typer.Option(False, "--enable", help="Put it back in the pool instead"),
     control_plane_url: str = "",
 ) -> None:
-    """Stop using a provider key without deleting it. Use --enable to put it back."""
+    """Stop using a provider key without deleting it."""
     with access_client(control_plane_url) as c:
-        resp = c.patch(org_path(f"/provider-credentials/{credential_id}"), json={"enabled": enable})
+        resp = c.patch(org_path(f"/provider-credentials/{credential_id}"), json={"enabled": False})
         ensure_ok(resp)
         credential = payload(resp, ProviderCredentialOut)
-    state = "Enabled" if credential.enabled else "Disabled"
-    console.print(f"{state} [bold]{credential.name}[/bold].")
+    console.print(f"Disabled [bold]{credential.name}[/bold].")
+
+
+@provider_credentials_app.command("enable")
+def provider_credentials_enable(
+    credential_id: str = typer.Argument(..., help="Credential id from `airmux provider-credentials list`"),
+    control_plane_url: str = "",
+) -> None:
+    """Put a disabled provider key back in the pool."""
+    with access_client(control_plane_url) as c:
+        resp = c.patch(org_path(f"/provider-credentials/{credential_id}"), json={"enabled": True})
+        ensure_ok(resp)
+        credential = payload(resp, ProviderCredentialOut)
+    console.print(f"Enabled [bold]{credential.name}[/bold].")
