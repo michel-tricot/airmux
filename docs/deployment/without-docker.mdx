@@ -61,11 +61,17 @@ responses, and preserve the security and forwarding headers in the shipped templ
 ## Start and claim
 
 Run each process in its own terminal from the release checkout, with the same `DATABASE_URL` for control-plane
-commands and the control-plane server:
+commands and the control-plane server.
+
+Start the Control plane:
+
+```text
+`uv run airmux control-plane serve --config deployment/airmux.yml --host 127.0.0.1 --port 8000`
+```
 
 | Process | Command |
 | --- | --- |
-| Control plane | `uv run airmux control-plane serve --config deployment/airmux.yml --host 127.0.0.1 --port 8000` |
+| Control plane |  |
 | Gateway | `uv run airmux gateway serve --config deployment/airmux.yml --host 127.0.0.1 --port 8081` |
 | Console proxy | `nginx -c "$PWD/deployment/nginx.conf" -g 'daemon off;'` |
 
