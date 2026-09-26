@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import json
-import os
+import shutil
 import subprocess
-import tomllib
-from pathlib import Path
+import sys
 
-from tests.documentation.examples import cli_reference_commands, code_block
+from tests.documentation.examples import cli_reference_commands
 from tests.documentation.test_documentation import ROOT
 from tests.installation.installation_support import run_cli
 
@@ -16,22 +15,22 @@ def test_documented_command_inventory_matches_installed_cli(installation, tmp_pa
     assert cli_reference_commands() <= {command["command"] for command in inventory}
 
 
-def test_documented_portable_recipe_runs_outside_checkout(installation, tmp_path):
+def test_candidate_runs_outside_checkout(installation, tmp_path):
     executable, environment = installation
-    locked = tomllib.loads((ROOT / "uv.lock").read_text())
-    constraints = tmp_path / "constraints.txt"
-    constraints.write_text("\n".join(f"{package['name']}=={package['version']}" for package in locked["package"] if "registry" in package["source"]))
-    recipe = code_block("docs/development.mdx", "cp tests/installation/")
-    _, recipe = recipe.split("uv tool install --python 3.13 dist/airmux-*.whl\n", 1)
-    result = subprocess.run(  # noqa: S603 execute the trusted recipe using the already installed candidate
-        ["/bin/bash", "-eu", "-o", "pipefail", "-c", "(\n" + recipe],
-        cwd=ROOT,
+    portable = tmp_path / "tests" / "installation" / "portable"
+    portable.mkdir(parents=True)
+    for path in (ROOT / "tests/installation/portable").glob("*.py"):
+        shutil.copy2(path, portable / path.name)
+    shutil.copy2(ROOT / "tests/installation/installation_support.py", portable.parent / "installation_support.py")
+    acceptance = tmp_path / "tests" / "acceptance"
+    acceptance.mkdir()
+    shutil.copy2(ROOT / "tests/acceptance/process_harness.py", acceptance / "process_harness.py")
+    result = subprocess.run(
+        [sys.executable, "-I", "-m", "pytest", "-o", "pythonpath=.", "tests/installation/portable"],
+        cwd=tmp_path,
         env={
-            **os.environ,
-            "PATH": f"{Path(executable).parent}{os.pathsep}{environment['PATH']}",
-            "UV_CONSTRAINT": str(constraints),
-            "UV_TOOL_BIN_DIR": str(Path(executable).parent),
-            "smoke_dir": str(tmp_path),
+            **environment,
+            "AIRMUX_INSTALL_BIN": executable,
         },
         capture_output=True,
         text=True,

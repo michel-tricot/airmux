@@ -25,8 +25,7 @@
               "docs/guides/cli",
               "docs/guides/user-management",
               "docs/guides/sdks",
-              "docs/policies",
-              "docs/guides/policy-workflow",
+              "docs/guides/policies",
               "docs/guides/budgets",
               "docs/features/model-routing",
               "docs/features/provider-credentials",
@@ -38,12 +37,12 @@
             "pages": [
               "docs/deployment/index",
               "docs/deployment/docker",
+              "docs/deployment/without-docker",
               "docs/deployment/gateway",
               "docs/deployment/scaling",
               "docs/deployment/security",
               "docs/deployment/opentelemetry",
-              "docs/deployment/operations",
-              "docs/deployment/upgrades"
+              "docs/deployment/operations"
             ]
           },
           {
@@ -58,7 +57,7 @@
           },
           {
             "group": "Contributing",
-            "pages": ["docs/development"]
+            "pages": ["docs/development", "docs/releasing"]
           }
         ]
       },

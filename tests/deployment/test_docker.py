@@ -47,7 +47,7 @@ def deployment():
     url = os.environ["DEPLOYMENT_URL"]
     compose = ("compose", "-p", project, "-f", compose_file)
     compact = compose_file == "docker-compose.yml"
-    gateways = ("airmux",) if compact else ("data-plane-1", "data-plane-2")
+    gateways = ("cli",) if compact else ("data-plane-1", "data-plane-2")
     gateway = gateways[0]
     container = docker(*compose, "ps", "-q", gateway)
     image = docker("inspect", "--format", "{{.Config.Image}}", container)
@@ -106,7 +106,7 @@ def assert_unprivileged(compose, service, expected):
 def assert_process_layout(client, compose, gateways, compact):
     assert_installed_packages(compose, gateways[0])
     lifecycle = ("migrate", "taxonomy")
-    services = (*lifecycle, "airmux") if compact else (*lifecycle, "control-plane", *gateways, "console")
+    services = (*lifecycle, "cli") if compact else (*lifecycle, "control-plane", *gateways, "console")
     containers = [docker(*compose, "ps", "--all", "--quiet", service) for service in services]
     assert len({docker("inspect", "--format", "{{.Image}}", container) for container in containers}) == 1
     for service in lifecycle:

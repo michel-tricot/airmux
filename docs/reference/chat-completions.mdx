@@ -34,17 +34,17 @@ curl https://llm.example.com/inf/v1/chat/completions \
 | `max_completion_tokens` | integer | Current Chat Completions spelling; minimum 1 |
 | `temperature` | number | Minimum 0 |
 | `top_p` | number | Greater than 0 and at most 1 |
-| `stop` | string or array | Normalized to an array |
+| `stop` | string or array | One or more stop sequences |
 | `seed` | integer | Forwarded when supported |
 | `tools` | array | Function tools |
 | `tool_choice` | string or object | `auto`, `none`, `required`, or a named function |
 | `parallel_tool_calls` | boolean | Requires provider support when supplied |
 | `response_format` | object | `text`, `json_object`, or `json_schema` |
-| `reasoning_effort` | string | Folded into canonical reasoning configuration |
+| `reasoning_effort` | string | Reasoning effort |
 | `reasoning` | object | Extended reasoning configuration |
 
 Other top-level fields are treated as provider extras. A provider profile either forwards them or reports them as dropped in `gateway.adjustments`.
-Supplying both output-limit fields is invalid. Either field maps to canonical `max_output_tokens`.
+Supplying both output-limit fields is invalid. Use either one to set the output token limit.
 
 ## Response
 

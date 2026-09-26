@@ -1,0 +1,103 @@
+---
+title: "Deploy without Docker"
+description: "Run the control plane, gateway, and console on a Linux host with Postgres and Nginx."
+---
+
+This runs the full platform on one Linux host. 
+
+## Install and build
+
+Install Python 3.13+, [uv](https://docs.astral.sh/uv/), Bun, Postgres 16, Nginx, and `envsubst` from `gettext-base`.
+Choose a [published release](https://github.com/michel-tricot/airmux/releases) and check out its tag so the CLI,
+catalog, console, and proxy template match:
+
+```bash
+export AIRMUX_VERSION=X.Y.Z
+git clone --branch "v$AIRMUX_VERSION" https://github.com/michel-tricot/airmux.git
+cd airmux
+uv sync --package airmux --frozen
+bun install --frozen-lockfile
+bun run --filter '@workspace/gateway-console' build
+```
+
+Provision a Postgres database named `airmux` owned by an `airmux` user. For a local Postgres server, you can create
+them with `sudo -u postgres createuser --pwprompt airmux` and `sudo -u postgres createdb --owner=airmux airmux`.
+Set a URL-safe password and make the connection available to the control-plane commands and process:
+
+```bash
+export DATABASE_URL='postgresql+asyncpg://airmux:<password>@127.0.0.1:5432/airmux'
+```
+
+## Prepare the runtime
+
+```bash
+uv run airmux control-plane init --directory deployment --console-url http://localhost:8080
+uv run airmux control-plane validate --config deployment/airmux.yml
+uv run airmux control-plane migrate --config deployment/airmux.yml
+uv run airmux control-plane taxonomy --config deployment/airmux.yml --file "$PWD/taxonomy/taxonomy.yml"
+```
+
+Use the public HTTPS origin for `--console-url` when deploying behind TLS. The generated config keeps runtime files
+beside `deployment/airmux.yml`. Both planes must read the same
+bootstrap key and secret store. The control-plane and gateway ports below should remain private to the host.
+
+Render the Nginx configuration for the built console and local services:
+
+```bash
+export AIRMUX_CONSOLE_ROOT="$PWD/apps/console/dist/public"
+export CONTROL_PLANE_UPSTREAM=127.0.0.1:8000
+export DATA_PLANE_UPSTREAM=127.0.0.1:8081
+export NGINX_RESOLVER=127.0.0.1
+export PUBLIC_SCHEME=http
+envsubst '${AIRMUX_CONSOLE_ROOT} ${CONTROL_PLANE_UPSTREAM} ${DATA_PLANE_UPSTREAM} ${NGINX_RESOLVER} ${PUBLIC_SCHEME}' \
+  < deploy/docker/nginx.conf.template > deployment/nginx.conf
+nginx -t -c "$PWD/deployment/nginx.conf"
+```
+
+Set `PUBLIC_SCHEME=https` when TLS terminates before Nginx. If you use a different proxy, serve
+`apps/console/dist/public`, send `/api/` to port 8000 and `/inf/` to port 8081, disable buffering for streaming
+responses, and preserve the security and forwarding headers in the shipped template.
+
+## Start and claim
+
+Run each process in its own terminal from the release checkout, with the same `DATABASE_URL` for control-plane
+commands and the control-plane server.
+
+Start the control plane:
+
+```bash
+uv run airmux control-plane serve --config deployment/airmux.yml --host 127.0.0.1 --port 8000
+```
+
+Start the gateway:
+
+```bash
+uv run airmux gateway serve --config deployment/airmux.yml --host 127.0.0.1 --port 8081
+```
+
+Start the webapp proxy:
+
+```bash
+nginx -c "$PWD/deployment/nginx.conf" -g 'daemon off;'
+```
+
+Then claim the instance and enter one provider credential:
+
+```bash
+uv run airmux quickstart --url http://localhost:8080
+```
+
+For unattended operation, run the three processes under your service manager with the same working directory,
+configuration, and environment. Keep `DATABASE_URL` private, persist the database and `deployment/` together, and
+follow the [security guide](/docs/deployment/security) before exposing the public origin.
+
+## Upgrade and roll back
+
+Read the target release notes, record the current tag, stop new inference traffic, and back up Postgres and
+`deployment/` together. Stop the control plane, gateway, and Nginx before switching versions. On the target tag, sync
+the CLI, rebuild the console, run `control-plane migrate` and `control-plane taxonomy` against the existing
+configuration, then restart the three processes. Re-render `deployment/nginx.conf` if the proxy template changed.
+
+Check `/healthz` and `/readyz`, make buffered and streaming requests, and confirm usage appears. If verification fails
+after a database migration, stop the new processes, restore Postgres and `deployment/` from the same backup, and
+restart the previous tag. Do not run the previous code against the migrated database.

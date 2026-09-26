@@ -46,6 +46,7 @@ services:
     volumes:
       - runtime-credentials:/state/runtime
       - provider-secrets:/state/secrets
+      - ./airmux-config:/config:ro
     depends_on:
       taxonomy:
         condition: service_completed_successfully
@@ -64,6 +65,7 @@ services:
       - runtime-credentials:/state/runtime:ro
       - provider-secrets:/state/secrets:ro
       - gateway-1:/state/data-plane
+      - ./airmux-config:/config:ro
 
   data-plane-2:
     <<: *gateway
@@ -72,6 +74,7 @@ services:
       - runtime-credentials:/state/runtime:ro
       - provider-secrets:/state/secrets:ro
       - gateway-2:/state/data-plane
+      - ./airmux-config:/config:ro
 
   console:
     image: ${AIRMUX_IMAGE:-airmux:local}

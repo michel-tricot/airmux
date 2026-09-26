@@ -3,7 +3,6 @@ from __future__ import annotations
 import ast
 import json
 import re
-import shutil
 import subprocess
 import tomllib
 from collections import Counter
@@ -133,22 +132,19 @@ def test_contributor_documentation_has_a_repository_entry_point() -> None:
 def test_documentation_tracks_current_ci_entry_points() -> None:
     policy = (ROOT / ".github/policy/README.md").read_text(encoding="utf-8")
     development = (DOCS / "development.mdx").read_text(encoding="utf-8")
+    releasing = (DOCS / "releasing.mdx").read_text(encoding="utf-8")
 
     assert "tests/ci/test_merge_policy.py" in policy
     assert "tests/documentation/test_merge_policy.py" not in policy
     assert "uv run pytest -n auto" in development
-    assert "Prepare Release" in development
-    assert "Publish Release" in development
-
-
-def test_local_distribution_installation_recipe_is_documented() -> None:
-    development = (DOCS / "development.mdx").read_text(encoding="utf-8")
-    recipe = next(match.group("body") for match in FENCE.finditer(development) if "./scripts/build-python-distribution.sh" in match.group("body"))
-    assert "uv tool install --reinstall dist/airmux-*.whl" in recipe
+    assert "/docs/releasing" in development
+    assert "Prepare Release" in releasing
+    assert "Publish Release" in releasing
 
 
 def test_documentation_covers_safe_upgrades() -> None:
-    assert (DOCS / "deployment" / "upgrades.mdx").exists()
+    for page in ("docker.mdx", "without-docker.mdx", "scaling.mdx", "gateway.mdx"):
+        assert "## Upgrade and roll back" in (DOCS / "deployment" / page).read_text(encoding="utf-8")
 
 
 def test_documented_cli_command_groups_and_subcommands_exist() -> None:
@@ -219,40 +215,25 @@ def test_documentation_navigation_is_organized_around_reader_tasks() -> None:
     ]
 
 
-def test_full_platform_instructions_pin_one_release() -> None:
+def test_full_platform_instructions_download_the_release_compose_file() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     quickstart = (DOCS / "quickstart.mdx").read_text(encoding="utf-8")
-    declared = {version for document in (readme, quickstart) for version in re.findall(r"^\s*export AIRMUX_VERSION=(\S+)$", document, re.MULTILINE)}
-
-    assert len(declared) == 1, declared
-    version = declared.pop()
-
     for document in (readme, quickstart):
-        assert 'git clone --branch "v$AIRMUX_VERSION"' in document
-
-    assert 'uv tool install "airmux==$AIRMUX_VERSION"' in readme
-    assert "uv sync --package airmux --frozen" in quickstart
-
-    git = shutil.which("git")
-    assert git is not None
-    tags = subprocess.run(  # noqa: S603 resolved Git executable only lists local tags
-        [git, "tag", "--list", f"v{version}"], cwd=ROOT, text=True, capture_output=True, check=False
-    )
-    assert tags.stdout.split() == [f"v{version}"], f"documented release v{version} is not a tag in this repository"
+        assert "releases/latest/download/docker-compose.yml" in document
+        assert "docker compose exec cli airmux quickstart" in document
 
 
-def test_quickstart_walks_through_the_webapp_and_a_verified_policy() -> None:
+def test_quickstart_walks_through_the_webapp_and_links_to_customization() -> None:
     quickstart = (DOCS / "quickstart.mdx").read_text(encoding="utf-8")
 
     assert "airmux quickstart --url" in quickstart
-    assert "/inf/v1/chat/completions" in quickstart
-    assert "airmux policies create" in quickstart
-    assert "policy_denied" in quickstart
+    assert "/inf/v1" in quickstart
+    assert "/docs/guides/policies#create-a-workspace-policy" in quickstart
+    assert "/docs/deployment/docker#customize-the-runtime-yaml" in quickstart
     assert "docker compose down" in quickstart
-    assert "/docs/deployment/gateway" in quickstart
 
     steps = re.findall(r'<Step title="([^"]+)">', quickstart)
-    assert steps.index("Find the request in the webapp") < steps.index("Add a workspace policy and prove it works")
+    assert steps == ["Download the release's Compose file", "Start and claim the instance", "See the request"]
 
 
 def test_public_links_use_the_current_repository() -> None:
@@ -357,9 +338,9 @@ def test_curl_request_bodies_are_valid_json(path: Path) -> None:
         json.loads(match.group("body"))
 
 
-def test_quickstart_runs_the_installed_cli_against_the_public_url() -> None:
+def test_quickstart_runs_the_image_cli() -> None:
     documents = "\n".join(path.read_text(encoding="utf-8") for path in [ROOT / "README.md", *documentation_files()])
-    commands = re.findall(r"^\s*airmux quickstart --url \S+$", documents, re.MULTILINE)
+    commands = re.findall(r"^\s*docker compose exec cli airmux quickstart --url http://localhost:8080$", documents, re.MULTILINE)
 
     assert commands
     assert "docker compose run" not in documents

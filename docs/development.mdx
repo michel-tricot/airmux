@@ -1,41 +1,71 @@
 ---
 title: "Development"
-description: "Set up airmux, make and verify a change, open a pull request, and publish a release."
+description: "Install source dependencies, run local services, and contribute a change."
 ---
+
+Use this guide to change the source. To run airmux without a development toolchain, follow the
+[Docker quickstart](/docs/quickstart).
 
 ## Clone and install
 
-Install Python 3.13+, [uv](https://docs.astral.sh/uv/), Bun, and Docker with Compose. The development stack uses ports 5432, 8000, 8080, and 5000; stop any service already using them. Clone the repository and install its dependencies:
+Install Python 3.13+, [uv](https://docs.astral.sh/uv/), Bun, and Docker with Compose. Clone the repository and install
+its dependencies:
 
 ```bash
 git clone https://github.com/michel-tricot/airmux.git
 cd airmux
 uv sync --all-packages --frozen
 bun install --frozen-lockfile
-cp .env.example .env
+```
+
+This is enough for code-only changes and unit tests. Start Postgres when you need the full stack or integration tests:
+
+```bash
 docker compose -f docker-compose.dev.yml up -d --wait
+```
+
+The development stack uses ports 5432, 8000, 8080, and 5000. If port 5432 is occupied, set
+`AIRMUX_DEV_POSTGRES_PORT` to a free port when starting Compose and export `DATABASE_URL` with that port in shells that
+run control-plane commands. For example:
+
+```bash
+AIRMUX_DEV_POSTGRES_PORT=15432 docker compose -f docker-compose.dev.yml up -d --wait
+export DATABASE_URL='postgresql+asyncpg://airmux:airmux@127.0.0.1:15432/airmux'
 ```
 
 ## Start the development environment
 
-Load the development catalog:
+Migrate the fresh database, then load the development catalog:
 
 ```bash
+uv run airmux control-plane migrate
 uv run airmux control-plane taxonomy --file taxonomy/taxonomy.yml
 ```
 
-Start each service in its own terminal:
+Start each service in its own terminal.
 
-| Service | Command | Address |
-| --- | --- | --- |
-| Control plane | `uv run airmux control-plane serve --dev` | `http://127.0.0.1:8000` |
-| Gateway | `uv run airmux gateway serve --config airmux.yml --dev` | `http://127.0.0.1:8080` |
-| Webapp | `bun run dev` | `http://127.0.0.1:5000` |
-
-Finish local setup through the webapp origin:
+Control plane (`http://127.0.0.1:8000`):
 
 ```bash
-uv run --package airmux airmux quickstart --url http://127.0.0.1:5000
+uv run airmux control-plane serve --dev
+```
+
+Gateway (`http://127.0.0.1:8080`):
+
+```bash
+uv run airmux gateway serve --config airmux.yml --dev
+```
+
+Webapp (`http://127.0.0.1:5000`):
+
+```bash
+bun run dev
+```
+
+To make a real inference request, run quickstart through the webapp origin and enter a provider key when prompted:
+
+```bash
+uv run airmux quickstart --url http://127.0.0.1:5000
 ```
 
 The development control plane applies migrations and creates `.airmux/dataplane.key` when needed. Keep that key with its local database.
@@ -63,52 +93,6 @@ Before editing, read [CONTRIBUTING.md](https://github.com/michel-tricot/airmux/b
 
 Open a pull request against `main` with a concise summary of user impact and the checks you ran. Draft and ready pull requests run the same fast checks. Main CI runs the broader checks after merge. Address review feedback and merge after the required CI and security checks pass.
 
-## Publish a release
+## Release
 
-The root `VERSION` file is the public package version. Publish Release requires the full SHA of the version pull request's merge commit on `main`. It checks Main CI and Security for that exact commit. The other workspace projects stay at `0.0.0`.
-
-### Checklist
-
-1. Run **Actions → Prepare Release** on `main`, then merge its pull request
-2. Wait for **Main CI** and **Security** to pass
-3. Run **Actions → Publish Release** on `main` with the version PR's merge commit SHA; wait for it to finish
-4. Check the GitHub release, PyPI package, and GHCR version and `latest` tags
-
-Prepare Release opens a pull request that changes `VERSION`. Publish Release confirms that the supplied commit changed `VERSION` and has not already been tagged. It uses the validated Python and container artifacts from that commit's successful Main CI run; it does not rebuild them. It checks installation and live providers before creating the tag, then publishes and verifies the package and image. The `release` environment supplies provider credentials and `RELEASE_GITHUB_TOKEN`; PyPI uses its trusted publisher for `release.yml`.
-
-### If a release fails
-
-| Failed stage | Action |
-| --- | --- |
-| Main CI or Security | Fix the failure on a PR. If the release source changed, prepare a new version, wait for its checks, then dispatch **Publish Release** |
-| `prepare` | Confirm the full SHA is the version pull request's merge commit on `main`, the version tag is unused, and both main checks passed; then dispatch **Publish Release** again |
-| `installation` or `live-providers` before the tag | Retry transient failures. If the release source must change, fix it on a PR and prepare a new version before dispatching again |
-| After the tag or during publication | Rerun failed jobs on the original **Publish Release** run while its Main CI artifacts are available. Keep the tag on its original commit |
-| After PyPI or GHCR publication | Inspect the published version and digest, then rerun failed verification or announcement jobs on the original run. If the source must change, prepare a new version; published package bytes and release tags cannot be replaced |
-
-### Install a local build
-
-Build and install an unreleased checkout, then run its portable installation smoke test outside the repository:
-
-```bash
-(
-set -e
-./scripts/build-python-distribution.sh
-uv tool install --reinstall dist/airmux-*.whl
-smoke_dir="$(mktemp -d)"
-export UV_TOOL_DIR="$smoke_dir/tools"
-export UV_TOOL_BIN_DIR="$smoke_dir/bin"
-uv tool install --python 3.13 dist/airmux-*.whl
-uv venv --python 3.13 "$smoke_dir/runner"
-uv pip install --python "$smoke_dir/runner/bin/python" pytest httpx pyyaml
-mkdir -p "$smoke_dir/tests/installation/portable" "$smoke_dir/tests/acceptance"
-cp tests/installation/portable/*.py "$smoke_dir/tests/installation/portable/"
-cp tests/installation/installation_support.py "$smoke_dir/tests/installation/"
-cp tests/acceptance/process_harness.py "$smoke_dir/tests/acceptance/"
-cd "$smoke_dir"
-AIRMUX_INSTALL_BIN="$UV_TOOL_BIN_DIR/airmux" AIRMUX_INSTALL_PYTHON=3.13 \
-  "$smoke_dir/runner/bin/python" -I -m pytest -o pythonpath=. tests/installation/portable
-)
-```
-
-The `airmux` command is then available outside the repository.
+Follow the [release guide](/docs/releasing) to prepare and publish a version.

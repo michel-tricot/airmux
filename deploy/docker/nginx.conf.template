@@ -22,7 +22,7 @@ http {
   }
   server {
     listen 8080;
-    root /usr/share/nginx/html;
+    root ${AIRMUX_CONSOLE_ROOT};
     client_max_body_size 32m;
     set $control_plane "${CONTROL_PLANE_UPSTREAM}";
     set $data_plane "${DATA_PLANE_UPSTREAM}";

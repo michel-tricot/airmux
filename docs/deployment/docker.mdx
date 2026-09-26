@@ -3,28 +3,18 @@ title: "Docker Compose"
 description: "Run the airmux image and Postgres with persistent named volumes."
 ---
 
-The default `docker-compose.yml` runs one long-lived `airmux` container and Postgres. Before `airmux` starts, two short-lived
-containers migrate the database and apply the shipped [model catalog](/docs/reference/models-and-providers).
-
-Install the [`airmux` CLI](/docs/reference/cli#installation) on the machine you use to manage the instance.
-
-Build from a checkout as shown below, or pull a published image from
-`ghcr.io/michel-tricot/airmux`. Release tags use `X.Y.Z`, and `latest` moves to the most recent successful release.
-Main CI also publishes tested candidates as `sha-<commit>`. For example, run `docker pull ghcr.io/michel-tricot/airmux:latest`
-or replace `latest` with a release version. Use a digest for reproducible production deployment. Published images include
-OCI version and source revision labels.
+Docker Compose runs airmux and Postgres. The CLI is available inside the `cli` container.
 
 ## Start
 
+Follow the [quickstart](/docs/quickstart) to download the release's Compose file, create `airmux-config`, and start the stack:
+
 ```bash
-cp .env.example .env
-docker build -t airmux:local .
+mkdir -p airmux-config
 docker compose up -d --wait
-airmux quickstart --url http://localhost:8080
 ```
 
-The CLI reads provider keys from the checkout's `.env` and stores missing credentials through the management API. The
-application container does not receive the provider-key variables from that file.
+If you need to customize the deployment see [Customize the runtime YAML](#customize-the-runtime-yaml).
 
 ## Configure the public origin
 
@@ -35,32 +25,54 @@ AIRMUX_PORT=9000
 AIRMUX_PUBLIC_URL=http://localhost:9000
 ```
 
-Set these in `.env`, restart Compose, and pass the same URL to `quickstart`. For a public deployment, terminate TLS at a
+Set these in `.env` and restart Compose. For a public deployment, terminate TLS at a
 reverse proxy and set `AIRMUX_PUBLIC_URL` to the exact HTTPS origin.
 
-The packaged proxy replaces incoming forwarding headers and uses the configured public URL for the request scheme. API
-and inference responses carry `Cache-Control: no-store`, including errors. The standalone data plane also applies these
-headers; SSE responses carry `no-store, no-transform`, which the packaged proxy preserves. When an external TLS proxy sits in front of
-the packaged proxy, its address is the observed client address. Client-specific throttling behind that edge requires an
-explicitly configured trusted-edge integration; incoming client forwarding chains are never trusted by default. Keep the
-split deployment's control-plane port private to its Docker network.
+After the HTTPS origin is reachable, claim the instance through that origin:
+
+```bash
+docker compose exec cli airmux quickstart --url https://airmux.example.com
+```
 
 Set a URL-safe `POSTGRES_PASSWORD` before the first start of a public installation. Changing the Compose variable later
 does not rotate the password already stored by Postgres.
 
+## Customize the runtime YAML
+
+Use this when you need to change the control-plane or data-plane settings in the
+[configuration reference](/docs/reference/configuration). Copy the default YAML from your running image:
+
+```bash
+mkdir -p airmux-config
+docker compose exec -T cli cat /app/deploy/docker/airmux.yml > airmux-config/airmux.yml
+```
+
+Edit `airmux-config/airmux.yml`. Keep its `/state` paths unless you also provide suitable persistent storage, and keep the control plane and data plane on the same secret store. 
+
+The Compose file mounts `./airmux-config` read-only and any change to `airmux.yml` will be picked up when you restart the stack. If the file is absent or empty, it will use the default YAML bundled in the image.
+
+Runtime `${env:...}` references use each container's environment, not values read directly from `.env`. 
+
+Paths in the custom YAML resolve relative to `/config`, so use absolute `/state/...` paths for persistent data as the bundled file does. Compare your custom file with the new image's default YAML when upgrading.
+
+Restart the stack after editing the YAML:
+
+```bash
+docker compose down
+docker compose up -d --wait
+```
+
+If startup fails, inspect `docker compose logs migrate taxonomy cli`. To return to the image default, remove `airmux-config/airmux.yml` and run the same two commands.
+
 ## Startup and database changes
 
-`docker compose up` runs the migration job first and the catalog job second. The `airmux` container starts only after both
+`docker compose up` runs the migration job first and the catalog job second. The `cli` container starts only after both
 jobs succeed. On later runs, migration checks the current schema revision and the catalog job reapplies the definitions
 shipped with the selected image. To diagnose a failure:
 
 ```bash
 docker compose logs migrate taxonomy
 ```
-
-Restarting the `airmux` container by itself does not run either job. The container does not use development mode, so the control
-plane never changes the database schema or catalog while starting; it refuses to serve when the schema is out of date and
-tells you to run the migration command.
 
 ## State
 
@@ -75,17 +87,20 @@ tells you to run the migration command.
   Back up both volumes before an update, and do not use `down -v` unless permanent deletion is intended.
 </Warning>
 
-## Update
+## Upgrade and roll back
 
-Check out the intended release, take a backup, then build the image once and replace the stack:
+Read the target release notes and compare any [custom runtime YAML](#customize-the-runtime-yaml) with the target image's
+default. Record the current image digest, stop new traffic, and back up Postgres and `/state` together. The migration
+job may change the database schema and an older image cannot safely use a database migrated by a newer release.
+
+Download the Compose file for the target release. Remove any older `AIRMUX_IMAGE` override from `.env`, then replace
+the stack:
 
 ```bash
-docker build -t airmux:local .
 docker compose up -d --wait
 ```
 
-The migration and catalog jobs use the same image as the serving container. The image defaults to the `airmux` role, which
-starts the control plane, gateway, and webapp. The control plane verifies the migrated schema and creates its internal
-gateway credential only when absent. Application processes run as UID `10001`.
-Docker initializes fresh named volumes from the image's private state directories. Bind mounts and custom configured
-paths must be writable by the selected container user; overriding the container user does not change the startup path.
+Check `/healthz` and `/readyz` on the public origin, run `docker compose exec cli airmux doctor`, and send a buffered
+and streaming request. Confirm that the requests appear in usage. If verification fails after migration, stop the new
+stack, restore Postgres and `/state` from the same backup, and redeploy the recorded previous release. Do not roll
+back only the image against the newer database.

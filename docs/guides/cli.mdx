@@ -3,11 +3,17 @@ title: "Use the CLI"
 description: "Sign in to airmux and manage workspaces, credentials, inference keys, and usage from the command line."
 ---
 
-Use the `airmux` CLI to sign in to a deployment and manage its resources. Install it with `uv`:
+To manage a remote deployment from your own machine, install the CLI with `uv`:
 
 ```bash
 uv tool install airmux
 ```
+
+<Note>
+  The [Docker quickstart](/docs/quickstart) includes the CLI in the image. 
+
+  From its Compose directory, prefix commands with `docker compose exec cli`, for example `docker compose exec cli airmux doctor`.
+</Note>
 
 ## Sign in
 
@@ -37,7 +43,7 @@ airmux doctor
 Create a workspace, then select it for subsequent commands:
 
 ```bash
-airmux workspaces create Staging
+airmux workspaces create staging
 airmux workspaces use staging
 airmux workspaces list
 ```
@@ -49,7 +55,7 @@ airmux provider-credentials add openai --name production
 airmux provider-credentials list
 ```
 
-Create an inference key for applications. Copy the secret when it is printed; it is shown only once:
+Create an inference key for applications. Copy the secret when it is printed (it is shown only once):
 
 ```bash
 airmux inference-keys create backend

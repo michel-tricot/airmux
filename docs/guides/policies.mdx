@@ -8,14 +8,47 @@ Policies control which requests a workspace accepts, which models and credential
 ## How policies apply
 
 - Every matching restriction must pass
-- Rules within a policy are unordered
 - All matching policies compose
 - Policies are traversed by ID for deterministic evaluation
-- The first matching fallback policy in that order supplies the fallback plan
-- Exact duplicate rules are invalid
-- Editing one policy cannot change another policy
 
-Routing changes take effect after gateways adopt the updated workspace bundle. Budget state refreshes separately. See the [budget tutorial](/docs/guides/budgets) for spending and status checks.
+## Create a workspace policy
+
+This walkthrough creates a self-contained policy that caps every request in the active workspace at 1,024 output tokens, then verifies the behavior from the CLI.
+
+<Steps>
+  <Step title="Create the policy configuration">
+    Save this as `output-limit-policy.json`:
+
+    ```json
+    {
+      "name": "Production output limit",
+      "enabled": true,
+      "definition": {
+        "target": {"kind": "workspace"},
+        "rules": [
+          {
+            "match": {"kind": "all_requests"},
+            "action": {"kind": "request_limits", "max_output_tokens": 1024}
+          }
+        ]
+      }
+    }
+    ```
+  </Step>
+  <Step title="Create and inspect the policy">
+    The CLI uses your active organization and workspace context. Use `--workspace` to target a specific workspace:
+
+    ```bash
+    airmux policies create output-limit-policy.json --workspace production -f json
+    airmux policies list
+    ```
+
+    The webapp can also create and edit policies with the same target, match, and action options.
+  </Step>
+  <Step title="Verify behavior">
+    With the policy active, a Chat Completions request with `max_completion_tokens` greater than `1024` returns `403 policy_denied`. A request that omits the field sends `1024` upstream and reports a `defaulted` adjustment with `source: policy`. If several matching policies set limits, the tightest ceiling applies.
+  </Step>
+</Steps>
 
 ## Configure a policy
 
@@ -51,6 +84,8 @@ Target specific keys. Keys created later are not included:
 }
 ```
 
+The webapp's **Applies to** selector exposes the same three targets, including service accounts in the user picker.
+
 ### Choose requests to match
 
 Match all requests:
@@ -69,8 +104,6 @@ Or combine model, stream, and capability criteria. Every supplied criterion must
   "capabilities": ["tools"]
 }
 ```
-
-Capabilities are `tools`, `reasoning`, and `structured_output`. Matching uses the original request, including when a fallback model handles it.
 
 ### Choose actions
 
@@ -92,6 +125,16 @@ Limit primary and fallback routes to the listed providers:
 {"kind": "providers", "names": ["openai", "anthropic"]}
 ```
 
+#### Budget
+
+Limit matching usage to a USD amount per UTC calendar day or month. Use `shared` to combine spend across the target or `per_key` to track each inference key separately:
+
+```json
+{"kind": "budget", "amount_usd": "20.00", "period": "month", "aggregation": "shared"}
+```
+
+See the [budget tutorial](/docs/guides/budgets) to create a budget and inspect spend.
+
 #### Credential access
 
 Allow credentials from the listed scopes. Matching credential rules intersect. `airmux` chooses the most specific populated allowed scope in workspace, organization, instance order:
@@ -102,13 +145,11 @@ Allow credentials from the listed scopes. Matching credential rules intersect. `
 
 #### Strict parameter support
 
-Reject a route if `airmux` would otherwise remove an unsupported caller-supplied parameter:
+Reject a route if `airmux` would otherwise clamp an unsupported caller-supplied parameter:
 
 ```json
 {"kind": "strict_parameters"}
 ```
-
-Capability and input-modality checks always run.
 
 #### Model price limit
 
@@ -132,16 +173,6 @@ Reject a request that explicitly asks for more output tokens than the limit. If 
 {"kind": "request_limits", "max_output_tokens": 4096}
 ```
 
-#### Budget
-
-Limit matching usage to a USD amount per UTC calendar day or month. Use `shared` to combine spend across the target or `per_key` to track each inference key separately:
-
-```json
-{"kind": "budget", "amount_usd": "20.00", "period": "month", "aggregation": "shared"}
-```
-
-See the [budget tutorial](/docs/guides/budgets) to create a budget and inspect spend.
-
 #### Deny requests
 
 Reject matching requests with `403 policy_denied` and the configured message:
@@ -164,50 +195,4 @@ Try backup models for rate limits, upstream errors, or timeouts:
 }
 ```
 
-A policy may contain one fallback rule with up to four backup models. `max_attempts` is 2–5 and includes the primary call. `timeout_ms` is 100–120,000. Invalid requests, policy denials, and authentication failures do not trigger model fallback. An upstream authentication failure may try another credential in the selected scope.
-
-## Create a policy
-
-Use either the CLI or the management API. This example creates a workspace-wide output limit. The CLI uses your active organization and workspace context; the API path names both explicitly.
-
-Save this as `policy.json`:
-
-```json
-{
-  "name": "Production output limit",
-  "enabled": true,
-  "definition": {
-    "target": {"kind": "workspace"},
-    "rules": [
-      {
-        "match": {"kind": "all_requests"},
-        "action": {"kind": "request_limits", "max_output_tokens": 1024}
-      }
-    ]
-  }
-}
-```
-
-<Tabs>
-  <Tab title="CLI">
-
-```bash
-airmux policies create policy.json --workspace production -f json
-```
-
-  </Tab>
-  <Tab title="cURL">
-
-Set `AIRMUX_URL`, `AIRMUX_ORG_ID`, and a management key with `policies.manage` for the workspace, then create the policy:
-
-```bash
-curl --fail-with-body "$AIRMUX_URL/api/v1/organizations/$AIRMUX_ORG_ID/workspaces/production/policies" \
-  -H "Authorization: Bearer $AIRMUX_MANAGEMENT_KEY" \
-  -H "Content-Type: application/json" \
-  --data-binary @policy.json
-```
-
-  </Tab>
-</Tabs>
-
-The response wraps the policy in `{"data": ...}`. The webapp can also create and edit policies with the same target, match, and action options.
+Invalid requests, policy denials, and authentication failures do not trigger model fallback. An upstream authentication failure may try another credential in the selected scope.

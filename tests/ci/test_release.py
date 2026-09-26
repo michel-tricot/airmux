@@ -72,3 +72,7 @@ def test_release_checks_candidate_before_tag_and_registry_before_announcement():
     assert "docker pull" in steps("verify-container")
     assert "refs/tags/$RELEASE_TAG" in steps("tag")
     assert jobs["publish"]["permissions"] == {"contents": "read", "actions": "read", "id-token": "write", "packages": "write"}
+    announce = steps("announce")
+    assert 'os.environ["IMAGE"]' in announce
+    assert "compose.replace(local_image, release_image)" in announce
+    assert 'gh release create "$RELEASE_TAG" "$RUNNER_TEMP/docker-compose.yml"' in announce

@@ -32,44 +32,31 @@ persistent usage history with estimated cost.
 
 ## Quickstart
 
-Run the full platform on one machine. You need Docker with Compose 2.24.4+, Python 3.13+, [uv](https://docs.astral.sh/uv/),
-and an API key for at least one provider.
-
-Use one release for both the CLI and the deployment files. A CLI and an image from different commits do not share a
-management API contract.
+Run the full platform on one machine. You need Docker with Compose 2.24.4+ and an API key for at least one provider.
 
 ```bash
-export AIRMUX_VERSION=0.1.2
-uv tool install "airmux==$AIRMUX_VERSION"
-git clone --branch "v$AIRMUX_VERSION" https://github.com/michel-tricot/airmux.git
-cd airmux
-cp .env.example .env
-```
-
-Set one provider key in `.env`, such as `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`, then start the stack and claim it:
-
-```bash
-docker build -t airmux:local .
+curl -fsSLO https://github.com/michel-tricot/airmux/releases/latest/download/docker-compose.yml
+mkdir -p airmux-config
 docker compose up -d --wait
-airmux quickstart --url http://localhost:8080
+docker compose exec cli airmux quickstart --url http://localhost:8080
 ```
 
-`quickstart` creates the owner account, organization, and workspace; imports provider credentials; mints an inference
-key; and proves the installation with a real model request. Open [localhost:8080](http://localhost:8080) for the
-console, where the request appears with its model, tokens, and estimated cost.
+Enter a provider key when prompted. `quickstart` sets up your account and workspace, prints an inference key, and sends
+a real model request. Open [localhost:8080](http://localhost:8080) for the console, where the request appears with its
+model, tokens, and estimated cost.
 
-> [!IMPORTANT]
+> [!NOTE]
 > Requests through `airmux` call real providers and are billed by them.
 
-The [quickstart guide](docs/quickstart.mdx) continues through finding that request in the console and enforcing your
-first workspace policy.
+The [quickstart guide](docs/quickstart.mdx) continues through finding that request in the console. See
+[customize the Docker deployment](docs/deployment/docker.mdx#customize-the-runtime-yaml) when you need to change runtime settings.
 
 | Goal | Command |
 | --- | --- |
-| List catalog models | `airmux models list` |
-| Inspect the installation | `airmux doctor` |
-| Follow gateway activity | `airmux events tail --interval 2 --keep 30` |
-| Follow service logs | `docker compose logs -f airmux` |
+| List catalog models | `docker compose exec cli airmux models list` |
+| Inspect the installation | `docker compose exec cli airmux doctor` |
+| Follow gateway activity | `docker compose exec cli airmux events tail --interval 2 --keep 30` |
+| Follow service logs | `docker compose logs -f cli` |
 | Stop while preserving state | `docker compose down` |
 
 ## Use your existing client
@@ -167,10 +154,12 @@ shapes.
 | --- | --- |
 | Run `airmux` and see it working | [Quickstart](docs/quickstart.mdx) |
 | Connect an application | [Use an SDK](docs/guides/sdks.mdx) |
-| Control routing, access, and spending | [Workspace policies](docs/policies.mdx) |
+| Control routing, access, and spending | [Workspace policies](docs/guides/policies.mdx) |
 | Understand usage and cost | [Usage and activity](docs/features/usage.mdx) |
 | Deploy `airmux` | [Deployment overview](docs/deployment/index.mdx) |
-| Upgrade or roll back a deployment | [Upgrade and rollback](docs/deployment/upgrades.mdx) |
+| Deploy without Docker | [Linux host deployment](docs/deployment/without-docker.mdx) |
+| Customize a Docker deployment | [Docker Compose](docs/deployment/docker.mdx#customize-the-runtime-yaml) |
+| Upgrade or roll back a deployment | [Docker Compose](docs/deployment/docker.mdx#upgrade-and-roll-back), [without Docker](docs/deployment/without-docker.mdx#upgrade-and-roll-back), or [separate services](docs/deployment/scaling.mdx#upgrade-and-roll-back) |
 | Call the management API | [Management API](docs/reference/management-api.mdx) |
 | Work on the project | [Contributing](CONTRIBUTING.md) and [Development guide](docs/development.mdx) |
 
