@@ -39,7 +39,7 @@ The summary shows estimated spend, distinct requests, input and output tokens, a
 
 One `request_id` is one logical request, even when fallback creates several provider attempts. Recorded cost and tokens add across attempts, including failed attempts with recorded usage. A request belongs to the period of its request start time, even if an attempt finishes later. 
 
-The Requests page supports exact `request_id` lookup and pagination. Detail shows approximate attempt order from start timestamps. Key owner means the owner of the inference key, not the end customer of an application. Deleted resources remain identifiable by their recorded IDs when names are unavailable. Prompt and response content are not part of usage reporting.
+The Requests page supports exact `request_id` lookup and pagination. Detail shows approximate attempt order from start timestamps. Key owner means the owner of the inference key. Deleted resources remain identifiable by their recorded IDs when names are unavailable.
 
 Costs are gateway estimates recorded at request time; current catalog prices are not used to recalculate history.
 Events arrive asynchronously, so a refreshed report can change as late events arrive. The report cannot infer a
