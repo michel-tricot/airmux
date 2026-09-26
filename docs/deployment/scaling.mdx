@@ -46,8 +46,7 @@ The checked-in split file demonstrates service boundaries, not a multi-host prod
 
 Set `AIRMUX_DATAPLANE_CONTROL_PLANE_URL` to the private control-plane address. Protect this path and its data-plane management key.
 
-Keep one control-plane replica. Multiple control-plane replicas remain unsupported until initialization, asynchronous
-bundle publication, and replica behavior are proven.
+Keep one control-plane replica. Multiple control-plane replicas isn't supported right now.
 
 Do not use `docker compose --scale` for gateways. Each gateway needs an explicit service and its own identity, bundle
 cache, and usage outbox volume.
