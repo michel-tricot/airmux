@@ -25,7 +25,7 @@ Set a provider key, then initialize and start the gateway. The initializer creat
 export OPENAI_API_KEY='your-provider-key'
 uv run airmux gateway init
 uv run airmux gateway validate
-airmux gateway serve
+uv run airmux gateway serve
 ```
 
 The gateway runs in the foreground at `http://127.0.0.1:8080`. Keep the provider key available to the process. To use
