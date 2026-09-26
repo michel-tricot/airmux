@@ -32,7 +32,7 @@ Install the [`airmux` CLI](/docs/reference/cli#installation) on the machine you 
 | `provider-secrets` | Control plane writes; gateways read |
 | `gateway-1`, `gateway-2` | One gateway each; identity, bundle cache, usage outbox |
 
-Every additional gateway needs a new persistent state volume. Sharing one SQLite outbox or cloning a running gateway identity is invalid.
+Every additional gateway needs a new persistent state volume.
 
 ## Multi-host requirements
 
