@@ -1,0 +1,115 @@
+---
+title: "Use the webapp"
+description: "Navigate the organization, workspace, and instance consoles to manage airmux and inspect usage."
+---
+
+The webapp has three scopes. The **organization** console covers organization-wide resources, the **workspace** console
+covers the keys and policies used by an application, and the **instance** console gives instance administrators a
+cross-organization view. The menus shown to you depend on your role and permissions.
+
+## Choose an organization and workspace
+
+After signing in, choose an organization if you belong to more than one. In the organization console, use the workspace
+selector at the top of the sidebar to switch workspaces. Choose **Create Workspace** from the selector menu if you have
+permission to add one. Organization pages remain available below the workspace menu.
+
+<Frame caption="Workspace navigation, with workspace and organization pages in the sidebar">
+  <img src="../images/webapp-workspace.png" alt="Workspace overview and the workspace and organization menus" />
+</Frame>
+
+The account area at the bottom of the sidebar shows the signed-in user and provides **Sign out**. If your account has an
+instance role, select the shield button there to open the instance console. The instance console's **Workspace console**
+link returns to the organization console.
+
+## Organization menu
+
+These pages apply to the selected organization:
+
+| Menu | What it is for |
+| --- | --- |
+| **Overview** | Open the organization home and its summary of available sections |
+| **Models** | Browse models available to the organization, including model limits and prices |
+| **Requests** | Review organization request and usage reports, then filter and inspect requests |
+| **Settings** | Manage organization details, members and invitations, service accounts, and organization-scoped management keys |
+
+<Frame caption="Organization overview and organization navigation">
+  <img src="../images/webapp-organization.png" alt="Organization usage overview with Models, Requests, and Settings in the sidebar" />
+</Frame>
+
+## Workspace menu
+
+Select a workspace to see its pages. The workspace menu applies to that workspace only:
+
+| Menu | What it is for |
+| --- | --- |
+| **Overview** | Review workspace usage and activity at a glance |
+| **Playground** | Try a model interactively and inspect or replicate the request |
+| **Inference Keys** | Create and revoke the keys applications use to call the gateway; inspect the policies that apply to a key |
+| **BYOK** | Add, rotate, and remove provider credentials owned by this workspace |
+| **Policies** | Define and order routing, access, parameter, budget, and other request policies for the workspace |
+| **Requests** | Filter workspace requests and inspect usage, cost, latency, status, and request details |
+| **Settings** | Change workspace details, manage members and invitations, and manage workspace-scoped management keys |
+
+An inference key is for application traffic. A management key is for authorized control-plane operations and can have a
+restricted permission set. Keep those credentials separate.
+
+## Instance management
+
+The instance console is available to accounts with an instance role. Select the shield icon from the organization
+console or **Workspace console** from the instance sidebar to switch between the two consoles.
+
+| Menu | What it is for |
+| --- | --- |
+| **Overview** | See instance-wide totals and which data planes are reporting in |
+| **Organizations** | List and create organizations, then open an organization to manage its workspaces |
+| **Users** | Browse users and service accounts, inspect a user, update an instance role, or remove an account |
+| **Management Keys** | Create and revoke instance management keys and manage their permissions |
+| **Provider Keys** | Manage provider credentials owned by the instance |
+
+Opening an organization shows its details and workspaces. Open a workspace from there to inspect or manage that
+workspace. Instance menus are permission-filtered, so an auditor or other limited role may see fewer actions than an
+owner.
+
+<Frame caption="Instance overview showing organization and user totals, reporting data planes, and recent activity">
+  <img src="../images/webapp-instance.png" alt="Instance overview with Organizations, Users, Management Keys, and Provider Keys in the sidebar" />
+</Frame>
+
+<Frame caption="Instance organization list">
+  <img src="../images/webapp-instance-organizations.png" alt="Instance Organizations page showing the organization list" />
+</Frame>
+
+## Common tasks
+
+### Add a provider credential for a workspace
+
+1. Select the organization and workspace
+2. Open **BYOK**
+3. Add a credential for the provider and give it a recognizable name
+4. Use **Rotate** on the credential when its secret needs replacing
+
+Instance and organization provider credentials are managed separately under **Instance → Provider Keys** and
+**Organization → Settings**, respectively.
+
+### Create an application key
+
+1. Select the workspace that should own the key
+2. Open **Inference Keys** and create a key
+3. Copy the secret when it is shown; it is only displayed at creation
+4. Give the key to the application that sends requests to the gateway
+
+### Review a request
+
+Open **Requests** at the organization or workspace scope. Set the available filters to narrow the report, then open a
+request to inspect its details. Workspace reports stay within one workspace; organization reports cover the
+organization's workspaces.
+
+### Invite a person
+
+Open **Organization → Settings → Members** to invite someone to the organization. You can assign an organization role
+and optionally add a workspace membership. The webapp creates an invitation link for you to share. Workspace membership
+can also be managed from **Workspace → Settings**.
+
+For role definitions and service-account setup, see [Manage users and access](/docs/guides/user-management). For
+policy design, see [Workspace policies](/docs/policies).
+
+<Note>The screenshots use an isolated demo organization and workspace, so usage totals are empty.</Note>
