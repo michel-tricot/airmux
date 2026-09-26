@@ -37,16 +37,9 @@ The webapp's Usage and Requests pages are available at organization and workspac
 
 The summary shows estimated spend, distinct requests, input and output tokens, and average cost per request. The trend and attribution table use the same recorded events. Attribution can group by workspace, key owner, inference key, served model, provider, or provider credential. 
 
-One `request_id` is one logical request, even when fallback creates several provider attempts. Recorded cost and tokens add across attempts, including failed attempts with
-recorded usage. A request belongs to the period of its request start time, even if an attempt finishes later. Model,
-provider, and credential filters select matching attempt contributions; a request can therefore appear in multiple
-groups. Its detail view shows all authorized attempts and identifies the matching contributions. Group request counts
-may overlap, while spend and tokens reconcile with the report total.
+One `request_id` is one logical request, even when fallback creates several provider attempts. Recorded cost and tokens add across attempts, including failed attempts with recorded usage. A request belongs to the period of its request start time, even if an attempt finishes later. 
 
-The Requests page supports exact request ID lookup and pagination. Detail
-shows approximate attempt order from start timestamps. Key owner means the owner of the inference key, not the end
-customer of an application. Deleted resources remain identifiable by their recorded IDs when names are unavailable.
-Prompt and response content are not part of usage reporting.
+The Requests page supports exact `request_id` lookup and pagination. Detail shows approximate attempt order from start timestamps. Key owner means the owner of the inference key, not the end customer of an application. Deleted resources remain identifiable by their recorded IDs when names are unavailable. Prompt and response content are not part of usage reporting.
 
 Costs are gateway estimates recorded at request time; current catalog prices are not used to recalculate history.
 Events arrive asynchronously, so a refreshed report can change as late events arrive. The report cannot infer a
