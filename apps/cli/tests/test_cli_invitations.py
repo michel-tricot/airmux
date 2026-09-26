@@ -74,66 +74,6 @@ def test_invitation_commands_use_the_active_org_and_show_a_link_only_when_minted
     ]
 
 
-def test_role_commands_target_each_scope_and_decode_the_response(monkeypatch):
-    org_id = uuid4()
-    user_id = uuid4()
-    workspace_id = uuid4()
-    now = datetime.now(tz=UTC).isoformat()
-    requests: list[tuple[str, dict]] = []
-
-    def respond(request: httpx.Request) -> httpx.Response:
-        body = json.loads(request.content)
-        requests.append((request.url.path, body))
-        if request.url.path.endswith("/instance-role"):
-            data = {
-                "id": str(user_id),
-                "email": "person@example.com",
-                "name": "Person",
-                "instance_role": body["instance_role"],
-                "service_account": False,
-                "managing_org_id": None,
-                "created_at": now,
-                "updated_at": now,
-                "orgs": [str(org_id)],
-            }
-        elif "/workspaces/" in request.url.path:
-            data = {
-                "user_id": str(user_id),
-                "workspace_id": str(workspace_id),
-                "email": "person@example.com",
-                "name": "Person",
-                "service_account": False,
-                "role": body["role"],
-                "status": "member",
-            }
-        else:
-            data = {"user_id": str(user_id), "org_id": str(org_id), "role": body["role"], "status": "member"}
-        return httpx.Response(200, request=request, json={"data": data})
-
-    monkeypatch.setenv("AIRMUX_ORG_ID", str(org_id))
-
-    def access_client(_url: str) -> httpx.Client:
-        return httpx.Client(base_url="http://control-plane", transport=httpx.MockTransport(respond))
-
-    monkeypatch.setattr(resources, "access_client", access_client)
-    instance = runner.invoke(app, ["users", "set-role", str(user_id), "owner", "-f", "json"])
-    cleared = runner.invoke(app, ["users", "set-role", str(user_id), "none", "-f", "json"])
-    organization = runner.invoke(app, ["orgs", "members", "set-role", str(user_id), "admin", "-f", "json"])
-    workspace = runner.invoke(app, ["workspaces", "members", "set-role", str(user_id), "viewer", "--workspace", str(workspace_id), "-f", "json"])
-
-    assert all(result.exit_code == 0 for result in (instance, cleared, organization, workspace))
-    assert json.loads(instance.stdout)[0]["instance_role"] == "owner"
-    assert json.loads(cleared.stdout)[0]["instance_role"] is None
-    assert json.loads(organization.stdout)[0]["role"] == "admin"
-    assert json.loads(workspace.stdout)[0]["role"] == "viewer"
-    assert requests == [
-        (f"/api/v1/users/{user_id}/instance-role", {"instance_role": "owner"}),
-        (f"/api/v1/users/{user_id}/instance-role", {"instance_role": None}),
-        (f"/api/v1/organizations/{org_id}/users/{user_id}", {"role": "admin"}),
-        (f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/members/{user_id}", {"role": "viewer"}),
-    ]
-
-
 def test_invitation_grants_require_a_complete_workspace_pair(monkeypatch):
     workspace_id = uuid4()
     submitted: list[dict] = []

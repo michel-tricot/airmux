@@ -55,15 +55,6 @@ Change roles in the webapp:
 - Organization roles: **Organization → Settings → Members**
 - Workspace roles: **Workspace → Settings → Members**
 
-The CLI can set roles at each scope. Use `none` to remove an instance role:
-
-```bash
-airmux users set-role "$USER_ID" auditor
-airmux users set-role "$USER_ID" none
-airmux orgs members set-role "$USER_ID" admin
-airmux workspaces members set-role "$USER_ID" viewer --workspace production
-```
-
 You can also manage existing memberships with the CLI. `airmux users list` provides account IDs; select the organization
 and workspace context first:
 

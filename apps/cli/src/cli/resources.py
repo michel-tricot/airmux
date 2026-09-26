@@ -19,7 +19,6 @@ from api_models import (
     InferenceKeyOut,
     ManagementKeyCreatedOut,
     ManagementKeyOut,
-    MembershipOut,
     MeOut,
     OrgInvitationMintedOut,
     OrgInvitationOut,
@@ -106,20 +105,6 @@ INVITATION_COLS = [
     Col("expires_at", "Expires", fmt=fmt_when),
 ]
 MINTED_INVITATION_COLS = [*INVITATION_COLS, Col("url", "Invitation URL")]
-
-
-class InstanceRoleChoice(StrEnum):
-    owner = "owner"
-    auditor = "auditor"
-    data_plane = "data_plane"
-    none = "none"
-
-
-class OrgRoleChoice(StrEnum):
-    owner = "owner"
-    admin = "admin"
-    member = "member"
-    data_plane = "data_plane"
 
 
 class InvitationOrgRoleChoice(StrEnum):
@@ -352,57 +337,10 @@ def users_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.tab
     print_rows("users", access_get("/api/v1/users", control_plane_url, UserOut), USER_COLS, fmt)
 
 
-@users_app.command("set-role")
-def users_set_role(
-    user_id: UUID,
-    role: InstanceRoleChoice,
-    control_plane_url: str = "",
-    fmt: FormatOption = OutputFormat.table,
-) -> None:
-    """Set an account's instance role; use none to remove it."""
-    with access_client(control_plane_url) as client:
-        response = ensure_ok(
-            client.put(f"/api/v1/users/{user_id}/instance-role", json={"instance_role": None if role is InstanceRoleChoice.none else role.value})
-        )
-        user = payload(response, UserOut)
-    print_rows("users", [user], [*USER_COLS, Col("instance_role", "Instance role")], fmt)
-
-
 @org_members_app.command("list")
 def org_members_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List the active org's members."""
     print_rows("members", access_get(org_path("/users"), control_plane_url, OrgMemberOut), ORG_MEMBER_COLS, fmt)
-
-
-@org_members_app.command("set-role")
-def org_members_set_role(
-    user_id: UUID,
-    role: OrgRoleChoice,
-    control_plane_url: str = "",
-    fmt: FormatOption = OutputFormat.table,
-) -> None:
-    """Set a principal's organization role."""
-    with access_client(control_plane_url) as client:
-        membership = payload(ensure_ok(client.put(org_path(f"/users/{user_id}"), json={"role": role.value})), MembershipOut)
-    print_rows("members", [membership], [Col("user_id", "User"), Col("org_id", "Organization"), Col("role", "Role")], fmt)
-
-
-@workspace_members_app.command("set-role")
-def workspace_members_set_role(
-    user_id: UUID,
-    role: WorkspaceRoleChoice,
-    workspace: WorkspaceOption = "",
-    control_plane_url: str = "",
-    fmt: FormatOption = OutputFormat.table,
-) -> None:
-    """Set a principal's workspace role."""
-    workspace_ref = resolve_workspace(workspace)
-    with access_client(control_plane_url) as client:
-        membership = payload(
-            ensure_ok(client.put(org_path(f"/workspaces/{workspace_ref}/members/{user_id}"), json={"role": role.value})),
-            WorkspaceMembershipOut,
-        )
-    print_rows("members", [membership], [*MEMBER_COLS, Col("role", "Role")], fmt)
 
 
 @org_invitations_app.command("list")
