@@ -65,19 +65,19 @@ commands and the control-plane server.
 
 Start the control plane:
 
-```text
+```bash
 uv run airmux control-plane serve --config deployment/airmux.yml --host 127.0.0.1 --port 8000
 ```
 
 Start the gateway:
 
-```text
+```bash
 uv run airmux gateway serve --config deployment/airmux.yml --host 127.0.0.1 --port 8081
 ```
 
 Start the webapp proxy:
 
-```text
+```bash
 nginx -c "$PWD/deployment/nginx.conf" -g 'daemon off;'
 ```
 
