@@ -7,6 +7,8 @@ description: "Monitor readiness, preserve state, update safely, and diagnose con
 
 `/healthz` reports whether each process can perform its serving role. Use it for traffic admission and health monitoring.
 
+Compose probes check that the management API and gateway HTTP listeners are available so `up --wait` can finish before onboarding creates the first bundle.
+
 | Plane | Endpoint | Healthy response | `503` meaning |
 | --- | --- | --- | --- |
 | Control plane | `/healthz` | `200 {"status":"ready"}` | Postgres is unavailable |

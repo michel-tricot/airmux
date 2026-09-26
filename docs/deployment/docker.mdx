@@ -11,12 +11,10 @@ Follow the [quickstart](/docs/quickstart) to download the release's Compose file
 
 ```bash
 mkdir -p airmux-config
-docker compose up -d
+docker compose up -d --wait
 ```
 
 If you need to customize the deployment see [Customize the runtime YAML](#customize-the-runtime-yaml).
-
-On a fresh installation, `/healthz` returns `503` until setup creates an accepted bundle. Run `quickstart` once the console is reachable.
 
 ## Configure the public origin
 

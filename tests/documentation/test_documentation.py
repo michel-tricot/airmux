@@ -183,7 +183,7 @@ def test_readme_is_a_complete_oss_entry_point() -> None:
 def test_readme_leads_with_the_full_platform() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
 
-    assert readme.index("docker compose up -d") < readme.index("airmux gateway init")
+    assert readme.index("docker compose up -d --wait") < readme.index("airmux gateway init")
     assert readme.index("airmux quickstart --url") < readme.index("airmux gateway serve")
 
     headings = re.findall(r"^## (.+)$", readme, re.MULTILINE)

@@ -61,7 +61,7 @@ def https_deployment(tmp_path_factory):
     upstream_started = False
     try:
         subprocess.run(  # noqa: S603 isolated Compose project uses the repository deployment configuration
-            [docker_binary, *compose, "up", "--detach", "--no-build"],
+            [docker_binary, *compose, "up", "--detach", "--no-build", "--wait", "--wait-timeout", "180"],
             cwd=ROOT,
             env=environment,
             check=True,
@@ -116,7 +116,6 @@ def https_deployment(tmp_path_factory):
             headers={"X-Requested-With": "XMLHttpRequest"},
             timeout=10,
         ) as client:
-            eventually(lambda: client.get("/api/v1/instance/oss/claim").status_code == 200)
             eventually(lambda: client.get("/healthz").status_code == 503)
             assert client.get("/readyz").status_code == 404
             signup = client.post(
