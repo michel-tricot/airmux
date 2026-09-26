@@ -3,15 +3,47 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from functools import partial
 
+import pytest
 from conftest import make_bundle as _make_bundle
 from conftest import make_key as _make_key
+from starlette.requests import Request
 
 from contract import uuid7
-from data_plane.auth import authenticate, index_keys
+from data_plane.auth import authenticate, authenticate_request, index_keys
+from data_plane.bundle.holder import BundleHolder, BundleSet
+from data_plane.canonical import GatewayErrorCode
+from data_plane.errors import RequestRejectedError
+from data_plane.metrics import DataPlaneMetrics
 
 ORG_A = uuid7()
 make_bundle = partial(_make_bundle, org=ORG_A)
 make_key = partial(_make_key, org=ORG_A)
+
+
+def test_first_bundle_arriving_during_authentication_does_not_reject_valid_key():
+    token, entry = make_key("k1")
+    accepted = BundleSet.from_bundles((make_bundle([entry]),))
+
+    class RecoveringHolder(BundleHolder):
+        @property
+        def current(self) -> BundleSet:
+            current = super().current
+            self.swap(accepted, source="local")
+            return current
+
+    holder = RecoveringHolder(DataPlaneMetrics())
+    request = Request({"type": "http", "headers": [(b"authorization", f"Bearer {token}".encode())]})
+
+    with pytest.raises(RequestRejectedError) as rejected:
+        authenticate_request(request, holder)
+
+    assert rejected.value.status == 503
+    assert rejected.value.code == GatewayErrorCode.bundle_unavailable
+
+    holder.swap(accepted, source="local")
+    key, snapshot = authenticate_request(request, holder)
+    assert key == entry
+    assert snapshot == accepted.snapshots[ORG_A]
 
 
 def test_valid_opaque_token_authenticates():

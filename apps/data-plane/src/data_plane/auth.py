@@ -31,9 +31,9 @@ def authenticate(bearer: str, index: Mapping[str, KeyEntry], now: datetime) -> K
 
 
 def authenticate_request(request: Request, holder: BundleHolder) -> tuple[KeyEntry, BundleSnapshot]:
-    bundle_set = holder.current
     if not holder.initialized:
         raise RequestRejectedError(503, GatewayErrorCode.bundle_unavailable)
+    bundle_set = holder.current
     token = _request_token(request)
     key = authenticate(token, bundle_set.key_index, datetime.now(tz=UTC))
     if key is None:
