@@ -36,8 +36,9 @@ Run the full platform on one machine. You need Docker with Compose 2.24.4+ and a
 
 ```bash
 curl -fsSLO https://github.com/michel-tricot/airmux/releases/latest/download/docker-compose.yml
+mkdir -p airmux-config
 docker compose up -d --wait
-docker compose exec app airmux quickstart --url http://localhost:8080
+docker compose exec cli airmux quickstart --url http://localhost:8080
 ```
 
 Enter a provider key when prompted. `quickstart` sets up your account and workspace, prints an inference key, and sends
@@ -52,10 +53,10 @@ The [quickstart guide](docs/quickstart.mdx) continues through finding that reque
 
 | Goal | Command |
 | --- | --- |
-| List catalog models | `docker compose exec app airmux models list` |
-| Inspect the installation | `docker compose exec app airmux doctor` |
-| Follow gateway activity | `docker compose exec app airmux events tail --interval 2 --keep 30` |
-| Follow service logs | `docker compose logs -f app` |
+| List catalog models | `docker compose exec cli airmux models list` |
+| Inspect the installation | `docker compose exec cli airmux doctor` |
+| Follow gateway activity | `docker compose exec cli airmux events tail --interval 2 --keep 30` |
+| Follow service logs | `docker compose logs -f cli` |
 | Stop while preserving state | `docker compose down` |
 
 ## Use your existing client
@@ -153,7 +154,7 @@ shapes.
 | --- | --- |
 | Run `airmux` and see it working | [Quickstart](docs/quickstart.mdx) |
 | Connect an application | [Use an SDK](docs/guides/sdks.mdx) |
-| Control routing, access, and spending | [Workspace policies](docs/policies.mdx) |
+| Control routing, access, and spending | [Workspace policies](docs/guides/policies.mdx) |
 | Understand usage and cost | [Usage and activity](docs/features/usage.mdx) |
 | Deploy `airmux` | [Deployment overview](docs/deployment/index.mdx) |
 | Deploy without Docker | [Linux host deployment](docs/deployment/without-docker.mdx) |

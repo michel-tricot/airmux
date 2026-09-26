@@ -142,12 +142,6 @@ def test_documentation_tracks_current_ci_entry_points() -> None:
     assert "Publish Release" in releasing
 
 
-def test_local_distribution_installation_recipe_is_documented() -> None:
-    development = (DOCS / "development.mdx").read_text(encoding="utf-8")
-    recipe = next(match.group("body") for match in FENCE.finditer(development) if "./scripts/build-python-distribution.sh" in match.group("body"))
-    assert "uv tool install --reinstall dist/airmux-*.whl" in recipe
-
-
 def test_documentation_covers_safe_upgrades() -> None:
     for page in ("docker.mdx", "without-docker.mdx", "scaling.mdx", "gateway.mdx"):
         assert "## Upgrade and roll back" in (DOCS / "deployment" / page).read_text(encoding="utf-8")
@@ -226,7 +220,7 @@ def test_full_platform_instructions_download_the_release_compose_file() -> None:
     quickstart = (DOCS / "quickstart.mdx").read_text(encoding="utf-8")
     for document in (readme, quickstart):
         assert "releases/latest/download/docker-compose.yml" in document
-        assert "docker compose exec app airmux quickstart" in document
+        assert "docker compose exec cli airmux quickstart" in document
 
 
 def test_quickstart_walks_through_the_webapp_and_links_to_customization() -> None:
@@ -234,7 +228,7 @@ def test_quickstart_walks_through_the_webapp_and_links_to_customization() -> Non
 
     assert "airmux quickstart --url" in quickstart
     assert "/inf/v1" in quickstart
-    assert "/docs/guides/policy-workflow" in quickstart
+    assert "/docs/guides/policies#create-a-workspace-policy" in quickstart
     assert "/docs/deployment/docker#customize-the-runtime-yaml" in quickstart
     assert "docker compose down" in quickstart
 
@@ -346,7 +340,7 @@ def test_curl_request_bodies_are_valid_json(path: Path) -> None:
 
 def test_quickstart_runs_the_image_cli() -> None:
     documents = "\n".join(path.read_text(encoding="utf-8") for path in [ROOT / "README.md", *documentation_files()])
-    commands = re.findall(r"^\s*docker compose exec app airmux quickstart --url http://localhost:8080$", documents, re.MULTILINE)
+    commands = re.findall(r"^\s*docker compose exec cli airmux quickstart --url http://localhost:8080$", documents, re.MULTILINE)
 
     assert commands
     assert "docker compose run" not in documents

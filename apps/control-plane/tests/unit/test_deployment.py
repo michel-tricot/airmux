@@ -10,13 +10,13 @@ def test_default_deployment_has_one_application_and_explicit_database_jobs():
     compose = yaml.safe_load((root / "docker-compose.yml").read_text())
     services = compose["services"]
     assert "name" not in compose
-    assert set(services) == {"app", "migrate", "taxonomy", "postgres"}
-    assert services["app"]["image"] == "${AIRMUX_IMAGE:-airmux:local}"
-    assert services["app"]["command"] == "airmux"
-    assert "build" not in services["app"]
-    assert "env_file" not in services["app"]
-    assert services["app"]["environment"]["AIRMUX_PUBLIC_SIGNUP"] == "${AIRMUX_PUBLIC_SIGNUP:-false}"
-    assert services["app"]["depends_on"] == {"taxonomy": {"condition": "service_completed_successfully"}}
+    assert set(services) == {"cli", "migrate", "taxonomy", "postgres"}
+    assert services["cli"]["image"] == "${AIRMUX_IMAGE:-airmux:local}"
+    assert services["cli"]["command"] == "airmux"
+    assert "build" not in services["cli"]
+    assert "env_file" not in services["cli"]
+    assert services["cli"]["environment"]["AIRMUX_PUBLIC_SIGNUP"] == "${AIRMUX_PUBLIC_SIGNUP:-false}"
+    assert services["cli"]["depends_on"] == {"taxonomy": {"condition": "service_completed_successfully"}}
     assert services["migrate"]["depends_on"] == {"postgres": {"condition": "service_healthy"}}
     assert services["taxonomy"]["depends_on"] == {"migrate": {"condition": "service_completed_successfully"}}
     assert all(services[name]["restart"] == "no" for name in ("migrate", "taxonomy"))
@@ -63,7 +63,7 @@ def test_gateway_container_healthchecks_do_not_require_onboarding():
     compact = yaml.safe_load((root / "docker-compose.yml").read_text())
     split = yaml.safe_load((root / "docker-compose.split.yml").read_text())
 
-    assert "/healthz" in compact["services"]["app"]["healthcheck"]["test"][-1]
+    assert "/healthz" in compact["services"]["cli"]["healthcheck"]["test"][-1]
     assert "/healthz" in split["services"]["data-plane-1"]["healthcheck"]["test"][-1]
     assert "/healthz" in split["services"]["data-plane-2"]["healthcheck"]["test"][-1]
     assert "/readyz" in split["services"]["control-plane"]["healthcheck"]["test"][-1]
@@ -79,5 +79,5 @@ def test_layouts_complete_database_jobs_before_serving():
     compact_services = compact["services"]
     assert compact_services["migrate"]["depends_on"]["postgres"]["condition"] == "service_healthy"
     assert compact_services["taxonomy"]["depends_on"]["migrate"]["condition"] == "service_completed_successfully"
-    assert compact_services["app"]["depends_on"]["taxonomy"]["condition"] == "service_completed_successfully"
+    assert compact_services["cli"]["depends_on"]["taxonomy"]["condition"] == "service_completed_successfully"
     assert split["services"]["control-plane"]["depends_on"]["taxonomy"]["condition"] == "service_completed_successfully"

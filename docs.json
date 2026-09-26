@@ -25,7 +25,7 @@
               "docs/guides/cli",
               "docs/guides/user-management",
               "docs/guides/sdks",
-              "docs/policies",
+              "docs/guides/policies",
               "docs/guides/budgets",
               "docs/features/model-routing",
               "docs/features/provider-credentials",

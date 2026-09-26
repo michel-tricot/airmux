@@ -3,15 +3,14 @@ title: "Docker Compose"
 description: "Run the airmux image and Postgres with persistent named volumes."
 ---
 
-Docker Compose runs airmux and Postgres. The CLI is available inside the `app` container.
+Docker Compose runs airmux and Postgres. The CLI is available inside the `cli` container.
 
 ## Start
 
-Follow the [quickstart](/docs/quickstart) to download the release's Compose file and start the stack:
+Follow the [quickstart](/docs/quickstart) to download the release's Compose file, create `airmux-config`, and start the stack:
 
 ```bash
 docker compose up -d --wait
-docker compose exec app airmux quickstart --url http://localhost:8080
 ```
 
 If you need to customize the deployment see [Customize the runtime YAML](#customize-the-runtime-yaml).
@@ -28,6 +27,12 @@ AIRMUX_PUBLIC_URL=http://localhost:9000
 Set these in `.env` and restart Compose. For a public deployment, terminate TLS at a
 reverse proxy and set `AIRMUX_PUBLIC_URL` to the exact HTTPS origin.
 
+After the HTTPS origin is reachable, claim the instance through that origin:
+
+```bash
+docker compose exec cli airmux quickstart --url https://airmux.example.com
+```
+
 Set a URL-safe `POSTGRES_PASSWORD` before the first start of a public installation. Changing the Compose variable later
 does not rotate the password already stored by Postgres.
 
@@ -38,7 +43,7 @@ Use this when you need to change the control-plane or data-plane settings in the
 
 ```bash
 mkdir -p airmux-config
-docker compose exec -T app cat /app/deploy/docker/airmux.yml > airmux-config/airmux.yml
+docker compose exec -T cli cat /app/deploy/docker/airmux.yml > airmux-config/airmux.yml
 ```
 
 Edit `airmux-config/airmux.yml`. Keep its `/state` paths unless you also provide suitable persistent storage, and keep the control plane and data plane on the same secret store. 
@@ -56,11 +61,11 @@ docker compose down
 docker compose up -d --wait
 ```
 
-If startup fails, inspect `docker compose logs migrate taxonomy app`. To return to the image default, remove `airmux-config/airmux.yml` and run the same two commands.
+If startup fails, inspect `docker compose logs migrate taxonomy cli`. To return to the image default, remove `airmux-config/airmux.yml` and run the same two commands.
 
 ## Startup and database changes
 
-`docker compose up` runs the migration job first and the catalog job second. The `app` container starts only after both
+`docker compose up` runs the migration job first and the catalog job second. The `cli` container starts only after both
 jobs succeed. On later runs, migration checks the current schema revision and the catalog job reapplies the definitions
 shipped with the selected image. To diagnose a failure:
 
@@ -94,7 +99,7 @@ the stack:
 docker compose up -d --wait
 ```
 
-Check `/healthz` and `/readyz` on the public origin, run `docker compose exec app airmux doctor`, and send a buffered
+Check `/healthz` and `/readyz` on the public origin, run `docker compose exec cli airmux doctor`, and send a buffered
 and streaming request. Confirm that the requests appear in usage. If verification fails after migration, stop the new
 stack, restore Postgres and `/state` from the same backup, and redeploy the recorded previous release. Do not roll
 back only the image against the newer database.
