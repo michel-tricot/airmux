@@ -43,11 +43,11 @@ docker compose exec -T app cat /app/deploy/docker/airmux.yml > airmux-config/air
 
 Edit `airmux-config/airmux.yml`. Keep its `/state` paths unless you also provide suitable persistent storage, and keep the control plane and data plane on the same secret store. 
 
-The Compose file mounts `./airmux-config` read-only and any change to `airmux.yml` will be picked up when you restart the stack. If the file is absent or empty, each role uses the YAML bundled in the image. A nonempty invalid YAML file causes startup to fail.
+The Compose file mounts `./airmux-config` read-only and any change to `airmux.yml` will be picked up when you restart the stack. If the file is absent or empty, it will use the default YAML bundled in the image.
 
-Runtime `${env:...}` references use each container's environment, not values read directly from `.env`. Paths in the
-custom YAML resolve relative to `/config`, so use absolute `/state/...` paths for persistent data as the bundled file
-does. Compare your custom file with the new image's default YAML when upgrading.
+Runtime `${env:...}` references use each container's environment, not values read directly from `.env`. 
+
+Paths in the custom YAML resolve relative to `/config`, so use absolute `/state/...` paths for persistent data as the bundled file does. Compare your custom file with the new image's default YAML when upgrading.
 
 Restart all roles after editing the YAML:
 
