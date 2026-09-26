@@ -85,7 +85,7 @@ docker compose logs migrate taxonomy
 
 Read the target release notes and compare any [custom runtime YAML](#customize-the-runtime-yaml) with the target image's
 default. Record the current image digest, stop new traffic, and back up Postgres and `/state` together. The migration
-job may change the database schema; an older image cannot safely use a database migrated by a newer release.
+job may change the database schema and an older image cannot safely use a database migrated by a newer release.
 
 Download the Compose file for the target release. Remove any older `AIRMUX_IMAGE` override from `.env`, then replace
 the stack:
