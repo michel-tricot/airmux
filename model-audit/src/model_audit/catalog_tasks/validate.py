@@ -47,10 +47,11 @@ FIELDS = {
     "env_var",
     "schema",
 }
-PROFILE_FIELDS = {"param_aliases", "params_closed", "accepted_params"}
+PROFILE_FIELDS = {"param_aliases", "params_closed", "accepted_params", "egress_kind"}
 INGRESS = {"oai", "oai_responses", "anthropic", "google", "other_standard", "custom"}
 # ingresses that carry a schema; google is the one shape we have not extracted
 WIRE = {"oai", "oai_responses", "anthropic", "custom"}
+EGRESS = {"openai_compatible", "openai_responses", "anthropic", "aws_bedrock", "azure_openai"}
 AUTH_BARE = {"bearer", "sigv4", "oauth"}
 PARTS = {"request", "response", "stream"}
 # bare markers name a source; "alias:<model id>" names the sibling a value was inherited
@@ -101,6 +102,8 @@ def check_shape(all_entries: list[dict], failures: list[str]) -> None:  # noqa: 
             fail(failures, "ingress", f"{eid} uses {sorted(bad)}, outside the vocabulary")
         if e.get("primary_surface") not in (e.get("ingress") or []):
             fail(failures, "ingress", f"{eid} primary_surface is not one of its ingresses")
+        if e.get("egress_kind") is not None and e.get("egress_kind") not in EGRESS:
+            fail(failures, "egress_kind", f"{eid} uses {e['egress_kind']}, outside the vocabulary")
         for value in e.get("auth") or []:
             if value not in AUTH_BARE and not value.startswith("header_key:"):
                 fail(failures, "auth", f"{eid} uses {value}, outside the vocabulary")
@@ -293,7 +296,22 @@ def check_seed(all_entries: list[dict], failures: list[str]) -> None:
     if not SEED.exists():
         fail(failures, "seed", "seed.yml is missing; a rebuild from scratch would be impossible")
         return
-    carried = ("id", "name", "icon_mono", "icon_color", "homepage", "docs", "base_url", "openapi", "models_url", "ingress", "auth", "env_var")
+    carried = (
+        "id",
+        "name",
+        "icon_mono",
+        "icon_color",
+        "homepage",
+        "docs",
+        "base_url",
+        "openapi",
+        "models_url",
+        "ingress",
+        "primary_surface",
+        "egress_kind",
+        "auth",
+        "env_var",
+    )
     seed = yaml.safe_load(SEED.read_text())
     # candidates live in the seed too, but they are not catalog entries
     seeded = {e["id"]: e for key, group in seed.items() if key != "candidates" for e in group}

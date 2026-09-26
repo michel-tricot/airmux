@@ -141,10 +141,11 @@ def _parameter_support(model: dict, endpoint: str, behaviors: list[BehaviorRecor
 
 def _provider_entry(provider: dict, icon: str) -> dict[str, object]:
     default_surface = str(provider["primary_surface"])
+    kind = str(provider.get("egress_kind") or discover()[default_surface].kind)
     profile = {field: provider[field] for field in ("param_aliases", "params_closed", "accepted_params") if field in provider}
     return {
         "provider_id": provider["id"],
-        "kind": discover()[default_surface].kind,
+        "kind": kind,
         "base_url": provider["base_url"],
         "icon": icon,
         **profile,
@@ -185,7 +186,7 @@ def build(root: Path) -> dict[str, list[dict[str, object]]]:
             input_modalities, output_modalities = _modalities(model, surface_behaviors, model_id=model_id)
             price = model.get("pricing") or {}
             codecs = discover()
-            kind = codecs[surface].kind
+            kind = str(provider.get("egress_kind") or codecs[surface].kind)
             emitted_models.append(
                 {
                     "model_id": model_id,
@@ -201,7 +202,7 @@ def build(root: Path) -> dict[str, list[dict[str, object]]]:
                     "output_modalities": output_modalities,
                     "capabilities": _capabilities(model, surface_behaviors),
                     **({"parameter_support": support} if (support := _parameter_support(model, codecs[surface].endpoint, surface_behaviors)) else {}),
-                    **({"egress_kind": kind} if kind != codecs[default_surface].kind else {}),
+                    **({"egress_kind": kind} if kind != str(provider.get("egress_kind") or codecs[default_surface].kind) else {}),
                 }
             )
     emitted_models.sort(key=lambda model: (str(model["provider_id"]), str(model["model_id"])))

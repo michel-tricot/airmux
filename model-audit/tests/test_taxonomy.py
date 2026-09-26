@@ -107,6 +107,18 @@ def test_provider_gateway_profile_is_preserved_in_generated_taxonomy():
     }
 
 
+def test_provider_egress_kind_overrides_its_default_surface():
+    provider = {
+        "id": "bedrock",
+        "base_url": "https://bedrock-mantle.us-east-1.api.aws/v1",
+        "ingress": ["oai"],
+        "primary_surface": "oai",
+        "egress_kind": "aws_bedrock",
+    }
+
+    assert _provider_entry(provider, "icon")["kind"] == "aws_bedrock"
+
+
 def test_openai_catalog_declares_its_output_limit_alias():
     document = yaml.safe_load((ROOT / "taxonomy/providers.yml").read_text(encoding="utf-8"))
     provider = next(item for item in document["providers"] if item["id"] == "openai")

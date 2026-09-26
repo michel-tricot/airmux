@@ -196,6 +196,8 @@ CASES: dict[str, dict[str, StreamCase]] = {
         "tools": StreamCase(log=RESPONSES_TOOL_LOG, nonstream=RESPONSES_TOOL_NONSTREAM),
     },
 }
+CASES["aws_bedrock"] = CASES["openai_compatible"]
+CASES["azure_openai"] = CASES["openai_compatible"]
 
 # A provider error arrives in each family's own spelling.
 ERROR_LOGS: dict[str, bytes] = {
@@ -203,6 +205,8 @@ ERROR_LOGS: dict[str, bytes] = {
     "openai_responses": responses_sse({"type": "error", "error": {"code": "overloaded", "message": "try later"}}),
     "anthropic": anthropic_sse({"type": "error", "error": {"type": "overloaded", "message": "try later"}}),
 }
+ERROR_LOGS["aws_bedrock"] = ERROR_LOGS["openai_compatible"]
+ERROR_LOGS["azure_openai"] = ERROR_LOGS["openai_compatible"]
 
 KINDS = sorted(REGISTRY)
 MODALITIES = ("text", "tools")

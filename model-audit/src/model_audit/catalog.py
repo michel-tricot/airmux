@@ -84,7 +84,7 @@ def _gateway_egress_kinds(taxonomy: Path) -> dict[str, EgressKind]:
         str(provider["provider_id"]): cast("EgressKind", provider["kind"])
         for value in _sequence(document.get("providers"))
         if (provider := _mapping(value)).get("provider_id") is not None
-        and provider.get("kind") in {"openai_compatible", "openai_responses", "anthropic"}
+        and provider.get("kind") in {"openai_compatible", "openai_responses", "anthropic", "aws_bedrock", "azure_openai"}
     }
     return {
         str(model["model_id"]): cast("EgressKind", model.get("egress_kind") or providers[str(model["provider_id"])])
