@@ -266,7 +266,7 @@ def verify_gateway(gateway_url: str, token: str, model: str) -> str:
     with httpx.Client(base_url=gateway_url.rstrip("/"), timeout=30.0) as gateway:
         for _ in range(20):
             try:
-                ready = gateway.get("/readyz", timeout=2.0)
+                ready = gateway.get("/healthz", timeout=2.0)
             except httpx.HTTPError:
                 ready = None
             if ready is not None and ready.is_success:

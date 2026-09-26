@@ -15,8 +15,7 @@ if TYPE_CHECKING:
 def test_ready_gateway_completes_and_records_usage(gateway: Gateway):
     provider = gateway.add_provider()
     gateway.start()
-    assert httpx.get(f"{gateway.url}/healthz").json() == {"status": "ok"}
-    assert httpx.get(f"{gateway.url}/readyz").json() == {"status": "ready"}
+    assert httpx.get(f"{gateway.url}/healthz").json() == {"status": "ready"}
     response = gateway.request()
     assert response.status_code == 200, response.text
     assert text_of("openai_chat_completions", response) == TEXT

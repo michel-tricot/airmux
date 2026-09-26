@@ -197,7 +197,7 @@ class Gateway:
             if self.port is None:
                 return False
             self.url = f"http://127.0.0.1:{self.port}"
-        return httpx.get(f"{self.url}/readyz", timeout=1).status_code == 200
+        return httpx.get(f"{self.url}/healthz", timeout=1).status_code == 200
 
     def launch(self, workers: int = 1) -> None:
         self.process = subprocess.Popen(  # noqa: S603 executable is the installed gateway supplied by the test environment

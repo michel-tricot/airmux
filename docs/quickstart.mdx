@@ -20,11 +20,12 @@ You need Docker with Compose 2.24.4 or newer and an API key for a provider in th
     </Note>
 
     ```bash
-    docker compose up -d --wait
+    docker compose up -d
+    curl --retry 60 --retry-delay 1 --retry-connrefused -fsS http://localhost:8080/api/v1/instance/oss/claim >/dev/null
     docker compose exec cli airmux quickstart --url http://localhost:8080
     ```
 
-    Wait for the stack to become healthy. `quickstart` asks for an owner account and provider keys. Enter one provider key and press Enter to skip providers you do not use. It sets up your workspace, prints an inference key, and sends a real request.
+    The gateway remains unhealthy until it accepts a bundle during setup. Once the console is reachable, run `quickstart`. It asks for an owner account and provider keys. Enter one provider key and press Enter to skip providers you do not use. It sets up your workspace, prints an inference key, and sends a real request.
 
     Copy the inference key when it appears. It is shown once.
   </Step>

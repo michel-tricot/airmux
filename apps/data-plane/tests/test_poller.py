@@ -10,7 +10,7 @@ from starlette.requests import Request
 from yarl import URL
 
 from contract import BundleManifest, BundleManifestEntry, BundleV1, uuid7
-from data_plane.app import readyz
+from data_plane.app import healthz
 from data_plane.bundle import BundleHolder, RemoteBundleConfig
 from data_plane.bundle.holder import BundleSet
 from data_plane.bundle.remote import RemoteBundleSource
@@ -82,6 +82,9 @@ async def test_cached_bundle_keeps_serving_when_control_plane_is_unreachable(htt
     _remote_source(tmp_path, restarted_holder, http_client)._load_cached()
 
     assert restarted_holder.current.snapshots[ORG].bundle.bundle_id == bundle.bundle_id
+    request = Request({"type": "http"})
+    request.state.runtime = SimpleNamespace(holder=restarted_holder, outbox=SimpleNamespace(accepting=True))
+    assert (await healthz(request)).status_code == 200
 
 
 async def test_poll_does_not_publish_a_bundle_set_that_failed_to_persist(http_mock, tmp_path, http_client, monkeypatch):
@@ -154,10 +157,18 @@ async def test_readiness_keeps_serving_after_rejecting_a_new_manifest():
     request = Request({"type": "http"})
     request.state.runtime = SimpleNamespace(holder=holder, outbox=SimpleNamespace(accepting=True))
 
-    assert (await readyz(request)).status_code == 200
+    assert (await healthz(request)).status_code == 200
     holder.reject_manifest()
 
-    assert (await readyz(request)).status_code == 200
+    assert (await healthz(request)).status_code == 200
+
+
+async def test_health_requires_an_accepted_bundle():
+    request = Request({"type": "http"})
+    request.state.runtime = SimpleNamespace(holder=BundleHolder(DataPlaneMetrics()), outbox=SimpleNamespace(accepting=True))
+
+    response = await healthz(request)
+    assert response.status_code == 503
 
 
 async def test_readiness_fails_when_metering_cannot_accept_work():
@@ -166,7 +177,7 @@ async def test_readiness_fails_when_metering_cannot_accept_work():
     request = Request({"type": "http"})
     request.state.runtime = SimpleNamespace(holder=holder, outbox=SimpleNamespace(accepting=False))
 
-    assert (await readyz(request)).status_code == 503
+    assert (await healthz(request)).status_code == 503
 
 
 async def test_poll_removes_an_org_absent_from_the_next_manifest(http_mock, tmp_path, http_client):

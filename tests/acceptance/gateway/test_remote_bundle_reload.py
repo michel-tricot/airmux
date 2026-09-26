@@ -116,4 +116,4 @@ def test_remote_reload_rejects_invalid_bundle_and_keeps_serving(gateway: Gateway
     assert gateway.request(key="sk-inf-replacement").status_code == 200
     assert gateway.request().status_code == 401
     assert str(gateway.events(3)[-1].bundle_id) == replacement["bundle_id"]
-    assert httpx.get(f"{gateway.url}/readyz").status_code == 200
+    assert httpx.get(f"{gateway.url}/healthz").status_code == 200

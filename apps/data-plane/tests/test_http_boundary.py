@@ -62,7 +62,7 @@ def test_all_inference_authentication_errors_have_common_headers(http_mock, dp_a
         assert response.json()["error"]["code"] == "missing_bearer_token"
 
 
-@pytest.mark.parametrize("path", ["/healthz", "/readyz", "/metrics"])
+@pytest.mark.parametrize("path", ["/healthz", "/metrics"])
 def test_operational_routes_remain_public_and_disable_caching(http_mock, dp_app, path):
     mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
@@ -70,6 +70,12 @@ def test_operational_routes_remain_public_and_disable_caching(http_mock, dp_app,
     assert response.status_code == 200
     assert_private_headers(response)
     assert "www-authenticate" not in response.headers
+
+
+def test_readyz_is_removed(http_mock, dp_app):
+    mock_control_plane(http_mock)
+    with TestClient(dp_app) as client:
+        assert client.get("/readyz").status_code == 404
 
 
 def test_metrics_are_prometheus_compatible_and_bounded(http_mock, dp_app):

@@ -98,6 +98,6 @@ Read the target release notes, record the current tag, stop new inference traffi
 the CLI, rebuild the console, run `control-plane migrate` and `control-plane taxonomy` against the existing
 configuration, then restart the three processes. Re-render `deployment/nginx.conf` if the proxy template changed.
 
-Check `/healthz` and `/readyz`, make buffered and streaming requests, and confirm usage appears. If verification fails
+Check `/healthz`, make buffered and streaming requests, and confirm usage appears. If verification fails
 after a database migration, stop the new processes, restore Postgres and `deployment/` from the same backup, and
 restart the previous tag. Do not run the previous code against the migrated database.

@@ -42,16 +42,14 @@ def test_only_dev_serve_migrates_the_database(tmp_path, monkeypatch, dev, expect
     assert {name: os.environ.get(name) for name in environment} == environment
 
 
-def test_liveness_readiness_metrics_and_request_correlation(tmp_path):
+def test_health_metrics_and_request_correlation(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as c:
         health = c.get("/healthz", headers={"x-request-id": "caller-controlled"})
-        readiness = c.get("/readyz")
         metrics = c.get("/metrics").text
         assert health.status_code == 200
-        assert health.json() == {"status": "ok"}
-        assert readiness.status_code == 200
-        assert readiness.json() == {"status": "ready"}
+        assert health.json() == {"status": "ready"}
+        assert c.get("/readyz").status_code == 404
         assert health.headers["x-request-id"] != "caller-controlled"
         assert UUID(health.headers["x-request-id"]).version == 7
         assert "airmux_control_plane_http_requests_total" in metrics
@@ -68,7 +66,6 @@ def test_liveness_readiness_metrics_and_request_correlation(tmp_path):
             yield
 
         cp.app.state.session_factory = unavailable_database
-        assert c.get("/healthz").status_code == 200
-        unavailable = c.get("/readyz")
+        unavailable = c.get("/healthz")
         assert unavailable.status_code == 503
         assert unavailable.json() == {"status": "unavailable"}

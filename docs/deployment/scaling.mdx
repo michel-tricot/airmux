@@ -11,7 +11,8 @@ The `docker-compose.split.yml` example runs Postgres, one control plane, the web
 
 ```bash
 docker build -t airmux:local .
-docker compose -p airmux-split -f docker-compose.split.yml up -d --wait
+docker compose -p airmux-split -f docker-compose.split.yml up -d
+curl --retry 60 --retry-delay 1 --retry-connrefused -fsS http://localhost:8080/api/v1/instance/oss/claim >/dev/null
 airmux quickstart --url http://localhost:8080
 ```
 

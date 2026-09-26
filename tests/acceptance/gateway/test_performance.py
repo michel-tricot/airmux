@@ -354,9 +354,9 @@ async def test_performance_upstream_preserves_idle_connections_between_controls(
     try:
         provider.start()
         async with httpx2.AsyncClient(trust_env=False, limits=httpx2.Limits(keepalive_expiry=None)) as client:
-            before = await client.get(provider.url + "/readyz")
+            before = await client.get(provider.url + "/healthz")
             await asyncio.sleep(6)
-            after = await client.get(provider.url + "/readyz")
+            after = await client.get(provider.url + "/healthz")
             assert before.status_code == after.status_code == 200
             assert before.extensions["network_stream"] is after.extensions["network_stream"]
     finally:
@@ -368,7 +368,7 @@ async def test_performance_upstream_negotiates_https_without_rotating_at_1000_re
     try:
         provider.start()
         async with httpx2.AsyncClient(verify=provider.ssl_context(), trust_env=False) as client:
-            responses = [await client.get(provider.url + "/readyz") for _ in range(1002)]
+            responses = [await client.get(provider.url + "/healthz") for _ in range(1002)]
         assert all(response.status_code == 200 and response.http_version == "HTTP/1.1" for response in responses)
         assert responses[0].extensions["network_stream"] is responses[-1].extensions["network_stream"]
     finally:

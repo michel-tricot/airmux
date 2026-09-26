@@ -39,7 +39,7 @@ def next_steps(guide: GatewayGuide, config: Path, inference_key: Path) -> tuple[
         f"     airmux gateway serve --config {shell_quote(str(config))}",
         "  3. In another terminal, verify inference:",
         f'     export AIRMUX_INFERENCE_KEY="$(cat {shell_quote(str(inference_key))})"',
-        "     curl --fail http://127.0.0.1:8080/readyz",
+        "     curl --fail http://127.0.0.1:8080/healthz",
         "     curl --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions \\",
         '       -H "Authorization: Bearer $AIRMUX_INFERENCE_KEY" \\',
         "       -H 'Content-Type: application/json' \\",
