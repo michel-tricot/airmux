@@ -141,12 +141,26 @@ Each command group's help keeps its subcommands in one flat list.
 | Command group        | Commands                           |
 | -------------------- | ---------------------------------- |
 | `orgs`               | `create`, `list`, `mine`, `switch` |
-| `orgs members`       | `add`, `list`, `remove`            |
+| `orgs members`       | `add`, `list`, `role`, `remove`    |
 | `orgs invitations`   | `create`, `list`, `reissue`, `revoke` |
 | `workspaces`         | `create`, `list`, `use`            |
-| `workspaces members` | `add`, `list`, `remove`            |
-| `users`              | `list`                             |
+| `workspaces members` | `add`, `list`, `role`, `remove`    |
+| `users`              | `list`, `role`                     |
 | `service-accounts`   | `create`, `list`                   |
+
+Set or change a user's role at each scope:
+
+```bash
+airmux users role "$USER_ID" auditor
+airmux orgs members role "$USER_ID" --role admin
+airmux workspaces members role "$USER_ID" --workspace production --role viewer
+```
+
+Instance roles are `owner`, `auditor`, `data_plane`, or `none` to remove the role. Organization roles are
+`owner`, `admin`, `member`, or `data_plane`. Workspace roles are `admin`, `member`, or `viewer`.
+Organization commands use the active organization. Workspace commands use that organization and the selected workspace.
+The membership commands assign a role even when the user is not yet a member, just like `members add`.
+All three commands accept `-f table|json|text` and enforce the existing authorization and owner protections.
 
 ## Gateway resource commands
 
