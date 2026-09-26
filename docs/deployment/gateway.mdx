@@ -3,8 +3,7 @@ title: 'Gateway only'
 description: 'Run the inference gateway from local files without Postgres or a control plane.'
 ---
 
-Run a standalone gateway when you need an inference endpoint without the full platform. You manage its models, keys, and
-provider credentials locally. For the webapp, workspaces, and managed usage history, use the [full platform](/docs/quickstart).
+Run a standalone gateway when you need an inference endpoint without the full platform. You manage its models, keys, and provider credentials locally. 
 
 ## Install
 
@@ -24,8 +23,8 @@ Set a provider key, then initialize and start the gateway. The initializer creat
 
 ```bash
 export OPENAI_API_KEY='your-provider-key'
-airmux gateway init
-airmux gateway validate
+uv run airmux gateway init
+uv run airmux gateway validate
 airmux gateway serve
 ```
 
