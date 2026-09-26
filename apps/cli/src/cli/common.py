@@ -56,6 +56,8 @@ GOODIES = "Goodies"
 orgs_app = typer.Typer(help="Organizations you belong to")
 org_members_app = typer.Typer(help="People in your organization")
 orgs_app.add_typer(org_members_app, name="members", no_args_is_help=True)
+org_invitations_app = typer.Typer(help="Email invitations to your organization")
+orgs_app.add_typer(org_invitations_app, name="invitations", no_args_is_help=True)
 workspaces_app = typer.Typer(help="Isolated environments for keys, credentials and usage")
 workspace_members_app = typer.Typer(help="Who can use a workspace")
 workspaces_app.add_typer(workspace_members_app, name="members", no_args_is_help=True)

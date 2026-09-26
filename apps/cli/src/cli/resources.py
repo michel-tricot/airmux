@@ -21,6 +21,9 @@ from api_models import (
     ManagementKeyOut,
     MembershipOut,
     MeOut,
+    OrgInvitationMintedOut,
+    OrgInvitationOut,
+    OrgInvitationRevokedOut,
     OrgMemberOut,
     OrgOut,
     ProviderCredentialOut,
@@ -53,6 +56,7 @@ from cli.common import (
     inference_keys_app,
     management_keys_app,
     models_app,
+    org_invitations_app,
     org_members_app,
     orgs_app,
     provider_credentials_app,
@@ -93,6 +97,29 @@ MEMBER_COLS = [
     Col("role", "Role"),
     Col("status", "Status", style="yellow"),
 ]
+INVITATION_COLS = [
+    Col("id", "ID", style="dim", no_wrap=True),
+    Col("email", "Email"),
+    Col("org_role", "Org role"),
+    Col("workspace_id", "Workspace"),
+    Col("workspace_role", "Workspace role"),
+    Col("status", "Status"),
+    Col("expires_at", "Expires", fmt=fmt_when),
+]
+MINTED_INVITATION_COLS = [*INVITATION_COLS, Col("url", "Invitation URL")]
+
+
+class InvitationOrgRoleChoice(StrEnum):
+    admin = "admin"
+    member = "member"
+
+
+class WorkspaceRoleChoice(StrEnum):
+    admin = "admin"
+    member = "member"
+    viewer = "viewer"
+
+
 PROVIDER_COLS = [
     Col("name", "Name", no_wrap=True),
     Col("kind", "Kind"),
@@ -363,6 +390,59 @@ class OrgRoleOption(StrEnum):
     admin = "admin"
     member = "member"
     data_plane = "data_plane"
+
+
+@org_invitations_app.command("list")
+def org_invitations_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+    """List your organization's invitations."""
+    print_rows("invitations", access_get(org_path("/invitations"), control_plane_url, OrgInvitationOut), INVITATION_COLS, fmt)
+
+
+@org_invitations_app.command("create")
+def org_invitations_create(  # noqa: PLR0913, PLR0917 CLI flags define the command surface
+    email: str,
+    role: Annotated[InvitationOrgRoleChoice, typer.Option("--role", help="Organization role: admin or member")] = InvitationOrgRoleChoice.member,
+    workspace_id: Annotated[UUID | None, typer.Option("--workspace", help="Workspace ID to grant on acceptance")] = None,
+    workspace_role: Annotated[WorkspaceRoleChoice | None, typer.Option("--workspace-role", help="Workspace role: admin, member, or viewer")] = None,
+    control_plane_url: str = "",
+    fmt: FormatOption = OutputFormat.table,
+) -> None:
+    """Create an email invitation and show its shareable URL once."""
+    if (workspace_id is None) != (workspace_role is None):
+        console.print("[red]--workspace and --workspace-role must be provided together.[/red]")
+        raise typer.Exit(1)
+    with access_client(control_plane_url) as client:
+        invitation = payload(
+            ensure_ok(
+                client.post(
+                    org_path("/invitations"),
+                    json={
+                        "email": email,
+                        "org_role": role.value,
+                        "workspace_id": str(workspace_id) if workspace_id else None,
+                        "workspace_role": workspace_role.value if workspace_role else None,
+                    },
+                )
+            ),
+            OrgInvitationMintedOut,
+        )
+    print_rows("invitations", [{**invitation.invitation.model_dump(mode="json"), "url": invitation.url}], MINTED_INVITATION_COLS, fmt)
+
+
+@org_invitations_app.command("reissue")
+def org_invitations_reissue(invitation_id: UUID, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+    """Replace an invitation URL and show the new URL once."""
+    with access_client(control_plane_url) as client:
+        invitation = payload(ensure_ok(client.post(org_path(f"/invitations/{invitation_id}/reissue"))), OrgInvitationMintedOut)
+    print_rows("invitations", [{**invitation.invitation.model_dump(mode="json"), "url": invitation.url}], MINTED_INVITATION_COLS, fmt)
+
+
+@org_invitations_app.command("revoke")
+def org_invitations_revoke(invitation_id: UUID, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+    """Revoke an invitation."""
+    with access_client(control_plane_url) as client:
+        invitation = payload(ensure_ok(client.post(org_path(f"/invitations/{invitation_id}/revoke"))), OrgInvitationRevokedOut)
+    print_rows("invitations", [invitation], [Col("id", "ID"), Col("status", "Status"), Col("revoked_at", "Revoked", fmt=fmt_when)], fmt)
 
 
 @org_members_app.command("add")
@@ -761,13 +841,24 @@ def provider_credentials_rm(
 @provider_credentials_app.command("disable")
 def provider_credentials_disable(
     credential_id: str = typer.Argument(..., help="Credential id from `airmux provider-credentials list`"),
-    enable: bool = typer.Option(False, "--enable", help="Put it back in the pool instead"),
     control_plane_url: str = "",
 ) -> None:
-    """Stop using a provider key without deleting it. Use --enable to put it back."""
+    """Stop using a provider key without deleting it."""
     with access_client(control_plane_url) as c:
-        resp = c.patch(org_path(f"/provider-credentials/{credential_id}"), json={"enabled": enable})
+        resp = c.patch(org_path(f"/provider-credentials/{credential_id}"), json={"enabled": False})
         ensure_ok(resp)
         credential = payload(resp, ProviderCredentialOut)
-    state = "Enabled" if credential.enabled else "Disabled"
-    console.print(f"{state} [bold]{credential.name}[/bold].")
+    console.print(f"Disabled [bold]{credential.name}[/bold].")
+
+
+@provider_credentials_app.command("enable")
+def provider_credentials_enable(
+    credential_id: str = typer.Argument(..., help="Credential id from `airmux provider-credentials list`"),
+    control_plane_url: str = "",
+) -> None:
+    """Put a disabled provider key back in the pool."""
+    with access_client(control_plane_url) as c:
+        resp = c.patch(org_path(f"/provider-credentials/{credential_id}"), json={"enabled": True})
+        ensure_ok(resp)
+        credential = payload(resp, ProviderCredentialOut)
+    console.print(f"Enabled [bold]{credential.name}[/bold].")
