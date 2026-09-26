@@ -19,6 +19,7 @@ from api_models import (
     InferenceKeyOut,
     ManagementKeyCreatedOut,
     ManagementKeyOut,
+    MembershipOut,
     MeOut,
     OrgMemberOut,
     OrgOut,
@@ -89,6 +90,7 @@ WORKSPACE_COLS = [
 ]
 MEMBER_COLS = [
     Col("user_id", "User", style="dim", no_wrap=True),
+    Col("role", "Role"),
     Col("status", "Status", style="yellow"),
 ]
 PROVIDER_COLS = [
@@ -196,19 +198,27 @@ def workspace_members_list(
     print_rows("members", rows, MEMBER_COLS, fmt)
 
 
+class WorkspaceRoleOption(StrEnum):
+    admin = "admin"
+    member = "member"
+    viewer = "viewer"
+
+
+@workspace_members_app.command("role")
 @workspace_members_app.command("add")
 def workspace_members_add(
-    user_id: str,
+    user_id: UUID,
     workspace: WorkspaceOption = "",
-    role: str = typer.Option("member", "--role", help="Workspace role: admin, member, or viewer"),
+    role: Annotated[WorkspaceRoleOption, typer.Option("--role", help="Workspace role")] = WorkspaceRoleOption.member,
     control_plane_url: str = "",
+    fmt: FormatOption = OutputFormat.table,
 ) -> None:
-    """Give someone access to this workspace."""
+    """Add a workspace member or set their role."""
     workspace_ref = resolve_workspace(workspace)
     with access_client(control_plane_url) as c:
         resp = c.put(org_path(f"/workspaces/{workspace_ref}/members/{user_id}"), json={"role": role})
-        ensure_ok(resp)
-    console.print(f"Added [bold]{user_id}[/bold] to [bold]{workspace_ref}[/bold]")
+        membership = payload(ensure_ok(resp), WorkspaceMembershipOut)
+    print_rows("members", [membership], MEMBER_COLS, fmt)
 
 
 @workspace_members_app.command("remove")
@@ -337,17 +347,26 @@ def org_members_list(control_plane_url: str = "", fmt: FormatOption = OutputForm
     print_rows("members", access_get(org_path("/users"), control_plane_url, OrgMemberOut), ORG_MEMBER_COLS, fmt)
 
 
+class OrgRoleOption(StrEnum):
+    owner = "owner"
+    admin = "admin"
+    member = "member"
+    data_plane = "data_plane"
+
+
+@org_members_app.command("role")
 @org_members_app.command("add")
 def org_members_add(
-    user_id: str,
-    role: str = typer.Option("member", "--role", help="Organization role: owner, admin, member, or data_plane"),
+    user_id: UUID,
+    role: Annotated[OrgRoleOption, typer.Option("--role", help="Organization role")] = OrgRoleOption.member,
     control_plane_url: str = "",
+    fmt: FormatOption = OutputFormat.table,
 ) -> None:
-    """Add a principal to the active organization."""
+    """Add an organization member or set their role."""
     with access_client(control_plane_url) as c:
         resp = c.put(org_path(f"/users/{user_id}"), json={"role": role})
-        ensure_ok(resp)
-    console.print(f"Added [bold]{user_id}[/bold] to your organization")
+        membership = payload(ensure_ok(resp), MembershipOut)
+    print_rows("members", [membership], MEMBER_COLS, fmt)
 
 
 @org_members_app.command("remove")
