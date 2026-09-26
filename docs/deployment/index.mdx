@@ -26,14 +26,11 @@ release for every service in a split deployment.
   </Card>
 </Columns>
 
-For the recommended single-container deployment, run the CLI inside the image with `docker compose exec app airmux ...`.
-See [Docker Compose](/docs/deployment/docker#customize-the-runtime-yaml) to override the bundled runtime YAML.
-
 ## Full-platform production requirements
 
 | Requirement | Purpose |
 | --- | --- |
-| Postgres 16 | Control-plane state, bundles, usage, and audit activity |
+| Postgres 16+ | Control-plane state, bundles, usage, and audit activity |
 | Persistent `/state` | Gateway identity, bundle cache, provider-secret files, and pending usage |
 | `DATABASE_URL` | Async Postgres connection; plain `postgresql://` URLs are normalized for `asyncpg` |
 | `AIRMUX_CONSOLE_URL` | Exact public origin used by browser and CLI flows |
