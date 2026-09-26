@@ -20,6 +20,18 @@ In the webapp, open the organization and go to **Settings → Members → Invite
 an organization role, and optionally choose a workspace and workspace role. Create the invitation, copy its link, and send
 it through a trusted channel. `airmux` does not send the email for you.
 
+The CLI also creates invitations and prints the link once:
+
+```bash
+airmux orgs invitations create person@example.com --role member
+airmux orgs invitations create person@example.com --role admin --workspace "$WORKSPACE_ID" --workspace-role viewer
+airmux orgs invitations list -f table
+airmux orgs invitations reissue "$INVITATION_ID"
+airmux orgs invitations revoke "$INVITATION_ID"
+```
+
+Use the workspace ID from `airmux workspaces list`. Reissuing invalidates the previous link. The CLI does not send email.
+
 The invitation is bound to that email address. The recipient opens the link, then creates an account or signs in with the
 matching email. From the same Members page, you can review,
 reissue, or revoke pending invitations.
@@ -42,6 +54,15 @@ Change roles in the webapp:
 - Instance roles: **Instance → Users → select a user**
 - Organization roles: **Organization → Settings → Members**
 - Workspace roles: **Workspace → Settings → Members**
+
+The CLI can set roles at each scope. Use `none` to remove an instance role:
+
+```bash
+airmux users set-role "$USER_ID" auditor
+airmux users set-role "$USER_ID" none
+airmux orgs members set-role "$USER_ID" admin
+airmux workspaces members set-role "$USER_ID" viewer --workspace production
+```
 
 You can also manage existing memberships with the CLI. `airmux users list` provides account IDs; select the organization
 and workspace context first:
