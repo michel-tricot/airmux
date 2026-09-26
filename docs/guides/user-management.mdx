@@ -37,35 +37,22 @@ Roles grant access at different scopes:
 | Organization | `owner`, `admin`, `member`, `data_plane` | `owner` and `admin` manage organization resources; `member` has basic organization access; `data_plane` is for gateway identities |
 | Workspace | `admin`, `member`, `viewer` | `admin` manages workspace access and settings; `member` can use the workspace; `viewer` has read access |
 
-Instance owners can open **Instance → Users → select a user** to review and change that user's instance role,
-organization roles, and workspace roles in one place. Use **Add to Organization** or **Add to Workspace** to grant a new
-membership. A user must belong to the organization before joining one of its workspaces.
+Change roles in the webapp:
 
-Administrators can also manage access within their own scope:
-
+- Instance roles: **Instance → Users → select a user**
 - Organization roles: **Organization → Settings → Members**
 - Workspace roles: **Workspace → Settings → Members**
-
-The lists show direct role assignments. Instance owners and organization owners or admins may have inherited access to
-workspaces without a direct workspace membership. Role changes keep the existing permission checks, and the last instance
-or organization owner cannot be demoted or removed.
 
 You can also manage existing memberships with the CLI. `airmux users list` provides account IDs; select the organization
 and workspace context first:
 
 ```bash
 airmux users list -f table
-airmux users show "$USER_ID" -f table
-airmux users role "$USER_ID" auditor
 airmux orgs members add "$USER_ID" --role admin
 airmux workspaces members add "$USER_ID" --workspace production --role viewer
 airmux orgs members list -f table
 airmux workspaces members list --workspace production -f table
 ```
-
-`users show` and `users role` require instance access. `users role "$USER_ID" none` removes the instance role.
-The organization and workspace `members add` commands create a membership or change its existing role to `--role`.
-Organization-managed service accounts cannot receive an instance role or own an organization.
 
 Remove a workspace membership with `airmux workspaces members remove "$USER_ID" --workspace production`. Remove an
 organization membership with `airmux orgs members remove "$USER_ID"`. Removing membership also revokes that person's

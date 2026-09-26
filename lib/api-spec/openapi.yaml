@@ -1202,46 +1202,6 @@ paths:
       - scope: instance_scope
         anyOf:
         - principals.manage
-  /api/v1/users/{user_id}/memberships:
-    get:
-      tags:
-      - Instance Users
-      summary: Get User Memberships
-      operationId: get_user_memberships
-      security:
-      - ManagementKey: []
-      - SessionCookie: []
-      parameters:
-      - name: user_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-          title: User Id
-        description: User or service-account ID
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope_UserMembershipsOut_'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-        '401':
-          description: Authentication failed
-        '403':
-          description: The credential does not have the required permission
-      x-airmux-authority:
-      - scope: instance_scope
-        anyOf:
-        - principals.read
-      description: 'Required permission: `principals.read`.'
   /api/v1/users:
     get:
       tags:
@@ -6581,14 +6541,6 @@ components:
       required:
       - data
       title: Envelope[UsageReportOut]
-    Envelope_UserMembershipsOut_:
-      properties:
-        data:
-          $ref: '#/components/schemas/UserMembershipsOut'
-      type: object
-      required:
-      - data
-      title: Envelope[UserMembershipsOut]
     Envelope_UserOut_:
       properties:
         data:
@@ -8122,23 +8074,6 @@ components:
       - member
       - data_plane
       title: OrgRole
-    OrgRoleAssignment:
-      properties:
-        org_id:
-          type: string
-          format: uuid
-          title: Org Id
-        name:
-          type: string
-          title: Name
-        role:
-          $ref: '#/components/schemas/OrgRole'
-      type: object
-      required:
-      - org_id
-      - name
-      - role
-      title: OrgRoleAssignment
     OrgServiceAccountCreatedOut:
       properties:
         service_account:
@@ -10161,23 +10096,6 @@ components:
       - cache_write_tokens
       - cost_usd
       title: UsageTotalsOut
-    UserMembershipsOut:
-      properties:
-        org_memberships:
-          items:
-            $ref: '#/components/schemas/OrgRoleAssignment'
-          type: array
-          title: Org Memberships
-        workspace_memberships:
-          items:
-            $ref: '#/components/schemas/WorkspaceRoleAssignment'
-          type: array
-          title: Workspace Memberships
-      type: object
-      required:
-      - org_memberships
-      - workspace_memberships
-      title: UserMembershipsOut
     UserOut:
       properties:
         id:
@@ -10383,32 +10301,6 @@ components:
       - member
       - viewer
       title: WorkspaceRole
-    WorkspaceRoleAssignment:
-      properties:
-        workspace_id:
-          type: string
-          format: uuid
-          title: Workspace Id
-        org_id:
-          type: string
-          format: uuid
-          title: Org Id
-        name:
-          type: string
-          title: Name
-        slug:
-          type: string
-          title: Slug
-        role:
-          $ref: '#/components/schemas/WorkspaceRole'
-      type: object
-      required:
-      - workspace_id
-      - org_id
-      - name
-      - slug
-      - role
-      title: WorkspaceRoleAssignment
     WorkspaceTarget:
       properties:
         kind:

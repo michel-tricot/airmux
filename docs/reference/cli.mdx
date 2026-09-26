@@ -144,12 +144,10 @@ Each command group's help keeps its subcommands in one flat list.
 | `orgs members`       | `add`, `list`, `remove`            |
 | `workspaces`         | `create`, `list`, `use`            |
 | `workspaces members` | `add`, `list`, `remove`            |
-| `users`              | `list`, `show`, `role`              |
+| `users`              | `list`, `role`                     |
 | `service-accounts`   | `create`, `list`                   |
 
-`users show USER_ID` lists direct role assignments at every scope. `users role USER_ID owner|auditor|data_plane|none`
-sets or removes the instance role. Organization and workspace `members add USER_ID --role ROLE` commands also update
-existing memberships. Workspace member lists include each member's role. See [Manage users and access](/docs/guides/user-management#assign-roles).
+`users role USER_ID owner|auditor|data_plane|none` sets or removes the instance role.
 
 ## Gateway resource commands
 

@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 import App from '@/App';
-import { ORG, WORKSPACES, paged, server } from './msw';
+import { paged, server } from './msw';
 import { now } from './fixtures';
 
 function installUser(instanceRole: Api.InstanceRole | null = null) {
@@ -26,9 +26,6 @@ function installUser(instanceRole: Api.InstanceRole | null = null) {
       }),
     ),
     http.get('/api/v1/users/target-user', () => HttpResponse.json({ data: user })),
-    http.get('/api/v1/users/target-user/memberships', () =>
-      HttpResponse.json<{ data: Api.UserMembershipsOut }>({ data: { org_memberships: [], workspace_memberships: [] } }),
-    ),
     http.get('/api/v1/organizations', () => paged([])),
     http.put('/api/v1/users/target-user/instance-role', async ({ request }) => {
       const body = (await request.json()) as Api.InstanceRoleIn;
@@ -92,68 +89,4 @@ describe('instance role editing', () => {
     expect(await screen.findByRole('heading', { name: 'Target User' })).toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: 'Instance role' })).not.toBeInTheDocument();
   });
-});
-
-it('changes organization and workspace roles from the user page without a reload', async () => {
-  installUser();
-  let memberships: Api.UserMembershipsOut = {
-    org_memberships: [{ org_id: ORG.id, name: ORG.name, role: 'member' }],
-    workspace_memberships: [{ workspace_id: WORKSPACES[0].id, org_id: ORG.id, name: 'Production', slug: 'production', role: 'viewer' }],
-  };
-  server.use(
-    http.get('/api/v1/users/target-user/memberships', () => HttpResponse.json({ data: memberships })),
-    http.put('/api/v1/organizations/org-1/users/target-user', async ({ request }) => {
-      const body = (await request.json()) as Api.OrgMembershipIn;
-      memberships = { ...memberships, org_memberships: [{ ...memberships.org_memberships[0], role: body.role }] };
-      return HttpResponse.json({ data: { user_id: 'target-user', org_id: ORG.id, role: body.role, status: 'member' } });
-    }),
-    http.put('/api/v1/organizations/org-1/workspaces/production/members/target-user', async ({ request }) => {
-      const body = (await request.json()) as Api.WorkspaceMembershipIn;
-      memberships = { ...memberships, workspace_memberships: [{ ...memberships.workspace_memberships[0], role: body.role }] };
-      return HttpResponse.json({ data: memberships.workspace_memberships[0] });
-    }),
-  );
-  render(<App />);
-  const user = userEvent.setup();
-  await user.click(await screen.findByRole('combobox', { name: 'Organization role in Acme' }));
-  await user.click(screen.getByRole('option', { name: 'Admin' }));
-  await user.click(screen.getByRole('button', { name: 'Confirm role change' }));
-  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-  expect(screen.getByRole('combobox', { name: 'Organization role in Acme' })).toHaveTextContent('Admin');
-  await user.click(screen.getByRole('combobox', { name: 'Workspace role in Production' }));
-  await user.click(screen.getByRole('option', { name: 'Member' }));
-  await user.click(screen.getByRole('button', { name: 'Confirm role change' }));
-  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-  expect(screen.getByRole('combobox', { name: 'Workspace role in Production' })).toHaveTextContent('Member');
-});
-
-it('assigns a workspace role to an existing organization member', async () => {
-  installUser();
-  let memberships: Api.UserMembershipsOut = {
-    org_memberships: [{ org_id: ORG.id, name: ORG.name, role: 'member' }],
-    workspace_memberships: [],
-  };
-  server.use(
-    http.get('/api/v1/users/target-user/memberships', () => HttpResponse.json({ data: memberships })),
-    http.put('/api/v1/organizations/org-1/workspaces/production/members/target-user', async ({ request }) => {
-      const body = (await request.json()) as Api.WorkspaceMembershipIn;
-      memberships = {
-        ...memberships,
-        workspace_memberships: [{ workspace_id: 'ws-1', org_id: ORG.id, name: 'Production', slug: 'production', role: body.role }],
-      };
-      return HttpResponse.json({ data: memberships.workspace_memberships[0] });
-    }),
-  );
-  render(<App />);
-  const user = userEvent.setup();
-  await user.click(await screen.findByRole('button', { name: 'Add to Workspace' }));
-  await user.click(screen.getByRole('combobox', { name: 'Organization' }));
-  await user.click(screen.getByRole('option', { name: 'Acme' }));
-  await user.click(screen.getByRole('combobox', { name: 'Workspace' }));
-  await user.click(await screen.findByRole('option', { name: 'Production' }));
-  await user.click(screen.getByRole('combobox', { name: 'Role' }));
-  await user.click(screen.getByRole('option', { name: 'Viewer' }));
-  await user.click(screen.getByRole('button', { name: 'Add' }));
-  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-  expect(screen.getByRole('combobox', { name: 'Workspace role in Production' })).toHaveTextContent('Viewer');
 });

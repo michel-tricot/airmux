@@ -19,7 +19,6 @@ from api_models import (
     InferenceKeyOut,
     ManagementKeyCreatedOut,
     ManagementKeyOut,
-    MembershipOut,
     MeOut,
     OrgMemberOut,
     OrgOut,
@@ -28,7 +27,6 @@ from api_models import (
     TaxonomyChangeCounts,
     TaxonomyOut,
     UsageEventOut,
-    UserMembershipsOut,
     UserOut,
     WorkspaceMembershipOut,
     WorkspaceOut,
@@ -91,7 +89,6 @@ WORKSPACE_COLS = [
 ]
 MEMBER_COLS = [
     Col("user_id", "User", style="dim", no_wrap=True),
-    Col("role", "Role"),
     Col("status", "Status", style="yellow"),
 ]
 PROVIDER_COLS = [
@@ -205,15 +202,13 @@ def workspace_members_add(
     workspace: WorkspaceOption = "",
     role: str = typer.Option("member", "--role", help="Workspace role: admin, member, or viewer"),
     control_plane_url: str = "",
-    fmt: FormatOption = OutputFormat.table,
 ) -> None:
-    """Add a workspace member or change their role."""
+    """Give someone access to this workspace."""
     workspace_ref = resolve_workspace(workspace)
     with access_client(control_plane_url) as c:
-        membership = payload(
-            ensure_ok(c.put(org_path(f"/workspaces/{workspace_ref}/members/{user_id}"), json={"role": role})), WorkspaceMembershipOut
-        )
-    print_rows("members", [membership], MEMBER_COLS, fmt)
+        resp = c.put(org_path(f"/workspaces/{workspace_ref}/members/{user_id}"), json={"role": role})
+        ensure_ok(resp)
+    console.print(f"Added [bold]{user_id}[/bold] to [bold]{workspace_ref}[/bold]")
 
 
 @workspace_members_app.command("remove")
@@ -336,38 +331,6 @@ def users_role(user_id: UUID, role: InstanceRoleOption, control_plane_url: str =
     print_rows("users", [user], USER_COLS, fmt)
 
 
-@users_app.command("show")
-def users_show(user_id: UUID, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
-    """Show a user's direct roles across instance, organization, and workspace scopes."""
-    with access_client(control_plane_url) as client:
-        user = payload(ensure_ok(client.get(f"/api/v1/users/{user_id}")), UserOut)
-        memberships = payload(ensure_ok(client.get(f"/api/v1/users/{user_id}/memberships")), UserMembershipsOut)
-    assignments = [
-        {"scope": "instance", "id": str(user.id), "name": user.name, "org_id": None, "role": user.instance_role},
-        *[
-            {
-                "scope": "organization",
-                "id": str(membership.org_id),
-                "name": membership.name,
-                "org_id": str(membership.org_id),
-                "role": membership.role.root,
-            }
-            for membership in memberships.org_memberships
-        ],
-        *[
-            {
-                "scope": "workspace",
-                "id": str(membership.workspace_id),
-                "name": membership.name,
-                "org_id": str(membership.org_id),
-                "role": membership.role.root,
-            }
-            for membership in memberships.workspace_memberships
-        ],
-    ]
-    print_rows("roles", assignments, [Col("scope", "Scope"), Col("name", "Name"), Col("id", "ID"), Col("role", "Role")], fmt)
-
-
 @org_members_app.command("list")
 def org_members_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List the active org's members."""
@@ -379,12 +342,12 @@ def org_members_add(
     user_id: str,
     role: str = typer.Option("member", "--role", help="Organization role: owner, admin, member, or data_plane"),
     control_plane_url: str = "",
-    fmt: FormatOption = OutputFormat.table,
 ) -> None:
-    """Add an organization member or change their role."""
+    """Add a principal to the active organization."""
     with access_client(control_plane_url) as c:
-        membership = payload(ensure_ok(c.put(org_path(f"/users/{user_id}"), json={"role": role})), MembershipOut)
-    print_rows("members", [membership], MEMBER_COLS, fmt)
+        resp = c.put(org_path(f"/users/{user_id}"), json={"role": role})
+        ensure_ok(resp)
+    console.print(f"Added [bold]{user_id}[/bold] to your organization")
 
 
 @org_members_app.command("remove")

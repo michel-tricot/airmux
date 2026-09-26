@@ -16,7 +16,7 @@ from control_plane.deps import ActorDep, instance_scope, require
 from control_plane.models import Org, OrgMembership, User
 from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.models.management_key import ManagementKeyCreatedOut, ManagementKeyIn  # noqa: TC001 FastAPI resolves route annotations at runtime
-from control_plane.models.user import InstanceRoleIn, ServiceAccountIn, UserMembershipsOut, UserOut
+from control_plane.models.user import InstanceRoleIn, ServiceAccountIn, UserOut
 from control_plane.routes.management_keys import issue_management_key
 
 router = APIRouter()
@@ -58,14 +58,6 @@ async def get_user(user_id: UUID) -> Envelope[UserOut]:
         raise HTTPException(status_code=404, detail="User not found")
     memberships = await OrgMembership.find(OrgMembership.user_id == user_id, order_by=col(OrgMembership.org_id))
     return Envelope(data=_user_out(user, [membership.org_id for membership in memberships]))
-
-
-@router.get("/users/{user_id}/memberships", tags=["Instance Users"], dependencies=[require("api", instance_scope, Permission.principals_read)])
-async def get_user_memberships(user_id: UUID) -> Envelope[UserMembershipsOut]:
-    user = await User.find_by_id(user_id)
-    if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    return Envelope(data=await user.memberships())
 
 
 @router.delete("/users/{user_id}", tags=["Instance Users"], dependencies=[require("api", instance_scope, Permission.principals_manage)])

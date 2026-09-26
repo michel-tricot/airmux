@@ -2,7 +2,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   useListUsers,
   useGetUser,
-  useGetUserMemberships,
   useCreateServiceAccount,
   useDeleteUser,
   useChangeInstanceRole,
@@ -11,7 +10,6 @@ import {
   removeOrgUser,
   getListUsersQueryKey,
   getGetUserQueryKey,
-  getGetUserMembershipsQueryKey,
   getListOrgUsersQueryKey,
   getEnrollmentQueryKey,
   getMeQueryKey,
@@ -26,10 +24,6 @@ export function useUsers({ enabled = true }: EnabledQueryOptions = {}) {
 
 export function useUser(userId: string) {
   return useGetUser(userId, { query: { retry: false } });
-}
-
-export function useUserMemberships(userId: string) {
-  return useGetUserMemberships(userId, { query: { retry: false } });
 }
 
 export function useCreateServiceAccountMutation() {
@@ -67,7 +61,6 @@ function useMembershipInvalidation() {
     Promise.all([
       queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() }),
       queryClient.invalidateQueries({ queryKey: getGetUserQueryKey(target.userId) }),
-      queryClient.invalidateQueries({ queryKey: getGetUserMembershipsQueryKey(target.userId) }),
       queryClient.invalidateQueries({ queryKey: getListOrgUsersQueryKey(target.orgId) }),
       queryClient.invalidateQueries({ queryKey: getEnrollmentQueryKey() }),
       queryClient.invalidateQueries({ queryKey: getMyPermissionsQueryKey() }),
