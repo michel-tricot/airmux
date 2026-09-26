@@ -56,7 +56,6 @@ http {
       default_type application/json;
       return 503 '{"status":"unavailable"}';
     }
-    location = /readyz { return 404; }
     location /api/ { proxy_pass http://$control_plane; }
     location /inf/ {
       proxy_pass http://$data_plane;

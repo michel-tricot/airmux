@@ -117,7 +117,6 @@ def https_deployment(tmp_path_factory):
             timeout=10,
         ) as client:
             eventually(lambda: client.get("/healthz").status_code == 503)
-            assert client.get("/readyz").status_code == 404
             signup = client.post(
                 "/api/v1/auth/signup",
                 json={"email": "owner@proxy.test", "name": "Owner", "password": "local-https-test-password"},
