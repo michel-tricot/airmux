@@ -22,8 +22,8 @@
           {
             "group": "Use the platform",
             "pages": [
-              "docs/guides/webapp",
               "docs/guides/cli",
+              "docs/guides/webapp",
               "docs/guides/user-management",
               "docs/guides/sdks",
               "docs/policies",
