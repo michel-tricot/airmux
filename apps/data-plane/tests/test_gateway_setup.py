@@ -77,6 +77,8 @@ def test_local_keys_reject_unusable_or_duplicate_tokens(tmp_path, monkeypatch, k
 def test_init_creates_private_files_and_validate_works_outside_the_directory(tmp_path, monkeypatch):
     taxonomy = write_taxonomy(tmp_path)
     directory = tmp_path / "gateway"
+    directory.mkdir(mode=0o755)
+    directory.chmod(0o755)
     runner = CliRunner()
     result = runner.invoke(app, ["init", "--directory", str(directory), "--taxonomy", str(taxonomy)])
     assert result.exit_code == 0, result.output

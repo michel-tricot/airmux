@@ -38,13 +38,15 @@ def write_private_text(path: Path, value: str) -> None:
                 temporary.unlink()
 
 
-def write_new_configuration(directory: Path, files: Mapping[str, str]) -> None:
+def write_new_configuration(directory: Path, files: Mapping[str, str], *, private_directory: bool = False) -> None:
     for name in files:
         path = directory / name
         if path.exists() or path.is_symlink():
             message = f"{path} already exists; choose another directory"
             raise FileExistsError(message)
     directory.mkdir(parents=True, exist_ok=True, mode=DIRECTORY_MODE)
+    if private_directory:
+        directory.chmod(DIRECTORY_MODE)
     created: list[Path] = []
     try:
         for name, contents in files.items():

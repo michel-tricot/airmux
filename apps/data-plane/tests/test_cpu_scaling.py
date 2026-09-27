@@ -67,8 +67,8 @@ def test_stream_accumulation_cpu_scales_with_fragment_count(kind, modality):
         started = time.thread_time()
         for _ in range(count):
             adapter.transform_stream_event(fragment, state)
-        final = adapter.finalize(state)
         elapsed = time.thread_time() - started
+        final = adapter.finalize(state)
         part = final.content[0]
         assert part.type in {"text", "tool_call"}
         value = part.arguments if part.type == "tool_call" else part.text
