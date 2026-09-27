@@ -64,7 +64,7 @@ export function createQueryClient(): QueryClient {
   });
 
   function refreshSession(error: unknown) {
-    if (isApiErrorStatus(error, 401)) void client.invalidateQueries({ queryKey: meKey, exact: true });
+    if (isApiErrorStatus(error, 401) && client.getQueryData(meKey)) void client.invalidateQueries({ queryKey: meKey, exact: true });
   }
 
   return client;
@@ -230,7 +230,7 @@ function Router() {
     return <AppSection />;
   }
 
-  if (location === '/') return <Redirect to={orgId ? '/org' : '/orgs'} replace />;
+  if (location === '/') return <Redirect to={orgId ? '/org' : user.instance_role ? '/instance' : '/orgs'} replace />;
 
   if (!user.instance_role) return <Redirect to="/org" />;
 
