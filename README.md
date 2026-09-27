@@ -36,7 +36,6 @@ Run the full platform on one machine. You need Docker with Compose 2.24.4+ and a
 
 ```bash
 curl -fsSLO https://github.com/michel-tricot/airmux/releases/latest/download/docker-compose.yml
-mkdir -p airmux-config
 docker compose up -d --wait
 ```
 

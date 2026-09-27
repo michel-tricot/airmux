@@ -3,6 +3,19 @@ title: "Release airmux"
 description: "Prepare, publish, and recover a release."
 ---
 
+## Enable public container downloads
+
+Set the `airmux` container package's visibility to **Public** once so users can pull `ghcr.io/michel-tricot/airmux` without signing in.
+GitHub Container Registry manages package visibility separately from repository visibility.
+
+1. Open your GitHub profile's **Packages** tab and select the `airmux` container package
+2. Open **Package settings**
+3. Under **Danger Zone**, choose **Change visibility**, select **Public**, and confirm the package name
+
+Keep the package linked to `michel-tricot/airmux` with **Inherit access from repository** enabled so its publishing workflows retain access.
+Public pulls need no token or `docker login`. GitHub does not allow a public package to become private again.
+See [GitHub's package visibility documentation](https://docs.github.com/en/packages/learn-github-packages/configuring-a-packages-access-control-and-visibility#configuring-visibility-of-packages-for-your-personal-account).
+
 ## Publish a release
 
 The root `VERSION` file is the public package version. Publish Release takes the full SHA of the exact source commit to release. That commit must be on `main` and have successful Main CI and Security checks. Its `VERSION` determines the release version. The other workspace projects stay at `0.0.0`.
