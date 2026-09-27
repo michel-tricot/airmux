@@ -30,7 +30,7 @@ These pages apply to the selected organization:
 | **Overview** | Open the organization home and its summary of available sections |
 | **Models** | Browse models available to the organization, including model limits and prices |
 | **Requests** | Review organization request and usage reports, then filter and inspect requests |
-| **Settings** | Manage organization details, members and invitations, service accounts, and organization-scoped management keys |
+| **Settings** | Manage members and invitations, service accounts, and organization-scoped management keys; review organization activity |
 
 <Frame caption="Organization usage across a 30-day history, attributed to its production and staging workspaces">
   <img src="../images/webapp-organization.png" alt="Organization overview with historical daily spend, 1,548 requests, and production and staging attribution" />
@@ -70,9 +70,9 @@ console or **Workspace console** from the instance sidebar to switch between the
 | **Management Keys** | Create and revoke instance management keys and manage their permissions |
 | **Provider Keys** | Manage provider credentials owned by the instance |
 
-Opening an organization shows its details and workspaces. Open a workspace from there to inspect or manage that
-workspace. Instance menus are permission-filtered, so an auditor or other limited role may see fewer actions than an
-owner.
+Opening an organization shows its details and workspaces, with actions to rename or delete the organization when you
+have permission. Open a workspace from there to inspect or manage that workspace. Instance menus are permission-filtered,
+so an auditor or other limited role may see fewer actions than an owner.
 
 <Frame caption="Instance overview with an online data plane and recent activity">
   <img src="../images/webapp-instance.png" alt="Instance overview showing one organization, an online connected service, and recent activity" />
@@ -91,8 +91,8 @@ owner.
 3. Add a credential for the provider and give it a recognizable name
 4. Use **Rotate** on the credential when its secret needs replacing
 
-Instance and organization provider credentials are managed separately under **Instance → Provider Keys** and
-**Organization → Settings**, respectively.
+Manage instance provider credentials under **Instance → Provider Keys**. For organization-scoped credentials, use the
+[CLI](/docs/guides/cli), for example `airmux provider-credentials add openai --org`, or the control-plane API.
 
 ### Create an application key
 
