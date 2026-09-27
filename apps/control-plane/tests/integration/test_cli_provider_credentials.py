@@ -117,14 +117,17 @@ def test_rotate_replaces_the_value_and_keeps_the_place(cli):
     assert listed(cp, workspace)[0]["version"] == 2
 
 
-def test_disable_takes_a_key_out_of_the_pool_without_deleting_it(cli):
+def test_disable_and_enable_preserve_the_credential_and_secret(cli):
     cp, workspace = cli
     run("provider-credentials", "add", "openai", "--workspace", workspace, stdin=f"{KEY}\n")
     credential = listed(cp, workspace)[0]
-    run("provider-credentials", "disable", credential["id"])
-    assert listed(cp, workspace)[0]["enabled"] is False
-    run("provider-credentials", "disable", credential["id"], "--enable")
-    assert listed(cp, workspace)[0]["enabled"] is True
+    for command, enabled in (("disable", False), ("enable", True)):
+        run("provider-credentials", command, credential["id"])
+        updated = listed(cp, workspace)[0]
+        assert updated["enabled"] is enabled
+        assert updated["id"] == credential["id"]
+        assert updated["version"] == credential["version"]
+        assert stored(cp, updated) == KEY
 
 
 def test_rm_deletes_the_credential(cli):

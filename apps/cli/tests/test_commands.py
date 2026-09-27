@@ -32,6 +32,8 @@ def test_every_command_is_listed_once():
         "airmux profiles use",
         "airmux orgs mine",
         "airmux provider-credentials add",
+        "airmux provider-credentials enable",
+        "airmux provider-credentials disable",
         "airmux management-keys create",
         "airmux catalog apply",
         "airmux gateways list",

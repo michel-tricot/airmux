@@ -84,6 +84,7 @@ class BundleSet:
 class BundleHolder:
     def __init__(self, metrics: DataPlaneMetrics) -> None:
         self._current = BundleSet.from_bundles(())
+        self.initialized = False
         self._metrics = metrics
 
     @property
@@ -92,6 +93,7 @@ class BundleHolder:
 
     def swap(self, current: BundleSet, source: str) -> None:
         self._current = current
+        self.initialized = True
         self._metrics.observe_bundle_adopted(len(current.snapshots))
         logger.info("adopted %s bundle manifest with %d organizations", source, len(current.snapshots))
 

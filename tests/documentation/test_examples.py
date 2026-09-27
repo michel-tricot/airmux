@@ -29,12 +29,12 @@ def test_replit_cli_examples_exist():
     assert (ROOT / script).is_file()
 
 
-def test_compose_recipe_builds_from_the_repository_root():
-    recipe = code_block("docs/deployment/docker.mdx", "cp .env.example .env")
-    assert "docker build -t airmux:local ." in recipe
-    assert (ROOT / "Dockerfile").is_file()
-    assert (ROOT / "apps/cli/src/cli").is_dir()
-    assert (ROOT / "taxonomy/taxonomy.yml").is_file()
+def test_compose_recipe_uses_the_published_image():
+    recipe = code_block("docs/quickstart.mdx", "curl -fsSLO")
+    assert "releases/latest/download/docker-compose.yml" in recipe
+    assert recipe.count("curl ") == 1
+    assert ".env.example" not in recipe
+    assert "docker build" not in recipe
 
 
 def test_provider_source_example_is_discovered_and_maps_models(tmp_path):

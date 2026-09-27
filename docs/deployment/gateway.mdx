@@ -3,8 +3,7 @@ title: 'Gateway only'
 description: 'Run the inference gateway from local files without Postgres or a control plane.'
 ---
 
-Run a standalone gateway when you need an inference endpoint without the full platform. You manage its models, keys, and
-provider credentials locally. For the webapp, workspaces, and managed usage history, use the [full platform](/docs/quickstart).
+Run a standalone gateway when you need an inference endpoint without the full platform. You manage its models, keys, and provider credentials locally. 
 
 ## Install
 
@@ -24,9 +23,9 @@ Set a provider key, then initialize and start the gateway. The initializer creat
 
 ```bash
 export OPENAI_API_KEY='your-provider-key'
-airmux gateway init
-airmux gateway validate
-airmux gateway serve
+uv run airmux gateway init
+uv run airmux gateway validate
+uv run airmux gateway serve
 ```
 
 The gateway runs in the foreground at `http://127.0.0.1:8080`. Keep the provider key available to the process. To use
@@ -39,7 +38,7 @@ taxonomy:
 
 ```bash
 export AIRMUX_INFERENCE_KEY="$(cat .airmux/inference.key)"
-curl --fail http://127.0.0.1:8080/readyz
+curl --fail http://127.0.0.1:8080/healthz
 curl --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions \
   -H "Authorization: Bearer $AIRMUX_INFERENCE_KEY" \
   -H 'Content-Type: application/json' \
@@ -49,21 +48,38 @@ curl --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions \
 Change the `model` value to another ID in your taxonomy. See the [inference reference](/docs/reference/inference) for
 other request formats.
 
-## Run the gateway in a container
-
-Clone the source and build the image, then run the gateway with the local configuration mounted read-only:
+Verify streaming with the same inference key. `--no-buffer` prints each event as it arrives; a successful stream ends with
+`data: [DONE]`:
 
 ```bash
-AIRMUX_CONFIG_DIR="$PWD"
-AIRMUX_SOURCE_DIR="$(mktemp -d)/airmux"
-git clone https://github.com/michel-tricot/airmux.git "$AIRMUX_SOURCE_DIR"
-docker build -t airmux:local "$AIRMUX_SOURCE_DIR"
-docker run --rm --user "$(id -u):$(id -g)" \
-  --entrypoint airmux \
-  --mount "type=bind,source=$PWD,target=/config,readonly" \
-  -e OPENAI_API_KEY -p 8080:8081 \
-  airmux:local gateway serve --config /config/.airmux/airmux.yml --host 0.0.0.0 --port 8081
+export AIRMUX_INFERENCE_KEY="$(cat .airmux/inference.key)"
+curl --no-buffer --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions \
+  -H "Authorization: Bearer $AIRMUX_INFERENCE_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"openai/gpt-5.4-mini","messages":[{"role":"user","content":"Hello"}],"stream":true}'
 ```
+
+## Run in a container
+
+Build the image from the checkout after running `gateway init`. The container reads the same `.airmux` directory and
+provider key as the local setup:
+
+```bash
+docker build -t airmux:local .
+```
+
+```bash
+docker run --rm -p 127.0.0.1:8080:8081 \
+  --user "$(id -u):$(id -g)" --workdir /tmp \
+  --mount "type=bind,source=${AIRMUX_CONFIG_DIR:-$PWD}/.airmux,target=/config,readonly" \
+  -e OPENAI_API_KEY \
+  airmux:local data-plane
+```
+
+Keep the container running and use the requests above against `http://127.0.0.1:8080`. The host user runs the gateway
+so it can read the private inference key. Set `AIRMUX_CONFIG_DIR` to the parent of `.airmux` if you initialized it outside
+the checkout. Stop the local Python gateway before using the same host port. Pass the matching provider key with `-e`
+if you use a provider other than OpenAI.
 
 ## Customize local setup
 
@@ -74,3 +90,16 @@ advanced settings.
 Standalone mode has no management API, webapp, or managed usage history. Its keys share one local workspace, and
 provider credentials come from environment variables. Usage events are discarded by default; see the
 [event outbox settings](/docs/reference/configuration#event-outboxes) to write them to a local file.
+
+## Upgrade and roll back
+
+Back up `.airmux/` and record the current release before changing the CLI. Check out the target release tag, run
+`uv sync --package airmux --frozen`, and validate the existing configuration:
+
+```bash
+uv run airmux gateway validate --config .airmux/airmux.yml
+uv run airmux gateway serve --config .airmux/airmux.yml
+```
+
+Before removing the backup, make a buffered and streaming request. If the new release fails, reinstall the previous
+release and restore its matching `.airmux/` directory. Stop the gateway before restoring state.

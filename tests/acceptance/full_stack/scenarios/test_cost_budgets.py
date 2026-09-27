@@ -44,7 +44,7 @@ def _start_two_deployments(stack: Stack) -> tuple[str, str]:
     second_log = stack.tmp / "dp-second.log"
     assert _poll(lambda: uvicorn_port(second_log) is not None, 30)
     second_url = f"http://127.0.0.1:{uvicorn_port(second_log)}"
-    assert _poll(lambda: httpx.get(f"{second_url}/readyz").status_code == 200, 30)
+    assert _poll(lambda: httpx.get(f"{second_url}/healthz").status_code == 200, 30)
     return stack.dp_url, second_url
 
 

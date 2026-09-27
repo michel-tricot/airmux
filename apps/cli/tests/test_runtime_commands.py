@@ -174,7 +174,7 @@ def test_initialization_prints_shell_safe_first_request(tmp_path, monkeypatch):
     assert shlex.split(provider) == ["export", "STUB_API_KEY=your-provider-key"]
     assert shlex.split(serve) == ["airmux", "gateway", "serve", "--config", str(directory / "airmux.yml")]
     assert inference_key == f'export AIRMUX_INFERENCE_KEY="$(cat {shlex.quote(str(directory / "inference.key"))})"'
-    assert "curl --fail http://127.0.0.1:8080/readyz" in lines
+    assert "curl --fail http://127.0.0.1:8080/healthz" in lines
     assert any(line.startswith("curl --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions") for line in lines)
     assert '"model":"echo"' in result.output
     assert '"content":"Say hello in one word."' in result.output

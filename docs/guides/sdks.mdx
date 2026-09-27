@@ -35,8 +35,6 @@ print(response.output_text)
   </Tab>
   <Tab title="Anthropic Python">
 
-The Messages endpoint uses a base URL ending in `/inf`; the SDK appends `/v1/messages`.
-
 ```python
 import os
 from anthropic import Anthropic
@@ -73,49 +71,7 @@ console.log(response.output_text);
 ```
 
   </Tab>
-  <Tab title="OpenAI Go">
-
-```go
-package main
-
-import (
-	"context"
-	"fmt"
-	"os"
-
-	"github.com/openai/openai-go/v3"
-	"github.com/openai/openai-go/v3/option"
-	"github.com/openai/openai-go/v3/responses"
-)
-
-func main() {
-	client := openai.NewClient(
-		option.WithBaseURL(os.Getenv("AIRMUX_URL") + "/inf/v1"),
-		option.WithAPIKey(os.Getenv("AIRMUX_INFERENCE_KEY")),
-	)
-	response, err := client.Responses.New(context.Background(), responses.ResponseNewParams{
-		Model: openai.ChatModel(os.Getenv("AIRMUX_MODEL")),
-		Input: responses.ResponseNewParamsInputUnion{
-			OfString: openai.String("Explain request routing in one sentence."),
-		},
-	})
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(response.OutputText())
-}
-```
-
-Add the SDK to your Go module with `go get github.com/openai/openai-go/v3`.
-
-  </Tab>
   <Tab title="Vercel AI SDK">
-
-Install `ai` and `@ai-sdk/openai-compatible` in your Node project:
-
-```bash
-npm install ai @ai-sdk/openai-compatible
-```
 
 ```typescript
 import { generateText } from "ai";
@@ -138,8 +94,6 @@ console.log(text);
   </Tab>
   <Tab title="LangChain Python">
 
-Install the OpenAI integration with `uv add langchain-openai`, then invoke it with the `airmux` endpoint:
-
 ```python
 import os
 
@@ -158,8 +112,6 @@ print(response.content)
   </Tab>
 </Tabs>
 
-Vercel AI SDK uses its [OpenAI-compatible provider](https://ai-sdk.dev/providers/openai-compatible-providers). LangChain uses the [OpenAI integration](https://docs.langchain.com/oss/python/integrations/chat/openai) with `airmux`'s Chat Completions endpoint.
-
 List models with the OpenAI SDK using `client.models.list()`. Results reflect the models visible to the key's workspace policies and configured credential scopes. See the [model discovery reference](/docs/reference/models-and-providers#inference-model-discovery).
 
-Inference keys begin with `sk-inf-`. Management keys (`sk-cp-`) cannot be used for inference. The [Messages reference](/docs/reference/messages), [Chat Completions reference](/docs/reference/chat-completions), and [Responses reference](/docs/reference/responses) describe supported request fields.
+Inference keys begin with `sk-inf-`. The [Messages reference](/docs/reference/messages), [Chat Completions reference](/docs/reference/chat-completions), and [Responses reference](/docs/reference/responses) describe supported request fields.

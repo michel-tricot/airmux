@@ -100,6 +100,7 @@ def test_playground_streaming_errors_and_recovery(stack: Stack) -> None:
     with running_console(stack) as console:
         console.login(ADMIN_EMAIL, ADMIN_PASSWORD)
         page = console.page
+        page.get_by_role("link", name="Workspace console", exact=True).click()
         console.select_workspace("acceptance")
         page.get_by_role("link", name="Playground", exact=True).click()
         composer = page.get_by_placeholder("Send a message... (Shift+Enter for newline)")

@@ -24,18 +24,17 @@ def test_compose_topologies_project_the_same_image_into_roles() -> None:
     split = yaml.safe_load(split_text)
 
     compact_services = compact["services"]
-    assert "build" not in compact_services["airmux"]
-    assert compact_services["airmux"]["image"] == "${AIRMUX_IMAGE:-airmux:local}"
-    assert compact_services["airmux"]["command"] == "airmux"
+    assert "build" not in compact_services["cli"]
+    assert compact_services["cli"]["image"] == "${AIRMUX_IMAGE:-airmux:local}"
+    assert compact_services["cli"]["command"] == "airmux"
     for name in ("migrate", "taxonomy"):
         assert compact_services[name]["image"] == "${AIRMUX_IMAGE:-airmux:local}"
-        assert compact_services[name]["entrypoint"] == ["/usr/bin/tini", "--", "airmux"]
         assert compact_services[name]["restart"] == "no"
-    assert compact_services["migrate"]["command"][:2] == ["control-plane", "migrate"]
-    assert compact_services["taxonomy"]["command"][:2] == ["control-plane", "taxonomy"]
+        assert compact_services[name]["command"] == name
+        assert compact_services[name]["volumes"] == ["./airmux-config:/config:ro"]
     assert compact_services["migrate"]["depends_on"]["postgres"]["condition"] == "service_healthy"
     assert compact_services["taxonomy"]["depends_on"]["migrate"]["condition"] == "service_completed_successfully"
-    assert compact_services["airmux"]["depends_on"]["taxonomy"]["condition"] == "service_completed_successfully"
+    assert compact_services["cli"]["depends_on"]["taxonomy"]["condition"] == "service_completed_successfully"
 
     services = split["services"]
     assert "setup" not in services
@@ -58,7 +57,7 @@ def test_compose_topologies_project_the_same_image_into_roles() -> None:
 
 
 def test_ci_builds_the_image_once_before_exercising_both_topologies() -> None:
-    workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
+    workflow = yaml.safe_load((ROOT / ".github/workflows/main-ci.yml").read_text(encoding="utf-8"))
     job = workflow["jobs"]["docker"]
     commands = "\n".join(step.get("run", "") for step in job["steps"])
 
@@ -68,3 +67,23 @@ def test_ci_builds_the_image_once_before_exercising_both_topologies() -> None:
     assert "docker compose" in commands
     assert not re.search(r"docker compose .* --build", commands)
     assert "docker image save " not in commands
+
+
+def test_main_ci_dispatch_uploads_the_release_image_reference() -> None:
+    workflow = yaml.safe_load((ROOT / ".github/workflows/main-ci.yml").read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["docker"]["steps"]
+    publish = next(step for step in steps if step.get("name") == "Publish the validated main image")
+    upload = next(step for step in steps if step.get("name") == "Upload the validated image reference")
+
+    assert publish["if"] == "github.ref == 'refs/heads/main'"
+    assert upload["if"] == publish["if"]
+
+
+def test_main_ci_publishes_the_image_it_built() -> None:
+    workflow = yaml.safe_load((ROOT / ".github/workflows/main-ci.yml").read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["docker"]["steps"]
+    build = next(step for step in steps if step.get("name") == "Build the candidate image once")
+    publish = next(step for step in steps if step.get("name") == "Publish the validated main image")
+
+    assert 'echo "image-id=$image_id" >> "$GITHUB_OUTPUT"' in build["run"]
+    assert 'test "$(docker image inspect "$AIRMUX_IMAGE" --format \'{{.Id}}\')" = "${{ steps.image.outputs.image-id }}"' in publish["run"]

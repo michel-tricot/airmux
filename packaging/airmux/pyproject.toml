@@ -1,6 +1,6 @@
 [project]
 name = "airmux"
-version = "0.1.2"
+dynamic = ["version"]
 description = "Self-hosted LLM gateway and management CLI"
 readme = "README.md"
 license = "Elastic-2.0"
@@ -43,6 +43,10 @@ airmux = "cli.main:main"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "../../VERSION"
+pattern = '^(?P<version>[0-9]+\.[0-9]+\.[0-9]+)\s*$'
 
 [tool.hatch.build.targets.wheel]
 packages = [

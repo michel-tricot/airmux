@@ -21,7 +21,8 @@ def test_documented_gateway_initialization_and_curl(gateway, document):
         "HOME": str(gateway.directory),
         "OPENAI_API_KEY": UPSTREAM_KEY,
     }
-    initialize, serve = code_block(document, "airmux gateway init").split("airmux gateway serve")
+    initialize, serve = code_block(document, "airmux gateway init").strip().rsplit("\n", 1)
+    serve = serve.split("airmux gateway serve", 1)[1]
     initialize = initialize.removeprefix("uv tool install airmux\n").replace("'your-provider-key'", shlex.quote(UPSTREAM_KEY))
     subprocess.run(["/bin/bash", "-eu", "-c", initialize], cwd=gateway.directory, env=environment, check=True, capture_output=True)  # noqa: S603 trusted documentation with local fixture credentials
     directory = gateway.directory
@@ -39,7 +40,7 @@ def test_documented_gateway_initialization_and_curl(gateway, document):
         stderr=subprocess.STDOUT,
     )
     eventually(gateway.ready)
-    request = code_block("docs/deployment/gateway.mdx", "curl --fail-with-body").replace("http://127.0.0.1:8080", gateway.url)
+    request = code_block("docs/deployment/gateway.mdx", "curl --fail http").replace("http://127.0.0.1:8080", gateway.url)
     result = subprocess.run(  # noqa: S603 execute the documented curl against the local gateway
         ["/bin/bash", "-eu", "-c", request],
         cwd=gateway.directory,
@@ -54,3 +55,18 @@ def test_documented_gateway_initialization_and_curl(gateway, document):
     completion = json.loads(result.stdout[end:])
     assert completion["choices"][0]["message"]["content"] == TEXT
     assert len(upstream.requests) == 1
+    request = code_block("docs/deployment/gateway.mdx", "curl --no-buffer").replace("http://127.0.0.1:8080", gateway.url)
+    result = subprocess.run(  # noqa: S603 execute the documented streaming curl against the local gateway
+        ["/bin/bash", "-eu", "-c", request],
+        cwd=gateway.directory,
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=15,
+        check=True,
+    )
+    events = [line[6:] for line in result.stdout.splitlines() if line.startswith("data: ")]
+    assert events[-1] == "[DONE]"
+    chunks = [json.loads(event) for event in events[:-1]]
+    assert "".join(choice["delta"].get("content", "") for chunk in chunks for choice in chunk["choices"]) == TEXT
+    assert len(upstream.requests) == 2

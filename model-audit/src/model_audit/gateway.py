@@ -31,7 +31,7 @@ class Gateway:
 
     def require_ready(self) -> None:
         try:
-            response = httpx.get(f"{self.base_url.rstrip('/')}/readyz", timeout=5)
+            response = httpx.get(f"{self.base_url.rstrip('/')}/healthz", timeout=5)
         except httpx.HTTPError as error:
             message = f"gateway at {self.base_url} is not reachable: {error}"
             raise RuntimeError(message) from error

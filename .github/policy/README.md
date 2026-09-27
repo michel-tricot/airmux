@@ -12,10 +12,10 @@ and resolved review conversations. It blocks direct pushes, branch deletion, for
 default branch. The `required` and `dependency-security` checks are bound to the GitHub Actions App, integration ID
 `15368`. Keep these names synchronized with the workflows and the [CI design](../../notes/design/CI.md).
 
-The correctness workflow deliberately skips integration and acceptance jobs and `required` for draft pull requests.
-Marking a pull request ready triggers the full graph. The gate then rejects every dependency result other than success.
-Security audits run on drafts as well; dependency review runs when the workflow detects support. Changes to job
-selection must keep the contributor guide and workflow contract tests accurate.
+PR CI runs the same five fast jobs on draft and ready pull requests. Main CI runs those jobs and the installed-candidate
+acceptance jobs after merge. Each workflow's `required` gate rejects every dependency result other than success.
+Security audits run on pull requests. Changes to job selection must keep the contributor guide
+and workflow contract tests accurate.
 
 The policy uses loose status checks: a conflict-free branch with passing required checks may merge without being
 up to date with `main`. It does not configure a merge queue. The [CI design](../../notes/design/CI.md) records the

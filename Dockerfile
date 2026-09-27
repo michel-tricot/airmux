@@ -45,6 +45,11 @@ RUN bun install --frozen-lockfile
 RUN bun run --filter '@workspace/gateway-console' build
 
 FROM python:3.13-slim-bookworm AS image
+ARG AIRMUX_VERSION
+ARG AIRMUX_REVISION
+LABEL org.opencontainers.image.source="https://github.com/michel-tricot/airmux" \
+    org.opencontainers.image.version="$AIRMUX_VERSION" \
+    org.opencontainers.image.revision="$AIRMUX_REVISION"
 RUN groupadd --system --gid 10001 airmux && useradd --system --uid 10001 --gid airmux --home-dir /state --shell /usr/sbin/nologin airmux \
     && install -d -m 0700 -o airmux -g airmux /state /state/runtime /state/secrets /state/data-plane \
     && apt-get update && apt-get install -y --no-install-recommends nginx gettext-base tini \
@@ -53,8 +58,8 @@ COPY --from=selected-python-build /app /app
 COPY --from=console-build /app/apps/console/dist/public /usr/share/nginx/html
 COPY deploy/docker /app/deploy/docker
 COPY taxonomy/taxonomy.yml /app/taxonomy/taxonomy.yml
-ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 AIRMUX_CONFIG=/app/deploy/docker/airmux.yml \
-    CONTROL_PLANE_UPSTREAM=127.0.0.1:8000 DATA_PLANE_UPSTREAM=127.0.0.1:8081 \
+ENV PATH="/app/.venv/bin:$PATH" HOME=/state PYTHONUNBUFFERED=1 AIRMUX_CONFIG=/app/deploy/docker/airmux.yml \
+    AIRMUX_CONSOLE_ROOT=/usr/share/nginx/html CONTROL_PLANE_UPSTREAM=127.0.0.1:8000 DATA_PLANE_UPSTREAM=127.0.0.1:8081 \
     AIRMUX_DATAPLANE_CONTROL_PLANE_URL=http://127.0.0.1:8000 FORWARDED_ALLOW_IPS=127.0.0.1
 WORKDIR /state
 EXPOSE 8000 8080 8081

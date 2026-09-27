@@ -1,9 +1,6 @@
 name: Install candidate
-description: Download, verify, and install the sdist-derived candidate with locked dependencies
+description: Verify and install a downloaded sdist-derived candidate with locked dependencies
 inputs:
-  artifact-id:
-    description: Candidate artifact ID
-    required: true
   python-version:
     description: Python version
     default: '3.13'
@@ -13,10 +10,6 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: ./.github/actions/download-artifact
-      with:
-        artifact-id: ${{ inputs.artifact-id }}
-        path: candidate
     - run: |
         uv export --locked --all-packages --all-groups --no-emit-workspace --no-hashes --output-file "$RUNNER_TEMP/constraints.txt"
         cd candidate

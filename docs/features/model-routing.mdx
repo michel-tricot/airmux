@@ -3,14 +3,12 @@ title: "Model routing and failover"
 description: "Route catalog model IDs across provider families, select healthy credentials, and define bounded fallback plans."
 ---
 
-Every inference request names one catalog model. `airmux` resolves that model to a provider profile, validates the
+Every inference request specifies one catalog model. `airmux` resolves that model to a provider profile, validates the
 request, chooses a credential, and translates the request into the provider's wire format.
 
 ## Model IDs
 
-Catalog IDs use `provider/model` form in managed deployments, for example `openai/gpt-4o-mini` or
-`anthropic/claude-sonnet-4-6`. The prefix selects the provider entry; the catalog maps the public ID to the upstream
-model name.
+Catalog IDs use `provider/model` form in managed deployments, for example `openai/gpt-4o-mini` or `anthropic/claude-sonnet-4-6`. 
 
 ```bash
 airmux models list
@@ -23,9 +21,6 @@ Each model declares:
 - Context window and maximum output tokens
 - Input and output modalities
 - Capabilities such as streaming, tools, reasoning, and structured output
-- Parameter support where the provider or model has a known restriction
-
-`airmux` checks capabilities and modalities before it resolves a provider credential.
 
 ## Credential selection
 
@@ -58,8 +53,8 @@ would drop a supplied parameter.
 
 A fallback rule names up to four backup model IDs and the failure classes that trigger them: `rate_limited`,
 `upstream_unavailable`, and `timeout`. Its deadline covers secret resolution and every attempt until response headers
-arrive; it does not cap the duration of an established stream. See
-[model fallbacks](/docs/policies#model-fallbacks) for the rule shape and limits.
+arrive. It does not cap the duration of an established stream. See
+[model fallbacks](/docs/guides/policies#model-fallbacks) for the rule shape and limits.
 
 Every backup route is evaluated against the same workspace restrictions. A fallback cannot escape an allowlist, price
 ceiling, credential rule, capability check, or parameter policy. Its effective output limit is recalculated from that
@@ -70,4 +65,4 @@ backup model's catalog ceiling.
   and each attempt gets its own usage record.
 </Info>
 
-Configure failover in [workspace policies](/docs/policies#model-fallbacks).
+Configure failover in [workspace policies](/docs/guides/policies#model-fallbacks).

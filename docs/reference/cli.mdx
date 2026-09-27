@@ -128,6 +128,8 @@ Each command group's help keeps its subcommands in one flat list.
 
 ## Getting started and connection commands
 
+You can also set up an instance through the web app. See the [quickstart](/docs/quickstart) for both setup paths.
+
 | Command                                            | Purpose                                                                                                       |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | `quickstart`                                       | Claim or resume an instance, create a workspace and inference key, import provider keys, and verify inference |
@@ -141,31 +143,46 @@ Each command group's help keeps its subcommands in one flat list.
 | Command group        | Commands                           |
 | -------------------- | ---------------------------------- |
 | `orgs`               | `create`, `list`, `mine`, `switch` |
-| `orgs members`       | `add`, `list`, `remove`            |
+| `orgs members`       | `add`, `list`, `role`, `remove`    |
+| `orgs invitations`   | `create`, `list`, `reissue`, `revoke` |
 | `workspaces`         | `create`, `list`, `use`            |
-| `workspaces members` | `add`, `list`, `remove`            |
-| `users`              | `list`                             |
+| `workspaces members` | `add`, `list`, `role`, `remove`    |
+| `users`              | `list`, `role`                     |
 | `service-accounts`   | `create`, `list`                   |
+
+Set or change a user's role at each scope:
+
+```bash
+airmux users role "$USER_ID" auditor
+airmux orgs members role "$USER_ID" --role admin
+airmux workspaces members role "$USER_ID" --workspace production --role viewer
+```
+
+Instance roles are `owner`, `auditor`, `data_plane`, or `none` to remove the role. Organization roles are
+`owner`, `admin`, `member`, or `data_plane`. Workspace roles are `admin`, `member`, or `viewer`.
+Organization commands use the active organization. Workspace commands use that organization and the selected workspace.
+The membership commands assign a role even when the user is not yet a member, just like `members add`.
+All three commands accept `-f table|json|text` and enforce the existing authorization and owner protections.
 
 ## Gateway resource commands
 
-| Command group          | Commands                                 |
-| ---------------------- | ---------------------------------------- |
-| `inference-keys`       | `create`, `list`, `revoke`               |
-| `management-keys`      | `create`, `list`, `revoke`               |
-| `provider-credentials` | `add`, `list`, `rotate`, `disable`, `rm` |
-| `providers`            | `list`                                   |
-| `models`               | `list`                                   |
-| `policies`             | `create`, `list`, `update`, `delete`     |
-| `gateways`             | `list`                                   |
-| `events`               | `list`, `tail`                           |
-| `catalog`              | `apply`                                  |
+| Command group          | Commands                                               |
+| ---------------------- | ------------------------------------------------------ |
+| `inference-keys`       | `create`, `list`, `revoke`                             |
+| `management-keys`      | `create`, `list`, `revoke`                             |
+| `provider-credentials` | `add`, `list`, `rotate`, `enable`, `disable`, `rm`    |
+| `providers`            | `list`                                                 |
+| `models`               | `list`                                                 |
+| `policies`             | `create`, `list`, `update`, `delete`                   |
+| `gateways`             | `list`                                                 |
+| `events`               | `list`, `tail`                                         |
+| `catalog`              | `apply`                                                |
 
 Run `airmux <group> <command> --help` for the exact options installed on your machine.
 
 Define policy rules inline in the JSON configuration's `definition.rules` array, with one `match` and one `action` per rule.
 Pass the file to `airmux policies create CONFIGURATION` or `airmux policies update POLICY_ID CONFIGURATION`.
-See [Create a workspace policy](/docs/guides/policy-workflow) for a complete example.
+See [Create a workspace policy](/docs/guides/policies#create-a-workspace-policy) for a complete example.
 
 ## Automation pattern
 

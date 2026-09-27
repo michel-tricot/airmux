@@ -171,7 +171,7 @@ def test_unexpected_worker_failure_terminates_a_uvicorn_process():
         deadline = time.monotonic() + 5
         while time.monotonic() < deadline and process.poll() is None:
             try:
-                served = httpx2.get(f"http://127.0.0.1:{port}/healthz", timeout=0.2).status_code == 200
+                served = httpx2.get(f"http://127.0.0.1:{port}/healthz", timeout=0.2).status_code == 503
             except httpx2.HTTPError:
                 time.sleep(0.02)
                 continue

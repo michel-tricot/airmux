@@ -147,7 +147,7 @@ def test_installed_gateway_with_external_taxonomy(tmp_path):
             assert port is not None
             command = [executable, "gateway", "serve", "--config", str(config_path), "--port", str(port)]
             with httpx.Client(base_url=f"http://127.0.0.1:{port}", timeout=5) as client:
-                eventually(lambda: client.get("/readyz").status_code == 200)
+                eventually(lambda: client.get("/healthz").status_code == 200)
                 headers = {"Authorization": f"Bearer {key}"}
                 body = {"model": "echo", "messages": [{"role": "user", "content": "hi"}]}
                 verify_gateway_requests(client, headers, body, key)
@@ -159,7 +159,7 @@ def test_installed_gateway_with_external_taxonomy(tmp_path):
                 process.send_signal(signal.SIGTERM)
                 assert process.wait(timeout=10) in {0, -signal.SIGTERM}
                 process = subprocess.Popen(command, cwd=tmp_path, env=environment, stdout=log, stderr=subprocess.STDOUT)  # noqa: S603 trusted gateway
-                eventually(lambda: client.get("/readyz").status_code == 200)
+                eventually(lambda: client.get("/healthz").status_code == 200)
                 assert client.post("/inf/v1/chat/completions", headers=headers, json=changed).status_code == 200
     finally:
         if process is not None and process.poll() is None:

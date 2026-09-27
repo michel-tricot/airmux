@@ -140,9 +140,9 @@ def diagnostic_rows(control_plane_url: str, gateway_url: str) -> list[dict[str, 
     with httpx.Client(timeout=5.0) as client:
         return [
             config_check,
-            _request_check("Control plane", lambda: client.get(f"{control_plane_url.rstrip('/')}/readyz")),
+            _request_check("Control plane", lambda: client.get(f"{control_plane_url.rstrip('/')}/healthz")),
             _request_check("Authentication", lambda: client.get(f"{control_plane_url.rstrip('/')}/api/v1/auth/me", headers=headers)),
-            _request_check("Gateway", lambda: client.get(f"{gateway_url.rstrip('/')}/readyz")),
+            _request_check("Gateway", lambda: client.get(f"{gateway_url.rstrip('/')}/healthz")),
         ]
 
 

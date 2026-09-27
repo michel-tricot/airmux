@@ -413,7 +413,7 @@ class FastProvider:
                 scheme = "https" if self.protocol == "https" else "http"
                 self.url = f"{scheme}://127.0.0.1:{self.port}"
             with httpx2.Client(verify=self.ssl_context(), trust_env=False, timeout=1) as client:
-                response = client.get(self.url + "/readyz")
+                response = client.get(self.url + "/healthz")
             return response.status_code == 200 and response.http_version == "HTTP/1.1"
 
         eventually(ready)

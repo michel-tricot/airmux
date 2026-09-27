@@ -47,7 +47,7 @@ def deployment():
     url = os.environ["DEPLOYMENT_URL"]
     compose = ("compose", "-p", project, "-f", compose_file)
     compact = compose_file == "docker-compose.yml"
-    gateways = ("airmux",) if compact else ("data-plane-1", "data-plane-2")
+    gateways = ("cli",) if compact else ("data-plane-1", "data-plane-2")
     gateway = gateways[0]
     container = docker(*compose, "ps", "-q", gateway)
     image = docker("inspect", "--format", "{{.Config.Image}}", container)
@@ -71,6 +71,7 @@ def deployment():
     )
     try:
         with httpx.Client(base_url=url, headers={"X-Requested-With": "XMLHttpRequest"}, timeout=10) as client:
+            eventually(lambda: client.get("/healthz").status_code == 200)
             yield client, compose, gateways, compact
     finally:
         try:
@@ -106,7 +107,7 @@ def assert_unprivileged(compose, service, expected):
 def assert_process_layout(client, compose, gateways, compact):
     assert_installed_packages(compose, gateways[0])
     lifecycle = ("migrate", "taxonomy")
-    services = (*lifecycle, "airmux") if compact else (*lifecycle, "control-plane", *gateways, "console")
+    services = (*lifecycle, "cli") if compact else (*lifecycle, "control-plane", *gateways, "console")
     containers = [docker(*compose, "ps", "--all", "--quiet", service) for service in services]
     assert len({docker("inspect", "--format", "{{.Image}}", container) for container in containers}) == 1
     for service in lifecycle:
@@ -164,7 +165,11 @@ def assert_installed_packages(compose, gateway):
 
 def assert_control_plane_outage(client, compose, path, headers, request):
     service_action(compose, "stop", "control-plane")
-    eventually(lambda: client.get("/healthz").status_code >= 500)
+    eventually(lambda: client.get("/healthz").status_code == 503)
+    gateway = docker(*compose, "ps", "-q", "data-plane-1")
+    assert '"status":"ready"' in docker(
+        "exec", gateway, "python", "-c", "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8081/healthz').read().decode())"
+    )
     assert all(client.post(path, headers=headers, json=request).status_code == 200 for _ in range(10))
 
 

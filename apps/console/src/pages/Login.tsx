@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLocation } from 'wouter';
 import * as z from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -39,6 +40,7 @@ export default function Login({
   description?: string;
 } = {}) {
   const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
   const [mode, setMode] = useState<InitialLoginMode>(initialMode);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const { data: claim } = useClaim();
@@ -54,11 +56,15 @@ export default function Login({
   const login = useLogin({
     mutation: {
       onSuccess,
+      meta: { silentError: true },
     },
   });
   const signup = useSignup({
     mutation: {
-      onSuccess,
+      onSuccess: (me) => {
+        if (unclaimedInstance && me.instance_role === 'owner' && !invitationToken) navigate('/onboarding');
+        onSuccess(me);
+      },
       meta: { silentError: true },
     },
   });

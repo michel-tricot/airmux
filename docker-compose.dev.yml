@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: airmux
       POSTGRES_DB: airmux
     ports:
-      - "5432:5432"
+      - "${AIRMUX_DEV_POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata-dev:/var/lib/postgresql/data
     healthcheck:

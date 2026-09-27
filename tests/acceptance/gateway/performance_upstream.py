@@ -99,7 +99,7 @@ def serve(  # noqa: PLR0913, PLR0917 CLI flags define the benchmark workload
     upstream = Starlette(
         routes=[
             Route("/chat/completions", complete, methods=["POST"]),
-            Route("/readyz", ready),
+            Route("/healthz", ready),
             Route("/connections", connections, methods=["GET", "DELETE"]),
         ]
     )

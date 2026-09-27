@@ -6,7 +6,6 @@ import stat
 import subprocess
 import sys
 from pathlib import Path
-from shlex import quote
 from uuid import uuid4
 
 import httpx
@@ -46,8 +45,8 @@ def test_documented_gateway_container_serves_from_a_fresh_configuration_director
     recipe = next(block for block in re.findall(r"```bash\n(.*?)```", guide, re.DOTALL) if "docker run" in block)
     command = (
         recipe.replace("docker run", f"docker run -d --name {gateway} --network {network}")
-        .replace("-p 8080:8081", "-p 127.0.0.1::8081")
-        .replace("airmux:local", quote(image))
+        .replace("-p 127.0.0.1:8080:8081", "-p 127.0.0.1::8081")
+        .replace("airmux:local", image)
     )
     docker("network", "create", network)
     try:
@@ -78,7 +77,7 @@ def test_documented_gateway_container_serves_from_a_fresh_configuration_director
         assert result.returncode == 0, result.stderr
         address = docker("port", gateway, "8081/tcp")
         with httpx.Client(base_url=f"http://{address}", timeout=5) as client:
-            eventually(lambda: client.get("/readyz").status_code == 200)
+            eventually(lambda: client.get("/healthz").status_code == 200)
             body = {"model": "openai/gpt-5.4-mini", "messages": [{"role": "user", "content": "hello"}]}
             headers = {"Authorization": f"Bearer {key}"}
             assert client.post("/inf/v1/chat/completions", json=body).status_code == 401

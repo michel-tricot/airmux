@@ -4,7 +4,7 @@ description: "Export airmux metrics through OTLP or scrape Prometheus endpoints,
 ---
 
 `airmux` records operational metrics through OpenTelemetry. Each process defaults its `service.name` to
-`airmux-control-plane` or `airmux-data-plane`; set `OTEL_SERVICE_NAME` to override it.
+`airmux-control-plane` or `airmux-data-plane`. Set `OTEL_SERVICE_NAME` to override it.
 
 ## Export metrics with OTLP
 
@@ -22,7 +22,7 @@ certificate, timeout, compression, and periodic export interval variables.
 ## Scrape with Prometheus
 
 Each standalone control-plane and data-plane listener exposes unauthenticated Prometheus metrics at `/metrics`. The
-all-in-one public listener does not proxy this path. Scrape the internal listeners from a monitoring network:
+public proxy does not expose this path. Scrape the internal listeners from a monitoring network:
 
 ```yaml
 scrape_configs:

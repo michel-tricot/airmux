@@ -102,7 +102,7 @@ def test_installed_gateway_serves_buffered_and_streaming_requests_and_shuts_down
                 while time.monotonic() < deadline:
                     assert process.poll() is None, log_path.read_text()
                     try:
-                        if client.get("/readyz").status_code == 200:
+                        if client.get("/healthz").status_code == 200:
                             break
                     except httpx.HTTPError:
                         pass

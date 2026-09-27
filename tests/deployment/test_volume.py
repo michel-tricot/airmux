@@ -88,4 +88,4 @@ def test_image_defaults_to_airmux_and_rejects_unknown_roles():
             check=False,
         )
         assert result.returncode == 2
-        assert result.stderr.startswith("Expected ")
+        assert "Expected airmux, console, control-plane, data-plane, migrate, or taxonomy" in result.stderr.splitlines()
