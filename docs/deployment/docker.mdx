@@ -7,12 +7,13 @@ Docker Compose runs airmux and Postgres. The CLI is available inside the `cli` c
 
 ## Start
 
-Follow the [quickstart](/docs/quickstart) to download the release's Compose file, create `airmux-config`, and start the stack:
+Follow the [quickstart](/docs/quickstart) to download the release's Compose file and start the stack:
 
 ```bash
-mkdir -p airmux-config
 docker compose up -d --wait
 ```
+
+Compose creates `airmux-config` automatically. The stack uses the bundled configuration until you add a custom YAML file.
 
 If you need to customize the deployment see [Customize the runtime YAML](#customize-the-runtime-yaml).
 
@@ -42,7 +43,8 @@ does not rotate the password already stored by Postgres.
 ## Customize the runtime YAML
 
 Use this when you need to change the control-plane or data-plane settings in the
-[configuration reference](/docs/reference/configuration). Copy the default YAML from your running image:
+[configuration reference](/docs/reference/configuration). If Docker created `airmux-config` as root on Linux, first take ownership with
+`sudo chown "$(id -u):$(id -g)" airmux-config`. Copy the default YAML from your running image:
 
 ```bash
 mkdir -p airmux-config
