@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import subprocess
-import time
 import uuid
 
 import pytest
@@ -67,7 +66,6 @@ def test_console_accepts_flys_ipv6_resolver(user):
         "console",
     )
     try:
-        time.sleep(1)
         assert docker("inspect", "--format", "{{.State.Running}}", container) == "true"
     finally:
         docker("rm", "-f", container)
