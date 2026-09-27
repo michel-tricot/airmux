@@ -1,4 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle, Badge } from '@/components/ui/elements';
+import { Link } from 'wouter';
+import { Button, Card, CardContent, CardHeader, CardTitle, Badge } from '@/components/ui/elements';
 import { Building2, Users, Key, Server, Activity } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { useOrgSummary } from '@/features/orgs/hooks';
@@ -13,6 +14,7 @@ import { useAuthorization } from '@/features/permissions/hooks';
 import { managementKeyAccess } from '@/features/keys/policy';
 import { orgAccess } from '@/features/orgs/policy';
 import { telemetryAccess } from '@/features/telemetry/policy';
+import { onboardingAccess } from '@/features/onboarding/policy';
 import { userAccess } from '@/features/users/policy';
 
 export default function Dashboard() {
@@ -55,7 +57,17 @@ export default function Dashboard() {
 
   return (
     <PageShell className="space-y-8">
-      <PageHeader title="System Overview" description="Instance-wide totals and the data planes reporting in." />
+      <PageHeader
+        title="System Overview"
+        description="Instance-wide totals and the data planes reporting in."
+        actions={
+          authorization.can(onboardingAccess) && (
+            <Button asChild variant="outline">
+              <Link href="/onboarding">Resume setup</Link>
+            </Button>
+          )
+        }
+      />
 
       {statsFailed && (
         <ErrorState

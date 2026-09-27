@@ -1,19 +1,15 @@
 import { useState } from 'react';
-import * as z from 'zod';
-import { Card, Button, Input, Badge } from '@/components/ui/elements';
+import { Card, Button, Badge } from '@/components/ui/elements';
 import { Building2, Plus } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { useOrgs, useCreateOrgMutation } from '@/features/orgs/hooks';
 import { DataTable } from '@/components/shared/data-table';
 import { TableLink } from '@/components/shared/table-link';
-import { FormDialog } from '@/components/shared/form-dialog';
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { CreateOrganizationDialog } from '@/components/shared/create-organization-dialog';
 import { PageHeader, PageShell } from '@/components/shared/page-shell';
 import { SearchField } from '@/components/shared/search-field';
 import { useAuthorization } from '@/features/permissions/hooks';
 import { orgAccess } from '@/features/orgs/policy';
-
-const createOrgSchema = z.object({ name: z.string().min(1, 'Name is required') });
 
 export default function Organizations() {
   const orgsQuery = useOrgs();
@@ -90,34 +86,12 @@ export default function Organizations() {
       </Card>
 
       {canCreate && (
-        <FormDialog
+        <CreateOrganizationDialog
           open={createOpen}
           onOpenChange={setCreateOpen}
-          title="Create Organization"
-          description="Set up a new organization."
-          schema={createOrgSchema}
-          defaultValues={{ name: '' }}
           onSubmit={(values) => createOrg.mutateAsync({ data: values })}
-          submitLabel="Create Organization"
-          pendingLabel="Creating..."
           pending={createOrg.isPending}
-        >
-          {(form) => (
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Acme Corp" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
-        </FormDialog>
+        />
       )}
     </PageShell>
   );

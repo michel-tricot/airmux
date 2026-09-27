@@ -2,7 +2,7 @@ import type * as Api from '@workspace/api-client-react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import App from '@/App';
 import { ORG, enveloped, server } from './msw';
 
@@ -135,8 +135,11 @@ describe('sign-in gate', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Usage' })).toBeInTheDocument();
   });
 
-  it('creates the first account directly', async () => {
+  it('leads the instance claimant into setup', async () => {
     server.use(
+      http.get('/api/v1/instance/provider-credentials', () => enveloped([])),
+      http.get('/api/v1/instance/taxonomy', () => HttpResponse.json({ data: { providers: [], models: [] } })),
+      http.get('/api/v1/enroll', () => HttpResponse.json({ data: { orgs: [], personal_org_id: null, pending_invitations: [] } })),
       http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
       http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: false, public_signup: false } })),
       http.post('/api/v1/auth/signup', () =>
@@ -158,7 +161,10 @@ describe('sign-in gate', () => {
     await user.type(screen.getByLabelText('Password'), 'secure-password');
     await user.click(screen.getByRole('button', { name: 'Create account' }));
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Usage' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Set up your instance' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/onboarding');
+    expect(screen.queryByRole('navigation', { name: 'Instance navigation' })).not.toBeInTheDocument();
+    expect(await screen.findByText('0 of 2 steps complete')).toBeInTheDocument();
   });
 
   it('explains that public signup is closed and directs visitors to an administrator', async () => {
@@ -176,10 +182,17 @@ describe('sign-in gate', () => {
   });
 
   it.each(['unknown account', 'incorrect password'])('keeps the sign-in error visible for an %s', async () => {
+    let loginAttempted = false;
     server.use(
-      http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
+      http.get('/api/v1/auth/me', async () => {
+        if (loginAttempted) await delay(100);
+        return new HttpResponse(null, { status: 401 });
+      }),
       http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true, public_signup: true } })),
-      http.post('/api/v1/auth/login', () => HttpResponse.json({ detail: 'Invalid credentials' }, { status: 401 })),
+      http.post('/api/v1/auth/login', () => {
+        loginAttempted = true;
+        return HttpResponse.json({ detail: 'Invalid credentials' }, { status: 401 });
+      }),
     );
     const user = userEvent.setup();
     renderAt('/');

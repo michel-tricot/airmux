@@ -38,10 +38,17 @@ Run the full platform on one machine. You need Docker with Compose 2.24.4+ and a
 curl -fsSLO https://github.com/michel-tricot/airmux/releases/latest/download/docker-compose.yml
 mkdir -p airmux-config
 docker compose up -d --wait
+```
+
+Open [localhost:8080](http://localhost:8080) and follow the setup steps. Then create a workspace and try **Playground**.
+
+Or use the CLI:
+
+```bash
 docker compose exec cli airmux quickstart --url http://localhost:8080
 ```
 
-Enter a provider key when prompted. `quickstart` sets up your account and workspace, prints an inference key, and sends
+Follow the prompts. `quickstart` sets up your account and workspace, prints an inference key, and sends
 a real model request. Open [localhost:8080](http://localhost:8080) for the console, where the request appears with its
 model, tokens, and estimated cost.
 

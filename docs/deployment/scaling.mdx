@@ -12,6 +12,13 @@ The `docker-compose.split.yml` example runs Postgres, one control plane, the web
 ```bash
 docker build -t airmux:local .
 docker compose -p airmux-split -f docker-compose.split.yml up -d --wait
+```
+
+Open [localhost:8080](http://localhost:8080) and follow the setup steps.
+
+Or use the CLI to set up and verify inference:
+
+```bash
 airmux quickstart --url http://localhost:8080
 ```
 

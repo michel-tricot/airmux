@@ -28,7 +28,9 @@ AIRMUX_PUBLIC_URL=http://localhost:9000
 Set these in `.env` and restart Compose. For a public deployment, terminate TLS at a
 reverse proxy and set `AIRMUX_PUBLIC_URL` to the exact HTTPS origin.
 
-After the HTTPS origin is reachable, claim the instance through that origin:
+Once your deployment is available, open its URL in a browser and follow the setup steps.
+
+Or set up the instance through the CLI using the same URL:
 
 ```bash
 docker compose exec cli airmux quickstart --url https://airmux.example.com

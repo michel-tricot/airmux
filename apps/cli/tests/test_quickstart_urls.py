@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
@@ -240,6 +241,51 @@ def test_quickstart_uses_a_model_backed_by_a_configured_provider():
     )
 
     assert configured_model(cast("httpx.Client", client)) == "anthropic/claude"
+
+
+@pytest.mark.parametrize(
+    ("requested_name", "answer", "existing", "expected_name"),
+    [
+        ("", "Acme AI\n", False, "Acme AI"),
+        ("", "\n", False, "example.com"),
+        ("Flag name", "", False, "Flag name"),
+        ("", None, False, "example.com"),
+        ("", "", True, "Existing"),
+    ],
+)
+def test_quickstart_organization_name(monkeypatch, requested_name, answer, existing, expected_name):
+    organization = OrgOut(id=PROVIDER_ONE, name="Existing", slug="existing", personal_for=None, created_at=NOW, updated_at=NOW)
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        nonlocal organization
+        if request.url.path == "/api/v1/enroll":
+            return httpx.Response(
+                200,
+                json={
+                    "data": {
+                        "orgs": [organization.model_dump(mode="json")] if existing else [],
+                        "personal_org_id": str(organization.id) if existing else None,
+                        "pending_invitations": [],
+                    }
+                },
+            )
+        assert request.url.path == "/api/v1/enroll/org"
+        organization = organization.model_copy(update={"name": json.loads(request.content)["name"]})
+        return httpx.Response(200, json={"data": organization.model_dump(mode="json")})
+
+    command = typer.Typer()
+
+    @command.command()
+    def create():
+        monkeypatch.setattr("sys.stdin.isatty", lambda: answer is not None)
+        with httpx.Client(base_url="http://control-plane", transport=httpx.MockTransport(handle)) as client:
+            assert auth._personal_org(client, "owner@example.com", requested_name).name == expected_name
+
+    result = runner.invoke(command, input=answer)
+
+    assert result.exit_code == 0, result.output
+    assert organization.name == expected_name
+    assert ("Organization name [example.com]" in result.output) is bool(answer)
 
 
 def test_quickstart_creates_a_management_key_without_replacing_the_active_one():

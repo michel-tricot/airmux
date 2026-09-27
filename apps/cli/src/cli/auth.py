@@ -196,8 +196,11 @@ def _personal_org(client: httpx.Client, email: str, requested_name: str) -> OrgO
     if existing is not None:
         _step(f"Organization [bold]{existing.name}[/bold]")
         return existing
+    name = requested_name or email.rsplit("@", maxsplit=1)[1]
+    if not requested_name and sys.stdin.isatty():
+        name = typer.prompt("Organization name", default=name)
     organization = _payload_or_die(
-        client.post("/api/v1/enroll/org", json={"name": requested_name or email.split("@", maxsplit=1)[0]}),
+        client.post("/api/v1/enroll/org", json={"name": name}),
         "org creation",
         OrgOut,
     )
@@ -311,7 +314,7 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
     control_plane_url: str = typer.Option("", help="Control plane API URL, for split development deployments"),
     email: str = typer.Option(..., prompt="Email", help="Email for the first account"),
     password: str = typer.Option(..., prompt="Password", hide_input=True, confirmation_prompt=True, help="At least 8 characters"),
-    org: str = typer.Option("", help="Organization name; defaults to your email name"),
+    org: str = typer.Option("", help="Organization name; prompted when creating one, with your email domain as the default"),
     gateway_url: str = typer.Option("", help="Gateway URL, for split development deployments"),
     openai_key: str = typer.Option("", help="OpenAI key; otherwise read from OPENAI_API_KEY or prompted for"),
     anthropic_key: str = typer.Option("", help="Anthropic key; otherwise read from ANTHROPIC_API_KEY or prompted for"),

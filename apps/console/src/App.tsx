@@ -22,8 +22,10 @@ import { workspaceRoutes } from '@/pages/app/workspace/routes';
 import { orgRoutes } from '@/pages/app/routes';
 import { instanceRoutes } from '@/pages/instance-routes';
 import { useRequiredParam } from '@/lib/route';
+import { onboardingAccess } from '@/features/onboarding/policy';
 import { PlaygroundProvider } from '@/features/playground/state';
 
+const Onboarding = lazy(() => import('@/pages/Onboarding'));
 const CliApprove = lazy(() => import('@/pages/CliApprove'));
 const Invite = lazy(() => import('@/pages/Invite'));
 const AppOrgPicker = lazy(() => import('@/pages/app/OrgPicker'));
@@ -64,7 +66,7 @@ export function createQueryClient(): QueryClient {
   });
 
   function refreshSession(error: unknown) {
-    if (isApiErrorStatus(error, 401)) void client.invalidateQueries({ queryKey: meKey, exact: true });
+    if (isApiErrorStatus(error, 401) && client.getQueryData(meKey)) void client.invalidateQueries({ queryKey: meKey, exact: true });
   }
 
   return client;
@@ -210,6 +212,17 @@ function Router() {
 
   if (!user) return <Login />;
 
+  if (location === '/onboarding') {
+    if (!user.instance_role) return <Redirect to="/org" />;
+    return (
+      <RoutedErrorBoundary>
+        <AuthorizationProvider scope={{ level: 'instance' }}>
+          <AuthorizedRoute component={Onboarding} access={onboardingAccess} level="instance" />
+        </AuthorizationProvider>
+      </RoutedErrorBoundary>
+    );
+  }
+
   if (location === '/cli' || location.startsWith('/cli/')) {
     return (
       <RoutedErrorBoundary>
@@ -230,7 +243,7 @@ function Router() {
     return <AppSection />;
   }
 
-  if (location === '/') return <Redirect to={orgId ? '/org' : '/orgs'} replace />;
+  if (location === '/') return <Redirect to={orgId ? '/org' : user.instance_role ? '/instance' : '/orgs'} replace />;
 
   if (!user.instance_role) return <Redirect to="/org" />;
 
