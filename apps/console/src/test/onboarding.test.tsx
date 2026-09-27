@@ -132,6 +132,22 @@ describe('instance setup', () => {
     expect(await screen.findByText('0 of 2 steps complete')).toBeVisible();
   });
 
+  it('offers membership recovery when the existing organization is no longer accessible', async () => {
+    credentials = [credential];
+    server.use(http.get('/api/v1/enroll', () => HttpResponse.json({ data: { orgs: [], personal_org_id: ORG.id, pending_invitations: [] } })));
+    renderSetup();
+    expect(await screen.findByText('Restore organization access')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Create organization' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Finish setup' })).toBeDisabled();
+    expect(screen.getByRole('link', { name: 'View invitations' })).toHaveAttribute('href', '/orgs');
+    server.use(http.get('/api/v1/enroll', () => HttpResponse.json({ data: { orgs: [ORG], personal_org_id: ORG.id, pending_invitations: [] } })));
+    await userEvent.click(screen.getByRole('button', { name: 'Check access' }));
+    expect(await screen.findByText('2 of 2 steps complete')).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: 'Finish setup' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Usage' })).toBeVisible();
+    expect(window.localStorage.getItem('airmux_org_id')).toBe(ORG.id);
+  });
+
   it('keeps setup incomplete when saving a key fails', async () => {
     server.use(http.post('/api/v1/instance/provider-credentials', () => HttpResponse.json({ detail: 'Key could not be saved' }, { status: 400 })));
     const user = userEvent.setup();

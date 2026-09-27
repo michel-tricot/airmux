@@ -99,6 +99,24 @@ function SetupSteps() {
             />
             {hasOrg ? (
               <p className="text-sm text-success">{organization?.name} is ready</p>
+            ) : enrollment.data.personal_org_id !== null ? (
+              <Alert>
+                <div className="space-y-3">
+                  <AlertTitle>Restore organization access</AlertTitle>
+                  <AlertDescription>
+                    Your organization already exists, but you are no longer a member. Ask an organization owner to invite you back, then return here
+                    to finish setup.
+                  </AlertDescription>
+                  <div className="flex flex-wrap gap-3">
+                    <Button asChild variant="outline">
+                      <Link href="/orgs">View invitations</Link>
+                    </Button>
+                    <Button variant="ghost" disabled={enrollment.isFetching} onClick={() => enrollment.refetch()}>
+                      Check access
+                    </Button>
+                  </div>
+                </div>
+              </Alert>
             ) : (
               <Button onClick={() => setCreateOpen(true)}>Create organization</Button>
             )}
