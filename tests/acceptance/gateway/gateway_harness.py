@@ -200,6 +200,10 @@ class Gateway:
         return httpx.get(f"{self.url}/healthz", timeout=1).status_code == 200
 
     def launch(self, workers: int = 1) -> None:
+        self.port = None
+        self.log.seek(0)
+        self.log.truncate()
+        self.log.flush()
         self.process = subprocess.Popen(  # noqa: S603 executable is the installed gateway supplied by the test environment
             [
                 self.executable,
