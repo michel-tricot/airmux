@@ -67,6 +67,7 @@ def initialize(directory: Path, taxonomy_path: Path | None = None) -> None:
             "airmux.yml": yaml.safe_dump(config, sort_keys=False),
             **taxonomy_file,
         },
+        private_directory=True,
     )
 
 
