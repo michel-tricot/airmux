@@ -62,7 +62,7 @@ export default function Login({
   const signup = useSignup({
     mutation: {
       onSuccess: (me) => {
-        if (unclaimedInstance && me.instance_role === 'owner' && !invitationToken) navigate('/instance/setup');
+        if (unclaimedInstance && me.instance_role === 'owner' && !invitationToken) navigate('/onboarding');
         onSuccess(me);
       },
       meta: { silentError: true },

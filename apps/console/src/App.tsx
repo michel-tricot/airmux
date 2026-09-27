@@ -22,8 +22,10 @@ import { workspaceRoutes } from '@/pages/app/workspace/routes';
 import { orgRoutes } from '@/pages/app/routes';
 import { instanceRoutes } from '@/pages/instance-routes';
 import { useRequiredParam } from '@/lib/route';
+import { onboardingAccess } from '@/features/onboarding/policy';
 import { PlaygroundProvider } from '@/features/playground/state';
 
+const Onboarding = lazy(() => import('@/pages/Onboarding'));
 const CliApprove = lazy(() => import('@/pages/CliApprove'));
 const Invite = lazy(() => import('@/pages/Invite'));
 const AppOrgPicker = lazy(() => import('@/pages/app/OrgPicker'));
@@ -209,6 +211,17 @@ function Router() {
   }
 
   if (!user) return <Login />;
+
+  if (location === '/onboarding') {
+    if (!user.instance_role) return <Redirect to="/org" />;
+    return (
+      <RoutedErrorBoundary>
+        <AuthorizationProvider scope={{ level: 'instance' }}>
+          <AuthorizedRoute component={Onboarding} access={onboardingAccess} level="instance" />
+        </AuthorizationProvider>
+      </RoutedErrorBoundary>
+    );
+  }
 
   if (location === '/cli' || location.startsWith('/cli/')) {
     return (

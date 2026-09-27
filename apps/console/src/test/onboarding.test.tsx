@@ -26,16 +26,16 @@ const credential: Api.ProviderCredentialOut = {
   scope: 'platform',
 };
 let credentials: Api.ProviderCredentialOut[];
-let total: number;
+let organization: Api.OrgOut | undefined;
 
 function renderSetup() {
-  window.history.replaceState(null, '', '/instance/setup');
+  window.history.replaceState(null, '', '/onboarding');
   return render(<App />);
 }
 
 beforeEach(() => {
   credentials = [];
-  total = 0;
+  organization = undefined;
   server.use(
     http.get('/api/v1/auth/me', () =>
       HttpResponse.json<{ data: Api.MeOut }>({
@@ -43,7 +43,9 @@ beforeEach(() => {
       }),
     ),
     http.get('/api/v1/instance/provider-credentials', () => enveloped(credentials)),
-    http.get('/api/v1/instance/organizations/summary', () => HttpResponse.json({ data: { total } })),
+    http.get('/api/v1/enroll', () =>
+      HttpResponse.json({ data: { orgs: organization ? [organization] : [], personal_org_id: organization?.id ?? null, pending_invitations: [] } }),
+    ),
     http.get('/api/v1/instance/taxonomy', () => HttpResponse.json({ data: { providers: [provider], models: [] } })),
     http.post('/api/v1/instance/provider-credentials', async ({ request }) => {
       const input = (await request.json()) as Api.ProviderCredentialIn;
@@ -52,10 +54,10 @@ beforeEach(() => {
       credentials = [...credentials, created];
       return HttpResponse.json({ data: created });
     }),
-    http.post('/api/v1/organizations', async ({ request }) => {
+    http.post('/api/v1/enroll/org', async ({ request }) => {
       const input = (await request.json()) as Api.OrgCreate;
-      total += 1;
-      return HttpResponse.json({ data: { ...ORG, name: input.name } });
+      organization = { ...ORG, name: input.name, personal_for: 'owner-1' };
+      return HttpResponse.json({ data: organization });
     }),
     http.get('/api/v1/users', () => enveloped([])),
     http.get('/api/v1/instance/data-planes', () => enveloped([])),
@@ -68,14 +70,16 @@ describe('instance setup', () => {
     window.history.replaceState(null, '', '/');
     render(<App />);
     expect(await screen.findByRole('heading', { name: 'System Overview' })).toBeVisible();
-    await userEvent.click(screen.getByRole('link', { name: 'Setup' }));
+    await userEvent.click(screen.getByRole('link', { name: 'Resume setup' }));
     expect(await screen.findByText('0 of 2 steps complete')).toBeVisible();
   });
 
-  it('adds multiple keys, resumes from saved resources, creates an organization, and opens the console', async () => {
+  it('adds multiple keys, resumes from saved resources, creates an organization, and opens that organization', async () => {
     const user = userEvent.setup();
     const firstSession = renderSetup();
     expect(await screen.findByText('0 of 2 steps complete')).toBeVisible();
+    expect(screen.queryByRole('navigation', { name: 'Instance navigation' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Finish setup' })).toBeDisabled();
 
     for (const name of ['primary', 'backup']) {
@@ -91,7 +95,7 @@ describe('instance setup', () => {
     expect(screen.queryByDisplayValue('test-provider-secret')).not.toBeInTheDocument();
     firstSession.unmount();
     window.localStorage.clear();
-    renderSetup();
+    const resumedSession = renderSetup();
     expect(await screen.findByText('1 of 2 steps complete')).toBeVisible();
     expect(screen.getByText('2 instance provider keys saved')).toBeVisible();
 
@@ -102,8 +106,21 @@ describe('instance setup', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(await screen.findByText('2 of 2 steps complete')).toBeVisible();
     expect(screen.getByText('Your instance setup is complete')).toBeVisible();
+    resumedSession.unmount();
+    window.localStorage.setItem('airmux_org_id', 'unrelated-org');
+    renderSetup();
+    expect(await screen.findByText('First organization is ready')).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Finish setup' }));
-    expect(await screen.findByRole('heading', { name: 'System Overview' })).toBeVisible();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Usage' })).toBeVisible();
+    expect(window.location.pathname).toBe('/org');
+    expect(window.localStorage.getItem('airmux_org_id')).toBe(ORG.id);
+  });
+
+  it('does not treat membership in another organization as completing the organization step', async () => {
+    server.use(http.get('/api/v1/enroll', () => HttpResponse.json({ data: { orgs: [ORG], personal_org_id: null, pending_invitations: [] } })));
+    renderSetup();
+    expect(await screen.findByText('0 of 2 steps complete')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Create organization' })).toBeVisible();
   });
 
   it('allows leaving and resuming incomplete setup from navigation', async () => {
@@ -111,7 +128,7 @@ describe('instance setup', () => {
     renderSetup();
     await user.click(await screen.findByRole('link', { name: 'Finish later' }));
     expect(await screen.findByRole('heading', { name: 'System Overview' })).toBeVisible();
-    await user.click(screen.getByRole('link', { name: 'Setup' }));
+    await user.click(screen.getByRole('link', { name: 'Resume setup' }));
     expect(await screen.findByText('0 of 2 steps complete')).toBeVisible();
   });
 
@@ -129,11 +146,11 @@ describe('instance setup', () => {
   });
 
   it('shows a retryable error instead of resetting saved progress', async () => {
-    server.use(http.get('/api/v1/instance/organizations/summary', () => new HttpResponse(null, { status: 503 })));
+    server.use(http.get('/api/v1/enroll', () => new HttpResponse(null, { status: 503 })));
     renderSetup();
     expect(await screen.findByRole('alert', undefined, { timeout: 2500 })).toHaveTextContent('Could not reach the control plane');
     expect(screen.queryByText('0 of 2 steps complete')).not.toBeInTheDocument();
-    server.use(http.get('/api/v1/instance/organizations/summary', () => HttpResponse.json({ data: { total: 1 } })));
+    server.use(http.get('/api/v1/enroll', () => HttpResponse.json({ data: { orgs: [ORG], personal_org_id: ORG.id, pending_invitations: [] } })));
     await userEvent.click(screen.getByRole('button', { name: /retry/i }));
     expect(await screen.findByText('1 of 2 steps complete')).toBeVisible();
   });
@@ -144,6 +161,6 @@ describe('instance setup', () => {
     );
     renderSetup();
     expect(await screen.findByRole('alert')).toHaveTextContent('You do not have access to this instance page');
-    expect(screen.queryByRole('link', { name: 'Setup' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Resume setup' })).not.toBeInTheDocument();
   });
 });

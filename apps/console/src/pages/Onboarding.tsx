@@ -1,3 +1,6 @@
+import { useEnrollment } from '@workspace/api-client-react';
+import { GatewayBrand } from '@/components/layout/responsive-shell';
+import { useSession } from '@/lib/session';
 import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { CheckCircle2 } from 'lucide-react';
@@ -7,28 +10,47 @@ import { PageHeader, PageShell, SectionHeader } from '@/components/shared/page-s
 import { ErrorState, LoadingState } from '@/components/shared/states';
 import { Alert, AlertDescription, AlertTitle, Badge, Button, Card } from '@/components/ui/elements';
 import { useAddInstanceCredentialMutation, useInstanceProviderCredentials, useInstanceProviders } from '@/features/credentials/hooks';
-import { useCreateOrgMutation, useOrgSummary } from '@/features/orgs/hooks';
+import { useCreatePersonalOrgMutation } from '@/features/orgs/hooks';
 
-export default function InstanceSetup() {
+export default function Onboarding() {
+  const { logout } = useSession();
+  return (
+    <div className="min-h-[100dvh] bg-background">
+      <header className="mx-auto flex w-full max-w-3xl items-center justify-between gap-4 px-4 py-6 sm:px-8">
+        <GatewayBrand href="/onboarding" />
+        <Button variant="ghost" onClick={logout}>
+          Sign out
+        </Button>
+      </header>
+      <main>
+        <SetupSteps />
+      </main>
+    </div>
+  );
+}
+
+function SetupSteps() {
   const credentialsQuery = useInstanceProviderCredentials();
-  const orgsQuery = useOrgSummary();
+  const enrollment = useEnrollment();
+  const { setOrgId } = useSession();
   const providersQuery = useInstanceProviders();
   const addCredential = useAddInstanceCredentialMutation();
-  const createOrg = useCreateOrgMutation();
+  const createOrg = useCreatePersonalOrgMutation();
   const [addOpen, setAddOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [, navigate] = useLocation();
-  const queries = [credentialsQuery, orgsQuery, providersQuery];
+  const queries = [credentialsQuery, enrollment, providersQuery];
   const failedQuery = queries.find((query) => query.isError);
 
   if (queries.some((query) => query.isLoading)) return <LoadingState label="Loading setup progress..." />;
   if (failedQuery) return <ErrorState error={failedQuery.error} resource="setup progress" onRetry={() => failedQuery.refetch()} />;
-  if (!credentialsQuery.data || !orgsQuery.data || !providersQuery.data)
+  if (!credentialsQuery.data || !enrollment.data || !providersQuery.data)
     return <ErrorState message="Setup progress is unavailable. Reload to try again." />;
 
   const keysSaved = credentialsQuery.data.filter((credential) => credential.enabled).length;
   const hasKeys = keysSaved > 0;
-  const hasOrg = orgsQuery.data.total > 0;
+  const organization = enrollment.data.orgs.find((org) => org.id === enrollment.data.personal_org_id);
+  const hasOrg = organization !== undefined;
   const complete = hasKeys && hasOrg;
   const providers = providersQuery.data.providers;
 
@@ -76,7 +98,7 @@ export default function InstanceSetup() {
               actions={<Badge variant={hasOrg ? 'success' : 'outline'}>{hasOrg ? 'Complete' : 'To do'}</Badge>}
             />
             {hasOrg ? (
-              <p className="text-sm text-success">Your first organization is ready</p>
+              <p className="text-sm text-success">{organization?.name} is ready</p>
             ) : (
               <Button onClick={() => setCreateOpen(true)}>Create organization</Button>
             )}
@@ -88,7 +110,7 @@ export default function InstanceSetup() {
           <CheckCircle2 />
           <div>
             <AlertTitle>Your instance setup is complete</AlertTitle>
-            <AlertDescription>Continue to the instance console to manage your organization and create workspaces.</AlertDescription>
+            <AlertDescription>Continue to {organization?.name} to create your first workspace.</AlertDescription>
           </div>
         </Alert>
       )}
@@ -96,12 +118,20 @@ export default function InstanceSetup() {
         <Button asChild variant="ghost">
           <Link href="/instance">Finish later</Link>
         </Button>
-        <Button disabled={!complete} onClick={() => navigate('/instance')}>
+        <Button
+          disabled={!complete}
+          onClick={() => {
+            if (organization) {
+              setOrgId(organization.id);
+              navigate('/org');
+            }
+          }}
+        >
           Finish setup
         </Button>
       </div>
       <p className="text-sm text-muted-foreground">
-        Each completed step is saved. You can sign out and return to Setup in the instance sidebar to continue.
+        Each completed step is saved. Return to this page after signing in, or choose Resume setup from the instance overview.
       </p>
       <AddProviderCredentialDialog
         open={addOpen}

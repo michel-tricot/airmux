@@ -139,7 +139,7 @@ describe('sign-in gate', () => {
     server.use(
       http.get('/api/v1/instance/provider-credentials', () => enveloped([])),
       http.get('/api/v1/instance/taxonomy', () => HttpResponse.json({ data: { providers: [], models: [] } })),
-      http.get('/api/v1/instance/organizations/summary', () => HttpResponse.json({ data: { total: 0 } })),
+      http.get('/api/v1/enroll', () => HttpResponse.json({ data: { orgs: [], personal_org_id: null, pending_invitations: [] } })),
       http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
       http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: false, public_signup: false } })),
       http.post('/api/v1/auth/signup', () =>
@@ -162,7 +162,8 @@ describe('sign-in gate', () => {
     await user.click(screen.getByRole('button', { name: 'Create account' }));
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Set up your instance' })).toBeInTheDocument();
-    expect(window.location.pathname).toBe('/instance/setup');
+    expect(window.location.pathname).toBe('/onboarding');
+    expect(screen.queryByRole('navigation', { name: 'Instance navigation' })).not.toBeInTheDocument();
     expect(await screen.findByText('0 of 2 steps complete')).toBeInTheDocument();
   });
 

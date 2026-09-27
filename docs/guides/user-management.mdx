@@ -14,13 +14,14 @@ airmux quickstart --url https://llm.example.com
 
 After the instance is claimed, public signup is disabled by default.
 
-Claiming through the webapp opens **Setup**, with two steps: add one or more instance provider keys, then create the first
-organization. Instance keys are available to every organization. Saving a key does not test the provider connection;
-its status updates after an inference request.
+Claiming through the webapp opens standalone onboarding at `/onboarding`, with two steps: add one or more instance
+provider keys, then create your first organization. Creating it grants you owner access through the existing self-founded
+organization enrollment flow. Instance keys are available to every organization. Saving a key does not test the provider
+connection; its status updates after an inference request.
 
 Each step reflects resources saved on the instance, so progress survives signing out or changing browsers. Choose
-**Finish later** to leave, then return through **Instance → Setup**. After both steps are complete, **Finish setup** opens
-the instance console, where you can manage the organization and create workspaces.
+**Finish later** to leave, then reopen `/onboarding` or choose **Resume setup** on the instance overview. After both steps
+are complete, **Finish setup** selects the organization you created and opens its console, ready for your first workspace.
 
 ## Invite a person
 

@@ -1,15 +1,13 @@
 import { lazy, type ComponentType } from 'react';
-import { Building2, ListChecks, KeyRound, LayoutDashboard, ShieldCheck, Users, type LucideIcon } from 'lucide-react';
-import { allOf, anyOf, type AccessPolicy } from '@/features/permissions/authorization';
+import { Building2, KeyRound, LayoutDashboard, ShieldCheck, Users, type LucideIcon } from 'lucide-react';
+import { anyOf, type AccessPolicy } from '@/features/permissions/authorization';
 import { managementKeyAccess } from '@/features/keys/policy';
 import { providerCredentialAccess } from '@/features/credentials/policy';
-import { catalogAccess } from '@/features/catalog/policy';
 import { orgAccess } from '@/features/orgs/policy';
 import { telemetryAccess } from '@/features/telemetry/policy';
 import { userAccess } from '@/features/users/policy';
 import { workspaceAccess } from '@/features/workspaces/policy';
 
-const InstanceSetup = lazy(() => import('@/pages/InstanceSetup'));
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
 const Organizations = lazy(() => import('@/pages/Organizations'));
 const OrganizationDetail = lazy(() => import('@/pages/OrganizationDetail'));
@@ -32,18 +30,6 @@ export const instanceRoutes: readonly InstanceRouteDefinition[] = [
     component: Dashboard,
     access: anyOf(orgAccess.list, userAccess.list, managementKeyAccess.instance.read, telemetryAccess.dataPlanes, telemetryAccess.instanceActivity),
     navigation: { label: 'Overview', icon: LayoutDashboard },
-  },
-  {
-    path: '/instance/setup',
-    component: InstanceSetup,
-    access: allOf(
-      orgAccess.summary,
-      orgAccess.create,
-      providerCredentialAccess.instance.read,
-      providerCredentialAccess.instance.create,
-      catalogAccess.instance.read,
-    ),
-    navigation: { label: 'Setup', icon: ListChecks },
   },
   {
     path: '/instance/organizations',
