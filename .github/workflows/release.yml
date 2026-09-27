@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       commit:
-        description: Full SHA of the VERSION bump commit on main
+        description: Full SHA of the green source commit on main to release
         required: true
         type: string
 
@@ -34,26 +34,16 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Validate the requested version commit
+      - name: Validate the requested source commit
         id: source
         env:
-          VERSION_SHA: ${{ inputs.commit }}
-          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_SHA: ${{ inputs.commit }}
         run: |
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          [[ "$VERSION_SHA" =~ ^[0-9a-f]{40}$ ]]
-          git merge-base --is-ancestor "$VERSION_SHA" "$SOURCE_SHA"
-          if git diff --quiet "$VERSION_SHA^" "$VERSION_SHA" -- VERSION; then
-            echo "The requested commit must change VERSION" >&2
-            exit 1
-          fi
-          version="$(git show "$VERSION_SHA:VERSION")"
-          source_version="$(git show "$SOURCE_SHA:VERSION")"
-          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
-          if [[ "$source_version" != "$version" ]]; then
-            echo "The selected main commit must keep VERSION at $version" >&2
-            exit 1
-          fi
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]] || exit 1
+          git merge-base --is-ancestor "$SOURCE_SHA" "$GITHUB_SHA"
+          version="$(git show "$SOURCE_SHA:VERSION")"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
           RELEASE_TAG="v$version"
           if git show-ref --verify --quiet "refs/tags/$RELEASE_TAG"; then
             echo "$RELEASE_TAG already exists; rerun failed jobs on its original release run" >&2
@@ -64,7 +54,7 @@ jobs:
             echo "version=$version"
             echo "tag=$RELEASE_TAG"
           } >> "$GITHUB_OUTPUT"
-          printf 'Release candidate: version %s from version commit %s using source commit %s.\n' "$version" "$VERSION_SHA" "$SOURCE_SHA" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Release candidate: version %s from source commit %s.\n' "$version" "$SOURCE_SHA" >> "$GITHUB_STEP_SUMMARY"
       - name: Require successful stable checks for the exact main commit
         id: checks
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd

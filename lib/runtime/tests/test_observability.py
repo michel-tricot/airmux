@@ -158,8 +158,7 @@ class FailingLogOutput(LogOutput):
 async def test_failed_writes_do_not_fail_requests_or_replay_old_batches(log_output, flush_on_error, capsys):
     logger, _output = log_output
     output = FailingLogOutput()
-    if not flush_on_error:
-        output.written = asyncio.Event()
+    output.written = asyncio.Event()
     logger.handlers[0].setStream(output)
     log_event(logger, logging.ERROR if flush_on_error else logging.INFO, "lost_batch")
     if not flush_on_error:
