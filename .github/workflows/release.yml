@@ -88,10 +88,20 @@ jobs:
             }
 
   installation:
-    name: Release installation
+    name: Release installation (${{ matrix.arch }})
     needs: prepare
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    env:
+      ARCH: ${{ matrix.arch }}
     permissions:
       contents: read
       actions: read
@@ -131,7 +141,10 @@ jobs:
           image="$(cat image)"
           [[ "$image" =~ ^ghcr\.io/michel-tricot/airmux@sha256:[0-9a-f]{64}$ ]]
           echo "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          docker buildx imagetools inspect "$image" --raw | jq -e \
+            '.manifests | map(.platform.os + "/" + .platform.architecture) | sort == ["linux/amd64", "linux/arm64"]'
           docker pull "$image"
+          test "$(docker image inspect "$image" --format '{{.Os}}/{{.Architecture}}')" = "linux/$ARCH"
           test "$(docker run --rm --entrypoint airmux "$image" --version)" = "airmux $VERSION"
           test "$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = "$VERSION"
           test "$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "$RELEASE_SHA"
@@ -144,7 +157,7 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: release-installation-${{ needs.prepare.outputs.sha }}
+          name: release-installation-${{ matrix.arch }}-${{ needs.prepare.outputs.sha }}
           path: installation-results
           retention-days: 7
 
@@ -270,6 +283,7 @@ jobs:
           docker buildx imagetools create --prefer-index=false --tag "$IMAGE:$VERSION" --tag "$IMAGE:latest" "$candidate"
           digest="$(docker buildx imagetools inspect "$IMAGE:$VERSION" --format '{{json .Manifest}}' | jq -r .digest)"
           [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          test "$digest" = "${candidate##*@}"
           echo "image=$IMAGE@$digest" >> "$GITHUB_OUTPUT"
 
   verify-pypi:
@@ -325,18 +339,25 @@ jobs:
           retention-days: 7
 
   verify-container:
-    name: Release verify-container
+    name: Release verify-container (${{ matrix.arch }})
     needs: [prepare, publish]
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    env:
+      ARCH: ${{ matrix.arch }}
     permissions:
       contents: read
       packages: read
-    outputs:
-      image: ${{ steps.verify.outputs.image }}
     steps:
       - name: Pull and verify the published image
-        id: verify
         env:
           GH_TOKEN: ${{ github.token }}
           IMAGE: ${{ needs.publish.outputs.image }}
@@ -344,18 +365,20 @@ jobs:
           RELEASE_SHA: ${{ needs.prepare.outputs.sha }}
         run: |
           echo "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          docker buildx imagetools inspect "$IMAGE" --raw | jq -e \
+            '.manifests | map(.platform.os + "/" + .platform.architecture) | sort == ["linux/amd64", "linux/arm64"]'
           docker pull "$IMAGE"
+          test "$(docker image inspect "$IMAGE" --format '{{.Os}}/{{.Architecture}}')" = "linux/$ARCH"
           test "$(docker run --rm --entrypoint airmux "$IMAGE" --version)" = "airmux $VERSION"
           test "$(docker image inspect "$IMAGE" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = "$VERSION"
           test "$(docker image inspect "$IMAGE" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "$RELEASE_SHA"
           docker buildx imagetools inspect "$IMAGE" --format '{{json .Manifest}}' | jq -e --arg digest "${IMAGE##*@}" '.digest == $digest'
           latest_digest="$(docker buildx imagetools inspect "ghcr.io/michel-tricot/airmux:latest" --format '{{json .Manifest}}' | jq -r .digest)"
           test "$latest_digest" = "${IMAGE##*@}"
-          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
 
   announce:
     name: Release announce
-    needs: [prepare, verify-pypi, verify-container]
+    needs: [prepare, publish, verify-pypi, verify-container]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment: release
@@ -370,7 +393,7 @@ jobs:
       - name: Publish the verified GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-          IMAGE: ${{ needs.verify-container.outputs.image }}
+          IMAGE: ${{ needs.publish.outputs.image }}
           RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
           RELEASE_SHA: ${{ needs.prepare.outputs.sha }}
           VERSION: ${{ needs.prepare.outputs.version }}
