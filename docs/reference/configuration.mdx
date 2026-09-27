@@ -144,8 +144,8 @@ local storage. `SIGKILL`, machine failure, power loss, or storage failure can lo
 | `control_plane` | Poll policy state from a control plane using its own link and interval |
 | `none`          | Disable budget state polling; the default for standalone gateways     |
 
-Budget configuration is independent of the bundle source and event outbox. Missing, mismatched, or expired state allows
-requests. With `budget.kind` set to `none`, budget rules always allow requests.
+With `budget.kind` set to `control_plane`, requests can continue when current budget status cannot be confirmed.
+With `budget.kind` set to `none`, budget rules do not block requests.
 
 ## Secret stores
 
