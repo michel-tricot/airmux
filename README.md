@@ -44,7 +44,7 @@ Open [localhost:8080](http://localhost:8080) and follow the setup steps. Then cr
 Or use the CLI:
 
 ```bash
-docker compose exec cli airmux quickstart --url http://localhost:8080
+docker compose exec app airmux quickstart --url http://localhost:8080
 ```
 
 Follow the prompts. `quickstart` sets up your account and workspace, prints an inference key, and sends
@@ -59,10 +59,10 @@ The [quickstart guide](docs/quickstart.mdx) continues through finding that reque
 
 | Goal | Command |
 | --- | --- |
-| List catalog models | `docker compose exec cli airmux models list` |
-| Inspect the installation | `docker compose exec cli airmux doctor` |
-| Follow gateway activity | `docker compose exec cli airmux events tail --interval 2 --keep 30` |
-| Follow service logs | `docker compose logs -f cli` |
+| List catalog models | `docker compose exec app airmux models list` |
+| Inspect the installation | `docker compose exec app airmux doctor` |
+| Follow gateway activity | `docker compose exec app airmux events tail --interval 2 --keep 30` |
+| Follow service logs | `docker compose logs -f app` |
 | Stop while preserving state | `docker compose down` |
 
 ## Use your existing client

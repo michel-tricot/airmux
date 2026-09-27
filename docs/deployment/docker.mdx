@@ -3,7 +3,7 @@ title: "Docker Compose"
 description: "Run the airmux image and Postgres with persistent named volumes."
 ---
 
-Docker Compose runs airmux and Postgres. The CLI is available inside the `cli` container.
+Docker Compose runs airmux and Postgres. The CLI is available inside the `app` container.
 
 ## Start
 
@@ -34,7 +34,7 @@ Once your deployment is available, open its URL in a browser and follow the setu
 Or set up the instance through the CLI using the same URL:
 
 ```bash
-docker compose exec cli airmux quickstart --url https://airmux.example.com
+docker compose exec app airmux quickstart --url https://airmux.example.com
 ```
 
 Set a URL-safe `POSTGRES_PASSWORD` before the first start of a public installation. Changing the Compose variable later
@@ -48,7 +48,7 @@ Use this when you need to change the control-plane or data-plane settings in the
 
 ```bash
 mkdir -p airmux-config
-docker compose exec -T cli cat /app/deploy/docker/airmux.yml > airmux-config/airmux.yml
+docker compose exec -T app cat /app/deploy/docker/airmux.yml > airmux-config/airmux.yml
 ```
 
 Edit `airmux-config/airmux.yml`. Keep its `/state` paths unless you also provide suitable persistent storage, and keep the control plane and data plane on the same secret store. 
@@ -66,11 +66,11 @@ docker compose down
 docker compose up -d --wait
 ```
 
-If startup fails, inspect `docker compose logs migrate taxonomy cli`. To return to the image default, remove `airmux-config/airmux.yml` and run the same two commands.
+If startup fails, inspect `docker compose logs migrate taxonomy app`. To return to the image default, remove `airmux-config/airmux.yml` and run the same two commands.
 
 ## Startup and database changes
 
-`docker compose up` runs the migration job first and the catalog job second. The `cli` container starts only after both
+`docker compose up` runs the migration job first and the catalog job second. The `app` container starts only after both
 jobs succeed. On later runs, migration checks the current schema revision and the catalog job reapplies the definitions
 shipped with the selected image. To diagnose a failure:
 
@@ -101,10 +101,13 @@ Download the Compose file for the target release. Remove any older `AIRMUX_IMAGE
 the stack:
 
 ```bash
-docker compose up -d --wait
+docker compose up -d --wait --remove-orphans
 ```
 
-Check `/healthz` on the public origin, run `docker compose exec cli airmux doctor`, and send a buffered
+The application service is named `app`. `--remove-orphans` removes the previous `cli` service when upgrading from an older Compose file,
+freeing its port for `app`. Keep the same Compose project name and directory to reuse the existing database and application volumes.
+
+Check `/healthz` on the public origin, run `docker compose exec app airmux doctor`, and send a buffered
 and streaming request. Confirm that the requests appear in usage. If verification fails after migration, stop the new
 stack, restore Postgres and `/state` from the same backup, and redeploy the recorded previous release. Do not roll
 back only the image against the newer database.
