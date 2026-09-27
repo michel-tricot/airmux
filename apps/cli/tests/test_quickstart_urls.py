@@ -247,9 +247,9 @@ def test_quickstart_uses_a_model_backed_by_a_configured_provider():
     ("requested_name", "answer", "existing", "expected_name"),
     [
         ("", "Acme AI\n", False, "Acme AI"),
-        ("", "\n", False, "owner"),
+        ("", "\n", False, "example.com"),
         ("Flag name", "", False, "Flag name"),
-        ("", None, False, "owner"),
+        ("", None, False, "example.com"),
         ("", "", True, "Existing"),
     ],
 )
@@ -285,7 +285,7 @@ def test_quickstart_organization_name(monkeypatch, requested_name, answer, exist
 
     assert result.exit_code == 0, result.output
     assert organization.name == expected_name
-    assert ("Organization name [owner]" in result.output) is bool(answer)
+    assert ("Organization name [example.com]" in result.output) is bool(answer)
 
 
 def test_quickstart_creates_a_management_key_without_replacing_the_active_one():
