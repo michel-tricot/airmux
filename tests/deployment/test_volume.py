@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import os
 import subprocess
-import time
 import uuid
 
+import httpx
 import pytest
-from test_docker import docker
+from test_docker import docker, eventually
 
 
 def test_named_volume_is_writable_by_default_user():
@@ -58,6 +58,8 @@ def test_console_accepts_flys_ipv6_resolver(user):
         "run",
         "--detach",
         "--rm",
+        "--publish",
+        "127.0.0.1::8080",
         *user_args,
         "--env",
         "NGINX_RESOLVER=fdaa::3",
@@ -67,8 +69,9 @@ def test_console_accepts_flys_ipv6_resolver(user):
         "console",
     )
     try:
-        time.sleep(1)
-        assert docker("inspect", "--format", "{{.State.Running}}", container) == "true"
+        address = docker("port", container, "8080/tcp")
+        with httpx.Client(base_url=f"http://{address}", timeout=2) as client:
+            eventually(lambda: client.get("/").status_code == 200)
     finally:
         docker("rm", "-f", container)
 

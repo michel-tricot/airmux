@@ -8,7 +8,7 @@ import sys
 
 import pytest
 
-from airmux_runtime.observability import JsonFormatter, configure_logger, flush_logger, log_event, request_context
+from airmux_runtime.observability import BatchedStreamHandler, JsonFormatter, configure_logger, flush_logger, log_event, request_context
 from contract import uuid7
 
 
@@ -29,9 +29,12 @@ class LogOutput(io.StringIO):
     def __init__(self):
         super().__init__()
         self.batches = []
+        self.written: asyncio.Event | None = None
 
     def write(self, text):
         self.batches.append(text)
+        if self.written is not None:
+            self.written.set()
         return super().write(text)
 
 
@@ -63,9 +66,10 @@ async def test_production_logs_batch_without_losing_request_context(log_output):
 
 async def test_low_volume_logs_flush_while_idle(log_output):
     logger, output = log_output
+    output.written = asyncio.Event()
     log_event(logger, logging.INFO, "usage_recorded")
     assert output.getvalue() == ""
-    await asyncio.sleep(0.15)
+    await asyncio.wait_for(output.written.wait(), timeout=1)
     assert json.loads(output.getvalue())["event"] == "usage_recorded"
 
 
@@ -87,14 +91,18 @@ async def test_errors_flush_preceding_logs_and_tracebacks(log_output):
 @pytest.mark.parametrize("close", [False, True])
 async def test_close_flushes_once_and_cancels_pending_output(log_output, close):
     logger, output = log_output
+    handler = logger.handlers[0]
+    assert isinstance(handler, BatchedStreamHandler)
     log_event(logger, logging.INFO, "before_close")
     assert output.getvalue() == ""
+    timer = handler._timer
+    assert timer is not None
     if close:
-        logger.handlers[0].close()
+        handler.close()
     else:
         flush_logger(logger)
+    assert timer.cancelled()
     output.close()
-    await asyncio.sleep(0.15)
     assert len(output.batches) == 1
     assert json.loads(output.batches[0])["event"] == "before_close"
 
@@ -139,6 +147,8 @@ class FailingLogOutput(LogOutput):
 
     def write(self, text):
         if self.failing:
+            if self.written is not None:
+                self.written.set()
             message = "log destination unavailable"
             raise OSError(message)
         return super().write(text)
@@ -148,10 +158,11 @@ class FailingLogOutput(LogOutput):
 async def test_failed_writes_do_not_fail_requests_or_replay_old_batches(log_output, flush_on_error, capsys):
     logger, _output = log_output
     output = FailingLogOutput()
+    output.written = asyncio.Event()
     logger.handlers[0].setStream(output)
     log_event(logger, logging.ERROR if flush_on_error else logging.INFO, "lost_batch")
     if not flush_on_error:
-        await asyncio.sleep(0.15)
+        await asyncio.wait_for(output.written.wait(), timeout=1)
     assert "log destination unavailable" in capsys.readouterr().err
     assert output.getvalue() == ""
     output.failing = False

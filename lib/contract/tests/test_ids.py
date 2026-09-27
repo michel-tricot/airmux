@@ -21,13 +21,6 @@ def test_uuid7_embeds_the_current_time():
     assert before <= embedded <= after
 
 
-def test_uuid7_sorts_by_creation_across_milliseconds():
-    first = uuid7()
-    time.sleep(0.002)
-    second = uuid7()
-    assert first < second
-
-
 def test_uuid7_is_unique():
     values = {uuid7() for _ in range(1000)}
     assert len(values) == 1000

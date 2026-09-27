@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import statistics
-import time
+import sys
 import tracemalloc
+from types import SimpleNamespace
 
 import pytest
 from conftest import CTX, MODEL, make_credential
@@ -18,36 +19,51 @@ from data_plane.metrics import DataPlaneMetrics
 pytestmark = pytest.mark.performance
 
 
-async def test_warm_credential_lookup_cpu_does_not_scale_with_other_credentials():
+async def test_warm_credential_lookup_work_does_not_scale_with_other_credentials(monkeypatch):
+    monkeypatch.setattr("data_plane.credentials.time", SimpleNamespace(monotonic=lambda: 1.0))
     store = MemoryStoreConfig().build()
     entry = make_credential()
-    await store.put(entry.ref, Secret("cached"))
+    secret = Secret("cached")
+    await store.put(entry.ref, secret)
     metrics = DataPlaneMetrics()
     resolver = CredentialResolver(store, metrics)
     try:
-        await resolver.fetch(entry)
+        cached = await resolver.fetch(entry)
+        assert cached is not None
 
         async def measure():
-            started = time.thread_time()
-            for _ in range(500):
-                assert resolver.available((entry,)) == (entry,)
-                assert await resolver.fetch(entry) is not None
-            return time.thread_time() - started
+            executed_lines = 0
 
-        small = statistics.median([await measure() for _ in range(3)])
+            def trace(frame, event, arg):
+                nonlocal executed_lines
+                if event == "line" and frame.f_code.co_filename == CredentialResolver.fetch.__code__.co_filename:
+                    executed_lines += 1
+                return trace
+
+            previous_trace = sys.gettrace()
+            sys.settrace(trace)
+            try:
+                assert resolver.available((entry,)) == (entry,)
+                assert await resolver.fetch(entry) is cached
+            finally:
+                sys.settrace(previous_trace)
+            return executed_lines
+
+        small = await measure()
         for index in range(4096):
             credential = make_credential(name=f"credential-{index}")
             await store.put(credential.ref, Secret("other"))
             await resolver.fetch(credential)
-        large = statistics.median([await measure() for _ in range(3)])
-        assert large < small * 4, (small, large)
+        large = await measure()
+        assert 0 < large <= small * 2, (small, large)
     finally:
         metrics.shutdown()
 
 
 @pytest.mark.parametrize("kind", KINDS)
 @pytest.mark.parametrize("modality", ["text", "tools"])
-def test_stream_accumulation_cpu_scales_with_fragment_count(kind, modality):
+@pytest.mark.parametrize("fragment_count", [2048, 8192])
+def test_stream_accumulation_does_not_recopy_prior_fragments(kind, modality, fragment_count):
     adapter = _adapter(kind)
     events = list(adapter.frame(CASES[kind][modality].log, adapter.new_stream_state(CTX)))
     fragments = {
@@ -59,25 +75,30 @@ def test_stream_accumulation_cpu_scales_with_fragment_count(kind, modality):
         ("openai_responses", "tools"): b'{"type":"response.function_call_arguments.delta","output_index":0,"delta":"%s"}',
     }
     fragment = RawEvent(data=fragments[kind, modality] % (b"a" * 1024))
+    state = adapter.new_stream_state(CTX)
+    for event in events[: 2 if kind == "anthropic" or modality == "tools" else 1]:
+        adapter.transform_stream_event(event, state)
+    for _ in range(fragment_count):
+        adapter.transform_stream_event(fragment, state)
 
-    def measure(count):
-        state = adapter.new_stream_state(CTX)
-        for event in events[: 2 if kind == "anthropic" or modality == "tools" else 1]:
-            adapter.transform_stream_event(event, state)
-        started = time.thread_time()
-        for _ in range(count):
+    probe_count = 32
+    allocated = 0
+    tracemalloc.start()
+    try:
+        for _ in range(probe_count):
+            current, _ = tracemalloc.get_traced_memory()
+            tracemalloc.reset_peak()
             adapter.transform_stream_event(fragment, state)
-        elapsed = time.thread_time() - started
-        final = adapter.finalize(state)
-        part = final.content[0]
-        assert part.type in {"text", "tool_call"}
-        value = part.arguments if part.type == "tool_call" else part.text
-        assert value == "a" * (count * 1024)
-        return elapsed
-
-    small = statistics.median(measure(2048) for _ in range(3))
-    large = statistics.median(measure(8192) for _ in range(3))
-    assert large < small * 8, (small, large)
+            _, peak = tracemalloc.get_traced_memory()
+            allocated += peak - current
+    finally:
+        tracemalloc.stop()
+    assert allocated < fragment_count * 16 + probe_count * 16_384, allocated
+    final = adapter.finalize(state)
+    part = final.content[0]
+    assert part.type in {"text", "tool_call"}
+    value = part.arguments if part.type == "tool_call" else part.text
+    assert value == "a" * ((fragment_count + probe_count) * 1024)
 
 
 @pytest.mark.parametrize("kind", KINDS)

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import os
+import subprocess
 from pathlib import Path
 
+import pytest
 import yaml
 
 ROOT = Path(__file__).parents[2]
@@ -29,20 +32,94 @@ def test_release_is_manual_and_requires_complete_checks_on_the_exact_main_commit
     assert dispatch["inputs"]["commit"]["required"] is True
     assert dispatch["inputs"]["commit"]["type"] == "string"
     source = next(step for step in RELEASE["jobs"]["prepare"]["steps"] if step.get("id") == "source")
-    assert source["env"]["RELEASE_SHA"] == "${{ inputs.commit }}"
+    assert source["env"]["SOURCE_SHA"] == "${{ inputs.commit }}"
     prepare = steps("prepare")
-    assert 'git merge-base --is-ancestor "$RELEASE_SHA" "$GITHUB_SHA"' in prepare
-    assert 'git diff --quiet "$RELEASE_SHA^" "$RELEASE_SHA" -- VERSION' in prepare
-    assert 'version="$(git show "$RELEASE_SHA:VERSION")"' in prepare
-    assert 'test "$(git rev-parse HEAD)" = "$GITHUB_SHA"' in prepare
     assert "main-ci.yml" in prepare
     assert "Main CI required" in prepare
     assert "security.yml" in prepare
-    assert "head_sha: process.env.RELEASE_SHA" in prepare
+    assert "head_sha: process.env.SOURCE_SHA" in prepare
     assert "run.conclusion === 'success'" in prepare
     assert "job.name === check" in prepare
     assert "setTimeout" not in prepare
     assert RELEASE["jobs"]["prepare"]["outputs"]["ci-run-id"] == "${{ steps.checks.outputs.ci-run-id }}"
+
+
+def git(repository, *args):
+    return subprocess.run(  # noqa: S603 controlled Git commands in a temporary test repository
+        ["/usr/bin/git", "-C", str(repository), *args], capture_output=True, text=True, check=True
+    ).stdout.strip()
+
+
+@pytest.fixture
+def release_repository(tmp_path):
+    git(tmp_path, "init", "-q")
+    git(tmp_path, "config", "user.name", "Release test")
+    git(tmp_path, "config", "user.email", "release@example.test")
+    git(tmp_path, "config", "commit.gpgsign", "false")
+    git(tmp_path, "config", "tag.gpgsign", "false")
+    for name, version in (("initial", "0.2.5"), ("version", "0.2.6"), ("fix", "0.2.6"), ("latest", "0.2.7")):
+        (tmp_path / "VERSION").write_text(version + "\n")
+        git(tmp_path, "add", "VERSION")
+        git(tmp_path, "commit", "-qm", name, "--allow-empty")
+        git(tmp_path, "tag", name)
+    git(tmp_path, "checkout", "-qb", "unmerged", "version")
+    git(tmp_path, "commit", "-qm", "unmerged fix", "--allow-empty")
+    git(tmp_path, "checkout", "-q", "--detach", "latest")
+    return tmp_path
+
+
+def validate_source(repository, source_sha):
+    source = next(step for step in RELEASE["jobs"]["prepare"]["steps"] if step.get("id") == "source")
+    return subprocess.run(
+        ["/bin/bash", "-e", "-o", "pipefail"],
+        input=source["run"],
+        cwd=repository,
+        env={
+            **os.environ,
+            "SOURCE_SHA": source_sha,
+            "GITHUB_SHA": git(repository, "rev-parse", "HEAD"),
+            "GITHUB_OUTPUT": str(repository / "output"),
+            "GITHUB_STEP_SUMMARY": str(repository / "summary"),
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+@pytest.mark.parametrize("source", ["version", "fix"])
+def test_release_pins_the_requested_commit_after_main_advances(release_repository, source):
+    source_sha = git(release_repository, "rev-parse", source)
+    completed = validate_source(release_repository, source_sha)
+    assert completed.returncode == 0, completed.stderr
+    assert (release_repository / "output").read_text().splitlines() == [f"sha={source_sha}", "version=0.2.6", "tag=v0.2.6"]
+
+
+@pytest.mark.parametrize("source", ["HEAD", "0" * 40, "unmerged"])
+def test_release_rejects_invalid_or_unmerged_commits(release_repository, source):
+    source_sha = git(release_repository, "rev-parse", source) if source == "unmerged" else source
+    assert validate_source(release_repository, source_sha).returncode != 0
+    assert not (release_repository / "output").exists()
+
+
+@pytest.mark.parametrize("version", ["invalid", None])
+def test_release_rejects_invalid_or_missing_version(release_repository, version):
+    version_file = release_repository / "VERSION"
+    if version is None:
+        version_file.unlink()
+    else:
+        version_file.write_text(version)
+    git(release_repository, "commit", "-qam", "invalid version")
+    source_sha = git(release_repository, "rev-parse", "HEAD")
+    assert validate_source(release_repository, source_sha).returncode != 0
+    assert not (release_repository / "output").exists()
+
+
+def test_release_rejects_an_existing_version_tag(release_repository):
+    git(release_repository, "tag", "v0.2.6", "version")
+    source_sha = git(release_repository, "rev-parse", "fix")
+    assert validate_source(release_repository, source_sha).returncode != 0
+    assert not (release_repository / "output").exists()
 
 
 def test_release_consumes_main_ci_artifacts_without_copying_them():
