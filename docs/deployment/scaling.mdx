@@ -12,6 +12,14 @@ The `docker-compose.split.yml` example runs Postgres, one control plane, the web
 ```bash
 docker build -t airmux:local .
 docker compose -p airmux-split -f docker-compose.split.yml up -d --wait
+```
+
+Open the web app at [localhost:8080](http://localhost:8080), create the owner account, and follow onboarding to add provider
+keys and name your first organization. **Finish setup** opens that organization.
+
+Or use the CLI to set up and verify inference:
+
+```bash
 airmux quickstart --url http://localhost:8080
 ```
 

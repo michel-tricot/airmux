@@ -81,7 +81,10 @@ Start the webapp proxy:
 nginx -c "$PWD/deployment/nginx.conf" -g 'daemon off;'
 ```
 
-Then claim the instance and enter one provider credential:
+Then open the web app at [localhost:8080](http://localhost:8080), create the owner account, and follow onboarding to add
+provider keys and name your first organization. **Finish setup** opens that organization.
+
+Or claim the instance through the CLI and enter an organization name and provider credential:
 
 ```bash
 uv run airmux quickstart --url http://localhost:8080
