@@ -10,7 +10,7 @@ import yaml
 
 ROOT = Path(__file__).parents[2]
 FAST_JOBS = {"quality", "python-unit", "python-integration", "frontend", "package"}
-MAIN_JOBS = {"fast", "gateway", "full-stack", "browser", "docker"}
+MAIN_JOBS = {"fast", "gateway", "full-stack", "browser", "docker", "container"}
 
 
 @pytest.mark.parametrize(("filename", "expected"), [("ci.yml", FAST_JOBS), ("main-ci.yml", MAIN_JOBS)])

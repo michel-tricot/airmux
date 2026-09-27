@@ -61,7 +61,15 @@ def test_ci_builds_the_image_once_before_exercising_both_topologies() -> None:
     job = workflow["jobs"]["docker"]
     commands = "\n".join(step.get("run", "") for step in job["steps"])
 
+    assert job["runs-on"] == "${{ matrix.runner }}"
+    assert job["strategy"]["fail-fast"] is False
+    assert job["strategy"]["matrix"]["include"] == [
+        {"arch": "amd64", "runner": "ubuntu-24.04"},
+        {"arch": "arm64", "runner": "ubuntu-24.04-arm"},
+    ]
+    assert job["env"]["ARCH"] == "${{ matrix.arch }}"
     assert commands.count("docker build ") == 1
+    assert '--platform "linux/$ARCH"' in commands
     assert "docker-compose.yml" in commands
     assert "docker-compose.split.yml" in commands
     assert "docker compose" in commands
@@ -77,6 +85,19 @@ def test_main_ci_dispatch_uploads_the_release_image_reference() -> None:
 
     assert publish["if"] == "github.ref == 'refs/heads/main'"
     assert upload["if"] == publish["if"]
+    assert upload["with"]["name"] == "container-${{ matrix.arch }}-${{ github.sha }}"
+    assert 'candidate="$IMAGE:sha-$GITHUB_SHA-$ARCH"' in publish["run"]
+    manifest = workflow["jobs"]["container"]
+    assert manifest["needs"] == "docker"
+    assert "container" in workflow["jobs"]["required"]["needs"]
+    download, combine, upload = manifest["steps"]
+    assert all(step["if"] == publish["if"] for step in manifest["steps"])
+    assert download["with"]["pattern"] == "container-*-${{ github.sha }}"
+    assert download["with"].get("merge-multiple", False) is False
+    assert 'docker buildx imagetools create --tag "$candidate" "$amd64" "$arm64"' in combine["run"]
+    assert '--arg amd64 "${amd64##*@}" --arg arm64 "${arm64##*@}"' in combine["run"]
+    assert "sha256sum --check SHA256SUMS" in combine["run"]
+    assert upload["with"]["name"] == "container-${{ github.sha }}"
 
 
 def test_main_ci_publishes_the_image_it_built() -> None:

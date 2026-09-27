@@ -133,14 +133,23 @@ jobs:
           retention-days: 7
 
   docker:
-    name: Main CI docker
+    name: Main CI docker (${{ matrix.arch }})
     needs: fast
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
     permissions:
       contents: read
       packages: write
     env:
+      ARCH: ${{ matrix.arch }}
       AIRMUX_PYTHON_BUILD: python-candidate
       AIRMUX_IMAGE: airmux:ci
       DEPLOYMENT_IMAGE: airmux:ci
@@ -159,7 +168,7 @@ jobs:
         id: image
         run: |
           version="$(cat VERSION)"
-          docker build --build-arg AIRMUX_PYTHON_BUILD="$AIRMUX_PYTHON_BUILD" --build-arg AIRMUX_VERSION="$version" \
+          docker build --platform "linux/$ARCH" --build-arg AIRMUX_PYTHON_BUILD="$AIRMUX_PYTHON_BUILD" --build-arg AIRMUX_VERSION="$version" \
             --build-arg AIRMUX_REVISION="$GITHUB_SHA" --tag "$AIRMUX_IMAGE" .
           image_id="$(docker image inspect "$AIRMUX_IMAGE" --format '{{.Id}}')"
           echo "image-id=$image_id" >> "$GITHUB_OUTPUT"
@@ -211,7 +220,8 @@ jobs:
           test "$(docker run --rm --entrypoint airmux "$AIRMUX_IMAGE" --version)" = "airmux $(cat VERSION)"
           test "$(docker image inspect "$AIRMUX_IMAGE" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = "$(cat VERSION)"
           test "$(docker image inspect "$AIRMUX_IMAGE" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "$GITHUB_SHA"
-          candidate="$IMAGE:sha-$GITHUB_SHA"
+          test "$(docker image inspect "$AIRMUX_IMAGE" --format '{{.Os}}/{{.Architecture}}')" = "linux/$ARCH"
+          candidate="$IMAGE:sha-$GITHUB_SHA-$ARCH"
           echo "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
           docker tag "$AIRMUX_IMAGE" "$candidate"
           push_output="$(docker push "$candidate")"
@@ -226,7 +236,7 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: container-${{ github.sha }}
+          name: container-${{ matrix.arch }}-${{ github.sha }}
           path: container
           if-no-files-found: error
           retention-days: ${{ github.ref == 'refs/heads/main' && 30 || 7 }}
@@ -239,17 +249,68 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: docker-${{ github.sha }}
+          name: docker-${{ matrix.arch }}-${{ github.sha }}
           path: |
             docker-results
             ${{ runner.temp }}/docker-artifacts
           retention-days: 7
 
+  container:
+    name: Main CI container manifest
+    needs: docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Download the validated platform references
+        if: github.ref == 'refs/heads/main'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          pattern: container-*-${{ github.sha }}
+          path: platforms
+      - name: Publish the validated multi-platform image
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMAGE: ghcr.io/michel-tricot/airmux
+        run: |
+          for arch in amd64 arm64; do
+            (cd "platforms/container-$arch-$GITHUB_SHA" && sha256sum --check SHA256SUMS)
+          done
+          amd64="$(cat "platforms/container-amd64-$GITHUB_SHA/image")"
+          arm64="$(cat "platforms/container-arm64-$GITHUB_SHA/image")"
+          for image in "$amd64" "$arm64"; do
+            [[ "$image" =~ ^ghcr\.io/michel-tricot/airmux@sha256:[0-9a-f]{64}$ ]] || exit 1
+          done
+          echo "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          candidate="$IMAGE:sha-$GITHUB_SHA"
+          docker buildx imagetools create --tag "$candidate" "$amd64" "$arm64"
+          digest="$(docker buildx imagetools inspect "$candidate" --format '{{json .Manifest}}' | jq -r .digest)"
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || exit 1
+          docker buildx imagetools inspect "$IMAGE@$digest" --raw | jq -e \
+            --arg amd64 "${amd64##*@}" --arg arm64 "${arm64##*@}" \
+            '(.manifests | map({digest, os: .platform.os, architecture: .platform.architecture}) | sort_by(.architecture)) ==
+             [{digest: $amd64, os: "linux", architecture: "amd64"}, {digest: $arm64, os: "linux", architecture: "arm64"}]'
+          mkdir -p container
+          printf '%s@%s\n' "$IMAGE" "$digest" > container/image
+          cd container
+          sha256sum image > SHA256SUMS
+      - name: Upload the validated image reference
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: container-${{ github.sha }}
+          path: container
+          if-no-files-found: error
+          retention-days: 30
+
   required:
     name: Main CI required
     runs-on: ubuntu-latest
     timeout-minutes: 1
-    needs: [fast, gateway, full-stack, browser, docker]
+    needs: [fast, gateway, full-stack, browser, docker, container]
     if: always()
     steps:
       - name: Require every correctness job to succeed

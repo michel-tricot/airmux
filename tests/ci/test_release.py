@@ -143,7 +143,21 @@ def test_release_checks_candidate_before_tag_and_registry_before_announcement():
     assert 'docker run --rm --entrypoint airmux "$image" --version' in steps("installation")
     assert "org.opencontainers.image.revision" in steps("installation")
     assert jobs["publish"]["needs"] == ["prepare", "tag"]
-    assert set(jobs["announce"]["needs"]) == {"prepare", "verify-pypi", "verify-container"}
+    assert set(jobs["announce"]["needs"]) == {"prepare", "publish", "verify-pypi", "verify-container"}
+    for name in ("installation", "verify-container"):
+        assert jobs[name]["runs-on"] == "${{ matrix.runner }}"
+        assert jobs[name]["strategy"]["fail-fast"] is False
+        assert jobs[name]["strategy"]["matrix"]["include"] == [
+            {"arch": "amd64", "runner": "ubuntu-24.04"},
+            {"arch": "arm64", "runner": "ubuntu-24.04-arm"},
+        ]
+        assert jobs[name]["env"]["ARCH"] == "${{ matrix.arch }}"
+        assert "{{.Os}}/{{.Architecture}}" in steps(name)
+        assert 'sort == ["linux/amd64", "linux/arm64"]' in steps(name)
+    assert 'test "$digest" = "${candidate##*@}"' in steps("publish")
+    announcement = next(step for step in jobs["announce"]["steps"] if step.get("name") == "Publish the verified GitHub release")
+    assert announcement["env"]["IMAGE"] == "${{ needs.publish.outputs.image }}"
+    assert "outputs" not in jobs["verify-container"]
     assert "pypi_artifacts.py" in steps("verify-pypi")
     assert "test_ready_gateway_completes_and_records_usage" in steps("verify-pypi")
     assert "docker pull" in steps("verify-container")
