@@ -5,11 +5,11 @@ import { Link } from 'wouter';
 import { Badge, Button, Card, ConfirmButton, Dropdown, Modal, Switch, Table } from '@/components/ui/elements';
 describe('shared controls', () => {
   it.each(['default', 'secondary', 'destructive', 'success', 'warning', 'outline', 'mono'] as const)(
-    'uses consistent optical text alignment for %s badges',
+    'optically centers uppercase labels for %s badges',
     (variant) => {
       render(<Badge variant={variant}>ACTIVE</Badge>);
 
-      expect(screen.getByText('ACTIVE')).toHaveClass('h-5', 'items-center', 'justify-center', 'leading-none', 'pt-0.5', 'pb-0');
+      expect(screen.getByText('ACTIVE')).toHaveClass('h-5', 'items-center', 'justify-center', 'leading-none', 'pt-0', 'pb-0.5');
     },
   );
 
