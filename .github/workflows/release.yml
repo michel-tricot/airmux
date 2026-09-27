@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       commit:
-        description: Full SHA of the version commit on main
+        description: Full SHA of the VERSION bump commit on main
         required: true
         type: string
 
@@ -37,33 +37,39 @@ jobs:
       - name: Validate the requested version commit
         id: source
         env:
-          RELEASE_SHA: ${{ inputs.commit }}
+          VERSION_SHA: ${{ inputs.commit }}
+          SOURCE_SHA: ${{ github.sha }}
         run: |
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
-          git merge-base --is-ancestor "$RELEASE_SHA" "$GITHUB_SHA"
-          if git diff --quiet "$RELEASE_SHA^" "$RELEASE_SHA" -- VERSION; then
+          [[ "$VERSION_SHA" =~ ^[0-9a-f]{40}$ ]]
+          git merge-base --is-ancestor "$VERSION_SHA" "$SOURCE_SHA"
+          if git diff --quiet "$VERSION_SHA^" "$VERSION_SHA" -- VERSION; then
             echo "The requested commit must change VERSION" >&2
             exit 1
           fi
-          version="$(git show "$RELEASE_SHA:VERSION")"
+          version="$(git show "$VERSION_SHA:VERSION")"
+          source_version="$(git show "$SOURCE_SHA:VERSION")"
           [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          if [[ "$source_version" != "$version" ]]; then
+            echo "The selected main commit must keep VERSION at $version" >&2
+            exit 1
+          fi
           RELEASE_TAG="v$version"
           if git show-ref --verify --quiet "refs/tags/$RELEASE_TAG"; then
             echo "$RELEASE_TAG already exists; rerun failed jobs on its original release run" >&2
             exit 1
           fi
           {
-            echo "sha=$RELEASE_SHA"
+            echo "sha=$SOURCE_SHA"
             echo "version=$version"
             echo "tag=$RELEASE_TAG"
           } >> "$GITHUB_OUTPUT"
-          printf 'Release candidate: %s from %s.\n' "$version" "$RELEASE_SHA" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Release candidate: version %s from version commit %s using source commit %s.\n' "$version" "$VERSION_SHA" "$SOURCE_SHA" >> "$GITHUB_STEP_SUMMARY"
       - name: Require successful stable checks for the exact main commit
         id: checks
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
         env:
-          RELEASE_SHA: ${{ steps.source.outputs.sha }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
         with:
           script: |
             const required = new Map([['main-ci.yml', 'Main CI required'], ['security.yml', 'dependency-security']]);
@@ -74,19 +80,19 @@ jobs:
               }
               const {data} = await github.rest.actions.listWorkflowRuns({
                 ...context.repo, workflow_id: workflow.id, branch: 'main',
-                head_sha: process.env.RELEASE_SHA, per_page: 20
+                head_sha: process.env.SOURCE_SHA, per_page: 20
               });
               const run = data.workflow_runs.find(run =>
                 ['push', 'workflow_dispatch'].includes(run.event) && run.status === 'completed' &&
-                run.conclusion === 'success' && run.head_sha === process.env.RELEASE_SHA &&
+                run.conclusion === 'success' && run.head_sha === process.env.SOURCE_SHA &&
                 run.head_branch === 'main' &&
                 run.head_repository?.full_name === `${context.repo.owner}/${context.repo.repo}`
               );
-              if (!run) throw new Error(`${filename} must succeed on main for ${process.env.RELEASE_SHA}`);
+              if (!run) throw new Error(`${filename} must succeed on main for ${process.env.SOURCE_SHA}`);
               const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {...context.repo, run_id: run.id});
               const gate = jobs.find(job => job.name === check);
-              if (!gate || gate.status !== 'completed' || gate.conclusion !== 'success' || gate.head_sha !== process.env.RELEASE_SHA) {
-                throw new Error(`${check} must succeed for ${process.env.RELEASE_SHA}`);
+              if (!gate || gate.status !== 'completed' || gate.conclusion !== 'success' || gate.head_sha !== process.env.SOURCE_SHA) {
+                throw new Error(`${check} must succeed for ${process.env.SOURCE_SHA}`);
               }
               if (filename === 'main-ci.yml') core.setOutput('ci-run-id', run.id);
             }
