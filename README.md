@@ -40,8 +40,7 @@ mkdir -p airmux-config
 docker compose up -d --wait
 ```
 
-Set up in the web app at [localhost:8080](http://localhost:8080): create the owner account, add a provider key, and name
-your first organization. **Finish setup** opens that organization. Create a workspace and send a request from **Playground**.
+Open [localhost:8080](http://localhost:8080) and follow the setup steps. Then create a workspace and try **Playground**.
 
 Or use the CLI:
 
@@ -49,8 +48,7 @@ Or use the CLI:
 docker compose exec cli airmux quickstart --url http://localhost:8080
 ```
 
-Enter your first organization name and a provider key when prompted. Press Enter to accept the suggested organization name.
-`quickstart` sets up your account and workspace, prints an inference key, and sends
+Follow the prompts. `quickstart` sets up your account and workspace, prints an inference key, and sends
 a real model request. Open [localhost:8080](http://localhost:8080) for the console, where the request appears with its
 model, tokens, and estimated cost.
 
