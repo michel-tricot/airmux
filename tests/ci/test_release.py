@@ -68,7 +68,7 @@ def release_repository(tmp_path):
     return tmp_path
 
 
-def validate_source(repository, source_sha):
+def validate_source(repository, source_sha, event_name="workflow_dispatch"):
     source = next(step for step in RELEASE["jobs"]["prepare"]["steps"] if step.get("id") == "source")
     return subprocess.run(
         ["/bin/bash", "-e", "-o", "pipefail"],
@@ -77,6 +77,7 @@ def validate_source(repository, source_sha):
         env={
             **os.environ,
             "SOURCE_SHA": source_sha,
+            "GITHUB_EVENT_NAME": event_name,
             "GITHUB_SHA": git(repository, "rev-parse", "HEAD"),
             "GITHUB_OUTPUT": str(repository / "output"),
             "GITHUB_STEP_SUMMARY": str(repository / "summary"),
@@ -119,6 +120,29 @@ def test_release_rejects_an_existing_version_tag(release_repository):
     git(release_repository, "tag", "v0.2.6", "version")
     source_sha = git(release_repository, "rev-parse", "fix")
     assert validate_source(release_repository, source_sha).returncode != 0
+    assert not (release_repository / "output").exists()
+
+
+def test_manual_release_keeps_requested_sha_when_ci_event_is_push(release_repository, monkeypatch):
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "push")
+    source_sha = git(release_repository, "rev-parse", "fix")
+    completed = validate_source(release_repository, source_sha)
+    assert completed.returncode == 0, completed.stderr
+    assert (release_repository / "output").read_text().splitlines() == [f"sha={source_sha}", "version=0.2.6", "tag=v0.2.6"]
+
+
+def test_automatic_release_uses_push_commit(release_repository):
+    source_sha = git(release_repository, "rev-parse", "HEAD")
+    completed = validate_source(release_repository, "0" * 40, event_name="push")
+    assert completed.returncode == 0, completed.stderr
+    assert (release_repository / "output").read_text().splitlines() == [f"sha={source_sha}", "version=0.2.7", "tag=v0.2.7"]
+
+
+def test_automatic_release_requires_version_only_commit(release_repository):
+    (release_repository / "README.md").write_text("Other changes\n")
+    git(release_repository, "add", "README.md")
+    git(release_repository, "commit", "-qm", "Other changes")
+    assert validate_source(release_repository, "0" * 40, event_name="push").returncode != 0
     assert not (release_repository / "output").exists()
 
 
