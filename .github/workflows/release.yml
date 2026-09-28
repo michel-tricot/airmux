@@ -1,4 +1,4 @@
-name: Publish Release
+name: Release - Publish
 
 on:
   push:
@@ -85,7 +85,7 @@ jobs:
             attempt=$((attempt + 1))
             sleep 20
           done
-          echo "Main CI and Security did not finish for $SOURCE_SHA" >&2
+          echo "CI - Main and CI - Security did not finish for $SOURCE_SHA" >&2
           exit 1
       - name: Require successful stable checks for the exact main commit
         id: checks

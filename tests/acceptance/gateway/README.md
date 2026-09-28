@@ -20,7 +20,7 @@ Level 2 also runs `test_openai_sdk.py` with the unmodified SDK against its path-
 Level 7 includes `test_gateway.py` for installed CLI setup, validation, taxonomy reload and restart, plus
 `test_local_mode.py` for embedded taxonomy with a minimal environment and no control plane.
 Levels describe increasing complexity, not dependencies. Every test owns its deployment and can run alone.
-PR CI runs levels in order, parallelizes variations within each level, and stops advancing when a level fails.
+CI - Pull Request runs levels in order, parallelizes variations within each level, and stops advancing when a level fails.
 
 ## Run
 
@@ -214,7 +214,7 @@ PYTHONPATH=. uv run python tests/acceptance/gateway/performance_scaling.py \
   --output /tmp/gateway-scaling
 ```
 
-Nightly CI runs the paired gateway benchmark and scaling in separate jobs, retaining artifacts for 90 days.
+CI - Nightly runs the paired gateway benchmark and scaling in separate jobs, retaining artifacts for 90 days.
 The output directory must be new. Three rounds reverse execution order on alternate rounds. Each round covers
 workers 1/2/4, total connections 100/256 per worker, concurrency 32/128, and provider HTTP/1.1/HTTP/2, for 24 cases.
 Keepalive stays at 20 per worker; timeouts and expiry stay at their defaults. All cases use buffered dev-null collection

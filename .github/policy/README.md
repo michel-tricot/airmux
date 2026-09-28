@@ -12,7 +12,7 @@ and resolved review conversations. It blocks direct pushes, branch deletion, for
 default branch. The `required` and `dependency-security` checks are bound to the GitHub Actions App, integration ID
 `15368`. Keep these names synchronized with the workflows and the [CI design](../../notes/design/CI.md).
 
-PR CI runs the same five fast jobs on draft and ready pull requests. Main CI runs those jobs and the installed-candidate
+CI - Pull Request runs the same five fast jobs on draft and ready pull requests. CI - Main runs those jobs and the installed-candidate
 acceptance jobs after merge. Each workflow's `required` gate rejects every dependency result other than success.
 Security audits run on pull requests. Changes to job selection must keep the contributor guide
 and workflow contract tests accurate.

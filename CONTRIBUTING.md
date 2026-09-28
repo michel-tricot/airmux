@@ -127,7 +127,7 @@ Keep each pull request limited to one user-visible outcome. Its description shou
 - The checks and real-world verification performed
 - Any documentation or generated contracts updated
 
-When the change and local checks are complete, select **Ready for review**. PR CI runs the same fast checks on draft and ready pull requests.
+When the change and local checks are complete, select **Ready for review**. CI - Pull Request runs the same fast checks on draft and ready pull requests.
 Read failures in the pull request's Checks tab and use the job logs and uploaded diagnostics to investigate. Workflow
 runs from forks may need [maintainer approval](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/approve-runs-from-forks);
 if GitHub shows that they are awaiting approval, ask a maintainer in the pull request.
@@ -149,9 +149,9 @@ Changes enter `main` through a squash merge.
 
 ## What CI runs
 
-[PR CI](.github/workflows/ci.yml) runs on draft and ready pull requests. It checks quality, Python unit and integration tests, frontend, and package metadata. Its `required` job passes only when all five jobs succeed. [Security](.github/workflows/security.yml) runs Python and Bun dependency audits.
+[CI - Pull Request](.github/workflows/ci.yml) runs on draft and ready pull requests. It checks quality, Python unit and integration tests, frontend, and package metadata. Its `required` job passes only when all five jobs succeed. [CI - Security](.github/workflows/security.yml) runs Python and Bun dependency audits.
 
-[Main CI](.github/workflows/main-ci.yml) runs after merge and on manual dispatch. It calls the shared PR CI jobs, then tests their candidate through the gateway matrix, full-stack scenarios, Chromium, and Docker deployments. Its `required` job covers the shared checks and all four broader jobs. [Nightly](.github/workflows/nightly.yml) checks platform compatibility and live providers on a schedule; performance and soak checks run on manual dispatch. See the [CI design](notes/design/CI.md) for the artifact and release gates.
+[CI - Main](.github/workflows/main-ci.yml) runs after merge and on manual dispatch. It calls the shared CI - Pull Request jobs, then tests their candidate through the gateway matrix, full-stack scenarios, Chromium, and Docker deployments. Its `required` job covers the shared checks and all four broader jobs. [CI - Nightly](.github/workflows/nightly.yml) checks platform compatibility and live providers on a schedule; performance and soak checks run on manual dispatch. See the [CI design](notes/design/CI.md) for the artifact and release gates.
 
 ## Main branch protection
 
@@ -171,4 +171,4 @@ The versioned ruleset currently requires no approving reviews, but contributions
 
 ## Releasing
 
-Follow the [release checklist and error guide](docs/development.mdx#publish-a-release). After the version pull request merges, wait for Main CI and Security to pass on the same `main` commit, then dispatch **Publish Release**. Publishing is manual and serialized. The workflow verifies the package and container before creating the GitHub release.
+Follow the [release checklist and error guide](docs/releasing.mdx). After the version pull request merges, **Release - Publish** starts automatically and waits for CI - Main and CI - Security on the version commit. Release runs are serialized. The workflow verifies the package and container before creating the GitHub release.
