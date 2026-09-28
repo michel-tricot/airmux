@@ -1,11 +1,9 @@
+# `airmux`
+
+`airmux` is a self-hosted gateway between your app and its LLM providers. Change the client's base URL and API key;
+keep using Chat Completions, Responses, or Messages.
+
 <div align="center">
-  <h1><code>airmux</code></h1>
-
-  <p>
-    Connect through a supported inference API while `airmux` centralizes provider translation, routing, policy,
-    credentials, failover, and usage accounting behind one endpoint.
-  </p>
-
   <p>
     <a href="https://github.com/michel-tricot/airmux/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/michel-tricot/airmux/actions/workflows/ci.yml/badge.svg"></a>
     <a href="https://pypi.org/project/airmux/"><img alt="PyPI" src="https://img.shields.io/pypi/v/airmux?logo=pypi&logoColor=white"></a>
@@ -20,11 +18,12 @@
   </p>
 </div>
 
-`airmux` gives agents one self-hosted origin for calling multiple LLM providers. Clients send `Chat Completions`, `Responses`, or `Messages` requests through any SDK or integration that can target the corresponding HTTP API. `airmux` authenticates the workspace, applies policy, selects a model and scoped provider credential, translates the request, and records the result.
-
 ![Organization usage dashboard showing spend, requests, tokens, cost per request, and a trend chart](docs/images/readme-screenshot.png)
 
 *Example organization usage in the webapp, using synthetic data*
+
+For each request, `airmux` applies workspace policy, picks a provider credential, calls the model, and records tokens and cost.
+It replies in the caller's API format.
 
 > [!NOTE]
 > `airmux` is pre-1.0. Configuration, APIs, and migrations may change before the first stable release.
