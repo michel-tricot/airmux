@@ -49,6 +49,7 @@ from cli.client import (
     resolve_workspace,
 )
 from cli.common import (
+    OrgOption,
     catalog_app,
     console,
     events_app,
@@ -67,7 +68,7 @@ from cli.common import (
     workspaces_app,
 )
 from cli.output import Col, FormatOption, OutputFormat, build_table, fmt_when, print_rows
-from cli.profiles import active_profile, load_config, upsert_profile
+from cli.profiles import select_workspace
 
 if TYPE_CHECKING:
     import httpx
@@ -189,27 +190,25 @@ WorkspaceOption = Annotated[str, typer.Option("--workspace", "-w", help="Workspa
 
 
 @workspaces_app.command("list")
-def workspaces_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+def workspaces_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table, _org: OrgOption = "") -> None:
     """List your workspaces."""
     print_rows("workspaces", access_get(org_path("/workspaces"), control_plane_url, WorkspaceOut), WORKSPACE_COLS, fmt)
 
 
 @workspaces_app.command("use")
-def workspaces_use(workspace: str, control_plane_url: str = "") -> None:
-    """Select the workspace that key commands use by default."""
-    config = load_config()
-    profile = active_profile(config)
-    if profile is None or config.active is None:
-        console.print("[red]Not signed in. Run [bold]airmux login[/bold].[/red]")
-        raise typer.Exit(1)
+def workspaces_use(workspace: str, control_plane_url: str = "", _org: OrgOption = "") -> None:
+    """Select the workspace used by workspace-scoped commands."""
+    organization = resolve_org_id()
     with access_client(control_plane_url) as c:
-        resp = c.get(org_path(f"/workspaces/{workspace}"))
+        resp = c.get(org_path(f"/workspaces/{workspace}", organization))
     if not resp.is_success:
         console.print(f"[red]No workspace [bold]{workspace}[/bold]. See [bold]airmux workspaces list[/bold].[/red]")
         raise typer.Exit(1)
     chosen = payload(resp, WorkspaceOut)
-    updated_profile = profile.model_copy(update={"workspace": chosen.slug, "workspace_name": chosen.name})
-    upsert_profile(config.active, updated_profile)
+    if str(chosen.org_id) != organization:
+        console.print("[red]This workspace belongs to another organization.[/red]")
+        raise typer.Exit(1)
+    select_workspace(organization, chosen.slug, chosen.name)
     console.print(f"Using workspace [bold]{chosen.slug}[/bold]")
 
 
@@ -218,6 +217,7 @@ def workspace_members_list(
     workspace: WorkspaceOption = "",
     control_plane_url: str = "",
     fmt: FormatOption = OutputFormat.table,
+    _org: OrgOption = "",
 ) -> None:
     """List who can use this workspace."""
     workspace_ref = resolve_workspace(workspace)
@@ -238,6 +238,7 @@ def workspace_members_add(
     role: Annotated[WorkspaceRoleOption, typer.Option("--role", help="Workspace role")] = WorkspaceRoleOption.member,
     control_plane_url: str = "",
     fmt: FormatOption = OutputFormat.table,
+    _org: OrgOption = "",
 ) -> None:
     """Add a workspace member or set their role."""
     workspace_ref = resolve_workspace(workspace)
@@ -254,13 +255,14 @@ def workspace_members_role(
     workspace: WorkspaceOption = "",
     control_plane_url: str = "",
     fmt: FormatOption = OutputFormat.table,
+    _org: OrgOption = "",
 ) -> None:
     """Set a workspace member's role."""
     workspace_members_add(user_id, workspace, role, control_plane_url, fmt)
 
 
 @workspace_members_app.command("remove")
-def workspace_members_remove(user_id: str, workspace: WorkspaceOption = "", control_plane_url: str = "") -> None:
+def workspace_members_remove(user_id: str, workspace: WorkspaceOption = "", control_plane_url: str = "", _org: OrgOption = "") -> None:
     """Remove a member from a workspace."""
     workspace_ref = resolve_workspace(workspace)
     with access_client(control_plane_url) as c:
@@ -274,6 +276,7 @@ def inference_keys_list(
     workspace: WorkspaceOption = "",
     control_plane_url: str = "",
     fmt: FormatOption = OutputFormat.table,
+    _org: OrgOption = "",
 ) -> None:
     """List this workspace's inference keys."""
     workspace_ref = resolve_workspace(workspace)
@@ -286,7 +289,7 @@ def inference_keys_list(
 
 
 @inference_keys_app.command("revoke")
-def inference_keys_revoke(key_id: str, workspace: WorkspaceOption = "", control_plane_url: str = "") -> None:
+def inference_keys_revoke(key_id: str, workspace: WorkspaceOption = "", control_plane_url: str = "", _org: OrgOption = "") -> None:
     """Revoke an inference key."""
     workspace_ref = resolve_workspace(workspace)
     with access_client(control_plane_url) as c:
@@ -380,7 +383,7 @@ def users_role(user_id: UUID, role: InstanceRoleOption, control_plane_url: str =
 
 
 @org_members_app.command("list")
-def org_members_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+def org_members_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table, _org: OrgOption = "") -> None:
     """List the active org's members."""
     print_rows("members", access_get(org_path("/users"), control_plane_url, OrgMemberOut), ORG_MEMBER_COLS, fmt)
 
@@ -393,7 +396,7 @@ class OrgRoleOption(StrEnum):
 
 
 @org_invitations_app.command("list")
-def org_invitations_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+def org_invitations_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table, _org: OrgOption = "") -> None:
     """List your organization's invitations."""
     print_rows("invitations", access_get(org_path("/invitations"), control_plane_url, OrgInvitationOut), INVITATION_COLS, fmt)
 
@@ -406,6 +409,7 @@ def org_invitations_create(  # noqa: PLR0913, PLR0917 CLI flags define the comma
     workspace_role: Annotated[WorkspaceRoleChoice | None, typer.Option("--workspace-role", help="Workspace role: admin, member, or viewer")] = None,
     control_plane_url: str = "",
     fmt: FormatOption = OutputFormat.table,
+    _org: OrgOption = "",
 ) -> None:
     """Create an email invitation and show its shareable URL once."""
     if (workspace_id is None) != (workspace_role is None):
@@ -430,7 +434,7 @@ def org_invitations_create(  # noqa: PLR0913, PLR0917 CLI flags define the comma
 
 
 @org_invitations_app.command("reissue")
-def org_invitations_reissue(invitation_id: UUID, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+def org_invitations_reissue(invitation_id: UUID, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table, _org: OrgOption = "") -> None:
     """Replace an invitation URL and show the new URL once."""
     with access_client(control_plane_url) as client:
         invitation = payload(ensure_ok(client.post(org_path(f"/invitations/{invitation_id}/reissue"))), OrgInvitationMintedOut)
@@ -438,7 +442,7 @@ def org_invitations_reissue(invitation_id: UUID, control_plane_url: str = "", fm
 
 
 @org_invitations_app.command("revoke")
-def org_invitations_revoke(invitation_id: UUID, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+def org_invitations_revoke(invitation_id: UUID, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table, _org: OrgOption = "") -> None:
     """Revoke an invitation."""
     with access_client(control_plane_url) as client:
         invitation = payload(ensure_ok(client.post(org_path(f"/invitations/{invitation_id}/revoke"))), OrgInvitationRevokedOut)
@@ -451,6 +455,7 @@ def org_members_add(
     role: Annotated[OrgRoleOption, typer.Option("--role", help="Organization role")] = OrgRoleOption.member,
     control_plane_url: str = "",
     fmt: FormatOption = OutputFormat.table,
+    _org: OrgOption = "",
 ) -> None:
     """Add an organization member or set their role."""
     with access_client(control_plane_url) as c:
@@ -465,13 +470,14 @@ def org_members_role(
     role: Annotated[OrgRoleOption, typer.Option("--role", help="Organization role")],
     control_plane_url: str = "",
     fmt: FormatOption = OutputFormat.table,
+    _org: OrgOption = "",
 ) -> None:
     """Set an organization member's role."""
     org_members_add(user_id, role, control_plane_url, fmt)
 
 
 @org_members_app.command("remove")
-def org_members_remove(user_id: str, control_plane_url: str = "") -> None:
+def org_members_remove(user_id: str, control_plane_url: str = "", _org: OrgOption = "") -> None:
     """Remove a principal from the active organization."""
     with access_client(control_plane_url) as c:
         resp = c.delete(org_path(f"/users/{user_id}"))
@@ -561,13 +567,13 @@ def _taxonomy(control_plane_url: str) -> TaxonomyOut:
 
 
 @providers_app.command("list")
-def providers_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+def providers_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table, _org: OrgOption = "") -> None:
     """List the providers you can route to."""
     print_rows("providers", _taxonomy(control_plane_url).providers, PROVIDER_COLS, fmt)
 
 
 @models_app.command("list")
-def models_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+def models_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table, _org: OrgOption = "") -> None:
     """List the models you can route to, with pricing."""
     taxonomy = _taxonomy(control_plane_url)
     providers = {provider.id: provider.name for provider in taxonomy.providers}
@@ -630,7 +636,11 @@ def gateways_list(
 
 @events_app.command("list")
 def events_list(
-    limit: LimitOption = 50, all_pages: AllPagesOption = False, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table
+    limit: LimitOption = 50,
+    all_pages: AllPagesOption = False,
+    control_plane_url: str = "",
+    fmt: FormatOption = OutputFormat.table,
+    _org: OrgOption = "",
 ) -> None:
     """List recent requests, newest first."""
     print_rows("events", access_get(org_path("/events"), control_plane_url, UsageEventOut, limit=limit, all_pages=all_pages), EVENT_COLS, fmt)
@@ -652,7 +662,9 @@ def _events_since(client: httpx.Client, path: str, newest_event_id: str | None) 
 
 
 @events_app.command("tail")
-def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+def events_tail(
+    interval: float = 2.0, keep: int = 30, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table, _org: OrgOption = ""
+) -> None:
     """Follow requests as they happen."""
     rows: deque[UsageEventOut] = deque(maxlen=keep)
     fresh_ids: set[str] = set()
@@ -720,6 +732,7 @@ def inference_keys_create(
     owner: str = typer.Option("", "--owner", help="Principal that this key represents; defaults to the current principal"),
     workspace: WorkspaceOption = "",
     control_plane_url: str = "",
+    _org: OrgOption = "",
 ) -> None:
     """Create an inference key. Shown once, never stored."""
     workspace_ref = resolve_workspace(workspace)
@@ -743,6 +756,7 @@ def workspaces_create(
     name: str = typer.Argument(..., help="Workspace name, e.g. Staging"),
     slug: str = typer.Option("", "--slug", help="Short handle to use instead of the id; derived from the name when omitted"),
     control_plane_url: str = "",
+    _org: OrgOption = "",
 ) -> None:
     """Create a workspace. You become its first member."""
     with access_client(control_plane_url) as c:
@@ -784,8 +798,9 @@ def provider_credentials_add(  # noqa: PLR0913, PLR0917 flags are the command's 
     name: str = typer.Option("default", "--name", help="Name for this key, e.g. prod or backup"),
     workspace: WorkspaceOption = "",
     priority: int = typer.Option(100, "--priority", help="Lower is tried first"),
-    org_wide: bool = typer.Option(False, "--org", help="Share across every workspace instead of one"),
+    org_wide: bool = typer.Option(False, "--org-wide", help="Share across every workspace instead of one"),
     control_plane_url: str = "",
+    _org: OrgOption = "",
 ) -> None:
     """Add your own provider key. Read from stdin when piped, prompted for otherwise.
 
@@ -802,9 +817,10 @@ def provider_credentials_add(  # noqa: PLR0913, PLR0917 flags are the command's 
 @provider_credentials_app.command("list")
 def provider_credentials_list(
     workspace: WorkspaceOption = "",
-    org_wide: bool = typer.Option(False, "--org", help="List every credential in the org rather than one workspace's"),
+    org_wide: bool = typer.Option(False, "--org-wide", help="List every credential in the org rather than one workspace's"),
     control_plane_url: str = "",
     fmt: FormatOption = OutputFormat.table,
+    _org: OrgOption = "",
 ) -> None:
     """List provider keys, in the order they are tried."""
     path = org_path("/provider-credentials" if org_wide else f"/workspaces/{resolve_workspace(workspace)}/provider-credentials")
@@ -816,6 +832,7 @@ def provider_credentials_list(
 def provider_credentials_rotate(
     credential_id: str = typer.Argument(..., help="Credential id from `airmux provider-credentials list`"),
     control_plane_url: str = "",
+    _org: OrgOption = "",
 ) -> None:
     """Replace a provider key, keeping its name and position."""
     secret = _read_secret("replacement API key")
@@ -830,6 +847,7 @@ def provider_credentials_rotate(
 def provider_credentials_rm(
     credential_id: str = typer.Argument(..., help="Credential id from `airmux provider-credentials list`"),
     control_plane_url: str = "",
+    _org: OrgOption = "",
 ) -> None:
     """Delete a provider key."""
     with access_client(control_plane_url) as c:
@@ -842,6 +860,7 @@ def provider_credentials_rm(
 def provider_credentials_disable(
     credential_id: str = typer.Argument(..., help="Credential id from `airmux provider-credentials list`"),
     control_plane_url: str = "",
+    _org: OrgOption = "",
 ) -> None:
     """Stop using a provider key without deleting it."""
     with access_client(control_plane_url) as c:
@@ -855,6 +874,7 @@ def provider_credentials_disable(
 def provider_credentials_enable(
     credential_id: str = typer.Argument(..., help="Credential id from `airmux provider-credentials list`"),
     control_plane_url: str = "",
+    _org: OrgOption = "",
 ) -> None:
     """Put a disabled provider key back in the pool."""
     with access_client(control_plane_url) as c:

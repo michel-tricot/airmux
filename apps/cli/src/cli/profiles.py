@@ -42,6 +42,23 @@ class CliConfig(BaseModel):
 
     active: str | None = None
     profiles: dict[str, Profile] = Field(default_factory=dict)
+    org_id: str | None = None
+    org_name: str | None = None
+    workspace: str | None = None
+    workspace_name: str | None = None
+
+    @model_validator(mode="after")
+    def validate_selection(self) -> Self:
+        if self.org_name is not None and self.org_id is None:
+            message = "a selected organization name requires an organization"
+            raise ValueError(message)
+        if self.workspace is not None and self.org_id is None:
+            message = "a selected workspace requires an organization"
+            raise ValueError(message)
+        if self.workspace_name is not None and self.workspace is None:
+            message = "a selected workspace name requires a workspace"
+            raise ValueError(message)
+        return self
 
 
 class InvalidConfigError(ValueError):
@@ -72,7 +89,27 @@ def load_config() -> CliConfig:
 
 
 def save_config(config: CliConfig) -> None:
-    write_private_text(config_path(), tomli_w.dumps(config.model_dump(mode="python", exclude_none=True)))
+    validated = CliConfig.model_validate(config.model_dump(mode="python"))
+    write_private_text(config_path(), tomli_w.dumps(validated.model_dump(mode="python", exclude_none=True)))
+
+
+def select_org(org_id: str, org_name: str) -> None:
+    config = load_config()
+    save_config(config.model_copy(update={"org_id": org_id, "org_name": org_name, "workspace": None, "workspace_name": None}))
+
+
+def select_workspace(org_id: str, workspace: str, workspace_name: str) -> None:
+    config = load_config()
+    save_config(
+        config.model_copy(
+            update={
+                "org_id": org_id,
+                "org_name": config.org_name if config.org_id == org_id else None,
+                "workspace": workspace,
+                "workspace_name": workspace_name,
+            }
+        )
+    )
 
 
 def active_profile(config: CliConfig) -> Profile | None:

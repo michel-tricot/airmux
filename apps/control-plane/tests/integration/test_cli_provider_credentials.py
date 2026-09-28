@@ -140,8 +140,8 @@ def test_rm_deletes_the_credential(cli):
 
 def test_an_org_wide_key_is_not_scoped_to_a_workspace(cli):
     cp, _ = cli
-    run("provider-credentials", "add", "openai", "--org", stdin=f"{KEY}\n")
-    credential = json.loads(run("provider-credentials", "list", "--org", "-f", "json"))[0]
+    run("provider-credentials", "add", "openai", "--org-wide", stdin=f"{KEY}\n")
+    credential = json.loads(run("provider-credentials", "list", "--org-wide", "-f", "json"))[0]
     assert credential["scope"] == "org"
     assert credential["workspace_id"] is None
     assert stored(cp, credential) == KEY

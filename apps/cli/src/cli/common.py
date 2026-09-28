@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError, version
+from typing import Annotated
 
 import typer
 from dotenv import find_dotenv, load_dotenv
@@ -15,15 +16,23 @@ console = Console()
 class Invocation:
     """What the run as a whole was told, as opposed to any one command.
 
-    --dev is the only such flag today. It lives here because the code that acts on it resolves a url
-    deep in the client, with no command in scope to ask.
+    The client resolves the deployment and organization below the command handler.
     """
 
     dev: bool = False
     version: bool = False
+    org: str = ""
 
 
 invocation = Invocation()
+
+
+def _select_org(value: str) -> str:
+    invocation.org = value
+    return value
+
+
+OrgOption = Annotated[str, typer.Option("--org", help="Target organization ID", callback=_select_org)]
 
 
 def _show_version(value: bool) -> bool:
@@ -45,6 +54,7 @@ def _main(
     load_dotenv(find_dotenv(usecwd=True))
     invocation.dev = dev
     invocation.version = version_
+    invocation.org = ""
 
 
 GETTING_STARTED = "Getting started"
@@ -72,7 +82,7 @@ policies_app = typer.Typer(help="Workspace inference restrictions and fallbacks"
 catalog_app = typer.Typer(help="Apply the instance provider and model catalog")
 events_app = typer.Typer(help="Requests, tokens and spend")
 gateways_app = typer.Typer(help="Gateways connected to this instance")
-profiles_app = typer.Typer(help="Saved deployment and organization contexts")
+profiles_app = typer.Typer(help="Saved deployment credentials")
 
 gateway_app = typer.Typer(help="Initialize, validate, and run a local or connected gateway", no_args_is_help=True)
 app.add_typer(gateway_app, name="gateway", rich_help_panel=SERVICES)

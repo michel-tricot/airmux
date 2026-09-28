@@ -34,9 +34,9 @@ airmux status
 airmux doctor
 ```
 
-`status` shows the active organization and workspace. Select a different saved organization profile with
-`airmux profiles use <profile>`; switch organization with `airmux orgs switch <organization>` and workspace with
-`airmux workspaces use <workspace>`.
+`status` shows the effective organization, workspace, and credential source. Select credentials with
+`airmux profiles use <profile>`. Select an organization with `airmux orgs switch <organization-id>` and a workspace with
+`airmux workspaces use <workspace>`. These selections also work with instance and environment management keys.
 
 ## Manage a workspace
 
@@ -66,8 +66,14 @@ List policies and recent usage events:
 
 ```bash
 airmux policies list
+airmux policies disable "$POLICY_ID"
+airmux policies enable "$POLICY_ID"
 airmux events list --limit 20
 ```
+
+Use `--org <organization-id>` on an organization-scoped command to target another organization for that command.
+Use `--workspace <slug-or-id>` to target another workspace. An explicit organization requires an explicit workspace
+when the saved workspace belongs to a different organization.
 
 Commands that return resources accept `-f json` for scripting and `-f table` for terminal output. For example:
 

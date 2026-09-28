@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
+import subprocess
 from typing import TYPE_CHECKING
 
 import httpx
 import pytest
-from stack_harness import ADMIN_EMAIL, ADMIN_PASSWORD, MODEL, _payload, _poll
+from stack_harness import ADMIN_EMAIL, ADMIN_PASSWORD, MODEL, _bin, _payload, _poll
 
 if TYPE_CHECKING:
     from stack_harness import Stack
@@ -54,6 +56,30 @@ def test_policy_changes_reach_running_gateway_and_preserve_workspace_scope(stack
             {"kind": "models", "names": ["quirk"]},
         )
         policy = _create_policy(admin, policies_path, "Only the other model", model_rule)
+        management_key = _payload(
+            admin.post(
+                f"/api/v1/organizations/{stack.org_id}/management-keys",
+                json={"label": "policy operator", "permissions": ["policies.manage"]},
+            )
+        )
+
+        def toggle(command: str) -> dict[str, object]:
+            result = subprocess.run(  # noqa: S603 runs the local CLI against the isolated acceptance stack
+                [_bin("airmux"), "policies", command, str(policy["id"]), "--org", stack.org_id, "--workspace", str(workspace["id"]), "-f", "json"],
+                cwd=stack.tmp,
+                env={
+                    **stack.env,
+                    "AIRMUX_CONTROL_PLANE_URL": stack.cp_url,
+                    "AIRMUX_MANAGEMENT_KEY": str(management_key["token"]),
+                    "AIRMUX_CLI_CONFIG": str(stack.tmp / "cli-config.toml"),
+                },
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            assert result.returncode == 0, result.stderr or result.stdout
+            return json.loads(result.stdout)[0]
+
         assert _poll(lambda: stack.request().status_code == 403, 30), "the running gateway did not enforce the published policy"
         response = httpx.post(
             f"{stack.dp_url}/inf/v1/chat/completions",
@@ -62,7 +88,7 @@ def test_policy_changes_reach_running_gateway_and_preserve_workspace_scope(stack
             timeout=10,
         )
         assert response.status_code == 200
-        _payload(admin.patch(f"{policies_path}/{policy['id']}", json={"enabled": False}))
+        assert toggle("disable")["enabled"] is False
         assert _poll(lambda: stack.request().status_code == 200, 30), "disabling the policy was not published"
         output_limit_rule = _rule(
             {"kind": "all_requests"},
@@ -81,7 +107,7 @@ def test_policy_changes_reach_running_gateway_and_preserve_workspace_scope(stack
             ),
             30,
         ), "the running gateway did not enforce the published output limit"
-        enabled = _payload(admin.patch(f"{policies_path}/{policy['id']}", json={"enabled": True}))
+        enabled = toggle("enable")
         assert enabled["enabled"] is True
         assert _poll(lambda: stack.request().status_code == 403, 30)
         _payload(admin.delete(f"{policies_path}/{policy['id']}"))
