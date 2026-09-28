@@ -48,8 +48,9 @@
   "overrides": {
     "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0",
     "esbuild": "0.28.1",
-    "fast-uri": "3.1.6",
-    "js-yaml": "4.3.2"
+    "fast-uri": "3.1.7",
+    "js-yaml": "4.3.2",
+    "undici": "8.10.2"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
