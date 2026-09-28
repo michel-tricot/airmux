@@ -635,7 +635,7 @@ it('shows the full attempt history while identifying the filtered provider contr
   expect(within(panel).getByText('User')).toBeInTheDocument();
   expect(within(panel).getAllByText('Success').length).toBeGreaterThan(0);
   expect(within(panel).getByText('Upstream error')).toBeInTheDocument();
-  expect(within(panel).getByText('Airmux-estimated')).toBeInTheDocument();
+  expect(within(panel).getByText('Airmux-derived')).toBeInTheDocument();
   expect(within(panel).queryByText(/estimated/i)).not.toBeInTheDocument();
   expect(within(panel).getByText('Checkout')).toBeInTheDocument();
   expect(within(panel).getByText('Primary credential')).toBeInTheDocument();

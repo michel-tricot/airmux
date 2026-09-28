@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/elements';
 
 const labels = {
   provider: 'Provider reported',
-  estimated: 'Airmux-estimated',
+  estimated: 'Airmux-derived',
   not_applicable: 'Not applicable',
 };
 
