@@ -34,6 +34,10 @@
 
 `airmux` gives agents one self-hosted origin for calling multiple LLM providers. Clients send `Chat Completions`, `Responses`, or `Messages` requests through any SDK or integration that can target the corresponding HTTP API. `airmux` authenticates the workspace, applies policy, selects a model and scoped provider credential, translates the request, and records the result.
 
+![Workspace request history showing status, cost, tokens, inference key, and model](docs/images/webapp-workspace-requests.png)
+
+*Example request history in the webapp, using synthetic data*
+
 > [!NOTE] `airmux` is pre-1.0. Configuration, APIs, and migrations may change before the first stable release.
 
 ## Quickstart
@@ -53,7 +57,25 @@ Or use the CLI:
 docker compose exec app airmux quickstart --url http://localhost:8080
 ```
 
-`quickstart` sets up your account and workspace, prints an inference key, and sends a real model request. Open [localhost:8080](http://localhost:8080) for the console, where the request appears with its model, tokens, and estimated cost.
+`quickstart` sets up your account and workspace, prints an inference key, and sends a real model request.
+Open [localhost:8080](http://localhost:8080) for the console, where the request appears with its model, tokens, and estimated cost.
+
+### Send an API request
+
+Copy the key printed by the CLI. If you used the web app, create one under **Inference Keys** in your workspace.
+The example uses an OpenAI model. If you configured another provider, use one of its model IDs from the web app's
+**Models** page or the model reported by `quickstart`.
+
+```bash
+export AIRMUX_INFERENCE_KEY='sk-inf-your-key'
+curl --fail-with-body http://localhost:8080/inf/v1/chat/completions \
+  -H "Authorization: Bearer $AIRMUX_INFERENCE_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"Say hello in five words"}],"max_completion_tokens":64}'
+```
+
+A successful response contains the answer in `choices[0].message.content` and token counts in `usage`.
+The request then appears under **Requests** in the web app. It calls your provider and is billed by that provider.
 
 ## Use your existing client
 
