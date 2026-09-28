@@ -8,19 +8,19 @@
 
   <p>
     <a href="https://github.com/michel-tricot/airmux/actions/workflows/ci.yml">
-      <img alt="CI" src="https://github.com/michel-tricot/airmux/actions/workflows/ci.yml/badge.svg" />
+      <img alt="CI" src="https://github.com/michel-tricot/airmux/actions/workflows/ci.yml/badge.svg">
     </a>
 
     <a href="https://pypi.org/project/airmux/">
-      <img alt="PyPI" src="https://img.shields.io/pypi/v/airmux?logo=pypi&logoColor=white" />
+      <img alt="PyPI" src="https://img.shields.io/pypi/v/airmux?logo=pypi&logoColor=white">
     </a>
 
     <a href="https://www.python.org/downloads/">
-      <img alt="Python 3.13+" src="https://img.shields.io/badge/python-3.13%2B-3776AB?logo=python&logoColor=white" />
+      <img alt="Python 3.13+" src="https://img.shields.io/badge/python-3.13%2B-3776AB?logo=python&logoColor=white">
     </a>
 
     <a href="LICENSE">
-      <img alt="Elastic License 2.0" src="https://img.shields.io/badge/license-Elastic--2.0-4C1?logo=elastic&logoColor=white" />
+      <img alt="Elastic License 2.0" src="https://img.shields.io/badge/license-Elastic--2.0-4C1?logo=elastic&logoColor=white">
     </a>
   </p>
 
