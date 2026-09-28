@@ -1,10 +1,9 @@
+# `airmux`
+
+`airmux` is a self-hosted gateway between your agents and their LLM providers. Change the client's base URL and API key and
+keep using `Chat Completions`, `Responses`, or `Messages` endpoints.
+
 <div align="center">
-  <h1><code>airmux</code></h1>
-  <p><strong>One self-hosted LLM gateway. Any compatible client. Multiple providers.</strong></p>
-  <p>
-    Connect through a supported inference API while `airmux` centralizes provider translation, routing, policy,
-    credentials, failover, and usage accounting behind one endpoint.
-  </p>
   <p>
     <a href="https://github.com/michel-tricot/airmux/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/michel-tricot/airmux/actions/workflows/ci.yml/badge.svg"></a>
     <a href="https://pypi.org/project/airmux/"><img alt="PyPI" src="https://img.shields.io/pypi/v/airmux?logo=pypi&logoColor=white"></a>
@@ -19,20 +18,19 @@
   </p>
 </div>
 
-`airmux` gives applications, agents, CLIs, and services one self-hosted origin for calling multiple provider families.
-Clients send Chat Completions, Responses, or Messages requests through any SDK or integration that can target the
-corresponding HTTP API. `airmux` authenticates the workspace, applies policy, selects a model and scoped provider
-credential, translates the request, and records the result.
+![Production workspace usage dashboard showing spend, requests, tokens, cost per request, and a trend chart](docs/images/readme-screenshot.png)
 
-You run the whole platform: a web console, organizations and workspaces, managed provider credentials, live policy, and
-persistent usage history with estimated cost.
+*Example Production workspace usage in the webapp, using synthetic data*
+
+For each request, `airmux` applies workspace policy, picks a provider credential, calls the model, and records tokens and cost.
+It replies in the caller's API format.
 
 > [!NOTE]
 > `airmux` is pre-1.0. Configuration, APIs, and migrations may change before the first stable release.
 
 ## Quickstart
 
-Run the full platform on one machine. You need Docker with Compose 2.24.4+ and an API key for at least one provider.
+Run the full platform on one node. You need Docker with Compose 2.24.4+ and an API key for at least one provider.
 
 ```bash
 curl -fsSLO https://github.com/michel-tricot/airmux/releases/latest/download/docker-compose.yml
@@ -47,28 +45,29 @@ Or use the CLI:
 docker compose exec app airmux quickstart --url http://localhost:8080
 ```
 
-Follow the prompts. `quickstart` sets up your account and workspace, prints an inference key, and sends
-a real model request. Open [localhost:8080](http://localhost:8080) for the console, where the request appears with its
-model, tokens, and estimated cost.
+`quickstart` sets up your account and workspace, prints an inference key, and sends a real model request.
+Open [localhost:8080](http://localhost:8080) for the console, where the request appears with its model, tokens, and estimated cost.
 
-> [!NOTE]
-> Requests through `airmux` call real providers and are billed by them.
+### Send an API request
 
-The [quickstart guide](docs/quickstart.mdx) continues through finding that request in the console. See
-[customize the Docker deployment](docs/deployment/docker.mdx#customize-the-runtime-yaml) when you need to change runtime settings.
+Copy the key printed by the CLI. If you used the web app, create one under **Inference Keys** in your workspace.
+The example uses an OpenAI model. If you configured another provider, use one of its model IDs from the web app's
+**Models** page or the model reported by `quickstart`.
 
-| Goal | Command |
-| --- | --- |
-| List catalog models | `docker compose exec app airmux models list` |
-| Inspect the installation | `docker compose exec app airmux doctor` |
-| Follow gateway activity | `docker compose exec app airmux events tail --interval 2 --keep 30` |
-| Follow service logs | `docker compose logs -f app` |
-| Stop while preserving state | `docker compose down` |
+```bash
+export AIRMUX_INFERENCE_KEY='sk-inf-your-key'
+curl --fail-with-body http://localhost:8080/inf/v1/chat/completions \
+  -H "Authorization: Bearer $AIRMUX_INFERENCE_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"Say hello in five words"}],"max_completion_tokens":64}'
+```
+
+A successful response contains the answer in `choices[0].message.content` and token counts in `usage`.
+The request then appears under **Requests** in the web app. It calls your provider and is billed by that provider.
 
 ## Use your existing client
 
-Any client that can target one of `airmux`'s HTTP APIs and send an inference key through `Authorization: Bearer` or
-`x-api-key` can connect. That includes SDKs, agent frameworks, CLIs, services, and raw HTTP integrations.
+Any client that can target one of `airmux`'s HTTP APIs and send an inference key through `Authorization: Bearer` or `x-api-key` can connect. That includes SDKs, agent frameworks, CLIs, services, and raw HTTP integrations.
 
 | API | Endpoint |
 | --- | --- |
@@ -77,7 +76,7 @@ Any client that can target one of `airmux`'s HTTP APIs and send an inference key
 | Messages | `POST /inf/v1/messages` |
 | Model discovery | `GET /inf/v1/models` and `GET /inf/v1/models/{model_id}` |
 
-The OpenAI SDK is one example. Point it at `/inf/v1` and replace the upstream key with an `airmux` inference key:
+For example, the OpenAI SDK just needs to be pointed it at `/inf/v1` with an `airmux` inference key:
 
 ```python
 import os
@@ -97,27 +96,26 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)
 ```
 
-The client protocol does not constrain the provider route. A Messages request can target an OpenAI-compatible model,
-and a Chat Completions request can target an Anthropic model. `airmux` translates the request and returns the response
-and errors in the caller's dialect. See the [SDK guide](docs/guides/sdks.mdx) for client examples.
+A `Messages` request can target an OpenAI-compatible model, and a `Chat Completions` request can target a `Messages` model. `airmux` translates the request and returns the response and errors in the caller's dialect. See the [SDK guide](docs/guides/sdks.mdx) for client examples.
 
 ## Why `airmux`
 
-- **Protocol-first clients:** connect any SDK, agent framework, CLI, service, or raw HTTP integration that speaks an exposed API
+- **Protocol-first clients:** connect any SDK, agent framework, CLI, service, or raw HTTP integration
 - **Policy at the gateway:** compose model and provider allowlists, price ceilings, spending budgets, request limits, credential rules, denials, strict parameters, and fallbacks
-- **Scoped provider secrets:** separate instance, organization, and workspace credentials without exposing secret values to configuration bundles
+- **Full feature translation:** translate buffered and streaming requests, including tool calls, structured output, reasoning, images, and PDF inputs when the selected model supports them
+- **Inference keys governance:** virtualize and monitor inference keys for organizations, workspaces, users or specific agents
+- **Agent ready management:** manage the configurations with your agent through the CLI and service accounts
 - **Predictable failover:** retry eligible credentials and route to bounded backup models without escaping workspace policy
-- **Complete request records:** capture tokens, estimated cost, latency, status, credential scope, configuration version, and every fallback attempt
-- **A resilient request path:** gateways evaluate immutable local bundles and can keep serving through a control-plane outage
+- **Outage-tolerant gateways:** keep serving inference during a control-plane outage
+- **Complete request records:** capture tokens, cost, latency, status, credential scope, and every fallback attempt
+- **Self-hosted platform:** run the webapp, organizations and workspaces, live policy, and persistent usage history on your own infrastructure
+- **Built-in observability:** export operational metrics through OpenTelemetry (OTLP) or scrape with Prometheus
 
-The shipped catalog includes Anthropic, Cerebras, DeepSeek, Fireworks, Groq, Mistral, OpenAI, Together, and xAI. Model
-IDs, prices, context windows, modalities, capabilities, and parameter support are explicit, inspectable data in the
-[taxonomy](taxonomy/taxonomy.yml).
+The shipped catalog includes 9 providers and 243 models across OpenAI, Anthropic, Cerebras, DeepSeek, Fireworks, Groq, Mistral, Together, and xAI. Model IDs, prices, context windows, modalities, capabilities, and parameter support are explicit, inspectable data in the [taxonomy](taxonomy/taxonomy.yml).
 
 ## Gateway-only mode
 
-A secondary path for one inference endpoint managed through local files, with no Docker, Postgres, console, or usage
-history. You need Python 3.13+, uv, and a provider key:
+A secondary path for one inference endpoint managed through local files, with no Docker, Postgres, console, or usage history. You need Python 3.13+, uv, and a provider key:
 
 ```bash
 uv tool install airmux
@@ -126,8 +124,7 @@ airmux gateway init
 airmux gateway serve
 ```
 
-`init` creates configuration, a model taxonomy, and a private inference key under `.airmux/`. Continue with the
-[gateway-only guide](docs/deployment/gateway.mdx).
+`init` creates configuration, a model taxonomy, and a private inference key under `.airmux/`. Continue with the [gateway-only guide](docs/deployment/gateway.mdx).
 
 ## Architecture
 
@@ -146,13 +143,9 @@ flowchart LR
   G -->|Usage and health| M
 ```
 
-Caller dialects and provider protocols cross through one canonical model, so adding a caller dialect costs one ingress
-adapter and adding a provider family costs one egress adapter. The control plane compiles complete, versioned
-organization bundles that gateways validate and adopt atomically, so inference never reads the management database and
-an in-flight request never observes partially updated policy.
+Caller dialects and provider protocols cross through one canonical model, so adding a caller dialect costs one ingress adapter and adding a provider family costs one egress adapter.
 
-Read the [architecture guide](docs/concepts/architecture.mdx) for the full data flow, failure boundaries, and deployment
-shapes.
+Read the [architecture guide](docs/concepts/architecture.mdx) for the full data flow, failure boundaries, and deployment shapes.
 
 ## Documentation
 
