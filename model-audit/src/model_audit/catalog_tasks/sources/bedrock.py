@@ -1,9 +1,10 @@
 """Bedrock Mantle's OpenAI-compatible Chat Completions endpoint.
 
-The catalog route targets the in-region Mantle endpoint and accepts a Bedrock API key.
-GPT-5.6 Terra is the documented representative model; its one-million-token price tier
-is recorded so long prompts are not underpriced. Other listed ids are omitted until their
-Chat Completions support and modality details are documented.
+Mantle lists account-available ids at `/v1/models`, while GPT-5.6 Terra's Chat Completions
+route is under `/openai/v1`. The catalog route accepts a Bedrock API key. GPT-5.6 Terra is
+the documented representative model; its one-million-token price tier is recorded so long
+prompts are not underpriced. Other listed ids are omitted until their Chat Completions
+support and modality details are documented.
 """
 
 from __future__ import annotations
@@ -21,7 +22,7 @@ if TYPE_CHECKING:
 
 class Bedrock(ModelSource):
     provider_id = "bedrock"
-    url = "https://bedrock-mantle.us-east-1.api.aws/openai/v1/models"
+    url = "https://bedrock-mantle.us-east-1.api.aws/v1/models"
     definition = ProviderDefinition(
         id=provider_id,
         name="Amazon Bedrock",
@@ -33,6 +34,7 @@ class Bedrock(ModelSource):
         ingress=("oai",),
         primary_surface="oai",
         egress_kind="aws_bedrock",
+        param_aliases=(("max_output_tokens", "max_completion_tokens"),),
         auth=("bearer",),
         env_var="AWS_BEARER_TOKEN_BEDROCK",
         icon_mono="bedrock",
@@ -49,7 +51,7 @@ class Bedrock(ModelSource):
             max_output_tokens=128_000,
             input_modalities=["text", "image"],
             output_modalities=["text"],
-            supports_tools=True,
+            supports_tools=False,
             pricing={
                 "input_per_mtok": Decimal("4.40"),
                 "cached_input_per_mtok": Decimal("0.44"),

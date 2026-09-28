@@ -36,6 +36,7 @@ class ProviderDefinition(BaseModel):
     ingress: tuple[Literal["oai", "oai_responses", "anthropic", "google", "other_standard", "custom"], ...] = Field(min_length=1)
     primary_surface: Literal["oai", "oai_responses", "anthropic", "google", "other_standard", "custom"]
     egress_kind: Literal["openai_compatible", "openai_responses", "anthropic", "aws_bedrock", "azure_openai"] | None = Field(None)
+    param_aliases: tuple[tuple[str, str], ...] = ()
     auth: tuple[str, ...] = Field(min_length=1)
     env_var: str = Field(pattern=r"^[A-Z][A-Z0-9_]+$")
     icon_mono: str | None = None
@@ -164,6 +165,7 @@ def provider_entry(definition: ProviderDefinition) -> dict[str, object]:
         "ingress": list(definition.ingress),
         "primary_surface": definition.primary_surface,
         **({"egress_kind": definition.egress_kind} if definition.egress_kind is not None else {}),
+        **({"param_aliases": dict(definition.param_aliases)} if definition.param_aliases else {}),
         "auth": list(definition.auth),
         "env_var": definition.env_var,
         "schema": None,

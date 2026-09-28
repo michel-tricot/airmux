@@ -51,13 +51,17 @@ inference endpoints; current content support is described below.
 | `accepted_params` | Known accepted top-level extras |
 | `params_closed` | Whether undeclared extras must be dropped |
 
-The shipped taxonomy currently includes Anthropic, Cerebras, DeepSeek, Fireworks, Groq, Mistral, OpenAI, Together, and
-xAI provider entries. The deployed catalog is authoritative and may differ after a taxonomy update.
+The shipped taxonomy includes Anthropic, AWS Bedrock, Azure OpenAI, Cerebras, DeepSeek, Fireworks, Groq, Mistral, OpenAI,
+Together, and xAI provider entries. The deployed catalog is authoritative and may differ after a taxonomy update.
 
-Custom provider entries can select `aws_bedrock` or `azure_openai` as their `kind`. Bedrock uses the regional
-OpenAI compatible endpoint and a Bedrock API key. Azure OpenAI uses a resource endpoint ending in `/openai/v1`; its
-model's `upstream_model` is the deployment name. Store the corresponding provider key through the normal provider
-credential workflow. See [provider credentials](/docs/features/provider-credentials) for setup and capability limits.
+The Bedrock entry uses the in-region Mantle Chat Completions endpoint and a Bedrock API key. Mantle's `/v1/models`
+endpoint lists account-available model IDs, but the gateway catalog only includes models with documented modality and
+capability metadata. The current entry includes `openai.gpt-5.6-terra` and maps the canonical output limit to
+`max_completion_tokens`.
+
+Azure OpenAI uses a resource endpoint ending in `/openai/v1`; its model's `upstream_model` is the deployment name.
+Replace `RESOURCE` with the Azure resource name. Store the provider key through the normal provider credential workflow.
+See [provider credentials](/docs/features/provider-credentials) for setup and capability limits.
 
 For example, a catalog input can define the endpoints and deployments directly:
 
@@ -65,14 +69,14 @@ For example, a catalog input can define the endpoints and deployments directly:
 providers:
   - provider_id: bedrock
     kind: aws_bedrock
-    base_url: https://bedrock-mantle.us-east-1.api.aws/v1
+    base_url: https://bedrock-mantle.us-east-1.api.aws/openai/v1
   - provider_id: azure_openai
     kind: azure_openai
     base_url: https://RESOURCE.openai.azure.com/openai/v1
 models:
-  - model_id: bedrock/anthropic.claude-sonnet
+  - model_id: bedrock/openai.gpt-5.6-terra
     provider_id: bedrock
-    upstream_model: anthropic.claude-sonnet
+    upstream_model: openai.gpt-5.6-terra
     input_modalities: [text]
     output_modalities: [text]
   - model_id: azure_openai/support-chat

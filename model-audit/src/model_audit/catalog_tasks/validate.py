@@ -309,6 +309,7 @@ def check_seed(all_entries: list[dict], failures: list[str]) -> None:
         "ingress",
         "primary_surface",
         "egress_kind",
+        "param_aliases",
         "auth",
         "env_var",
     )

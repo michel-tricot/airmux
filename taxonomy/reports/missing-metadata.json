@@ -1,5 +1,13 @@
 [
   {
+    "provider": "bedrock",
+    "model": "openai.gpt-5.6-terra",
+    "missing": [
+      "supports_structured_output",
+      "supports_thinking"
+    ]
+  },
+  {
     "provider": "cerebras",
     "model": "gemma-4-31b",
     "missing": [

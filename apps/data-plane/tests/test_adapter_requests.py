@@ -151,11 +151,20 @@ def test_the_upstream_request_names_the_upstream_model_and_spends_the_injected_c
 
 
 def test_bedrock_uses_the_regional_openai_compatible_endpoint_and_bearer_key():
-    provider = PROVIDER.model_copy(update={"kind": "aws_bedrock", "base_url": "https://bedrock-mantle.us-east-1.api.aws/v1"})
+    provider = PROVIDER.model_copy(
+        update={
+            "kind": "aws_bedrock",
+            "base_url": "https://bedrock-mantle.us-east-1.api.aws/openai/v1",
+            "param_aliases": {"max_output_tokens": "max_completion_tokens"},
+        }
+    )
     upstream = REGISTRY["aws_bedrock"](provider, Secret("bedrock-key")).transform_request(request_of(CORPUS[0]), MODEL)
 
-    assert upstream.url == "https://bedrock-mantle.us-east-1.api.aws/v1/chat/completions"
+    assert upstream.url == "https://bedrock-mantle.us-east-1.api.aws/openai/v1/chat/completions"
     assert upstream.headers["authorization"] == "Bearer bedrock-key"
+    body = json.loads(upstream.body)
+    assert body["max_completion_tokens"] == 4096
+    assert "max_tokens" not in body
 
 
 def test_azure_openai_uses_deployment_endpoint_and_api_key_header():

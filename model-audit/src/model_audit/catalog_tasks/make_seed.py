@@ -32,6 +32,7 @@ CARRIED = (
     "ingress",
     "primary_surface",
     "egress_kind",
+    "param_aliases",
     "auth",
     "env_var",
 )

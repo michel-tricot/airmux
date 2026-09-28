@@ -1,8 +1,8 @@
 {
   "provider": "bedrock",
-  "source": "https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-openai-gpt-56-terra.html",
-  "source_type": "docs",
-  "updated": "2026-09-24",
+  "source": "https://bedrock-mantle.us-east-1.api.aws/v1/models",
+  "source_type": "api",
+  "updated": "2026-09-28",
   "count": 1,
   "models": [
     {
@@ -17,16 +17,17 @@
       "output_modalities": [
         "text"
       ],
-      "supports_tools": true,
+      "supports_tools": false,
+      "supports_structured_output": null,
       "pricing": {
-        "input_per_mtok": "4.40",
-        "output_per_mtok": "19.80",
-        "cached_input_per_mtok": "0.44",
-        "cache_write_per_mtok": "5.50"
+        "input_per_mtok": 4.40,
+        "cached_input_per_mtok": 0.44,
+        "cache_write_per_mtok": 5.50,
+        "output_per_mtok": 19.80
       },
-      "context_source": "vendor-docs",
-      "max_output_source": "vendor-docs",
-      "pricing_source": "vendor-docs",
+      "context_source": "provider",
+      "max_output_source": "provider",
+      "pricing_source": "provider",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -44,9 +45,7 @@
             }
           }
         }
-      },
-      "documentation_url": "https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-openai-gpt-56-terra.html",
-      "source": "https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-openai-gpt-56-terra.html"
+      }
     }
   ]
 }

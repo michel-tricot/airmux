@@ -18,8 +18,6 @@ providers:
   auth:
   - bearer
   env_var: OPENAI_API_KEY
-  param_aliases:
-    max_output_tokens: max_completion_tokens
   schema:
     completion:
       oai: &id001
@@ -206,11 +204,13 @@ providers:
   docs: https://docs.aws.amazon.com/bedrock/latest/userguide/inference-chat-completions.html
   base_url: https://bedrock-mantle.us-east-1.api.aws/openai/v1
   openapi: https://raw.githubusercontent.com/openai/openai-openapi/master/openapi.yaml
-  models_url: https://bedrock-mantle.us-east-1.api.aws/openai/v1/models
+  models_url: https://bedrock-mantle.us-east-1.api.aws/v1/models
   ingress:
   - oai
   primary_surface: oai
   egress_kind: aws_bedrock
+  param_aliases:
+    max_output_tokens: max_completion_tokens
   auth:
   - bearer
   env_var: AWS_BEARER_TOKEN_BEDROCK
