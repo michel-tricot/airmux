@@ -1,5 +1,5 @@
 import { useEnrollment } from '@workspace/api-client-react';
-import { GatewayBrand } from '@/components/layout/responsive-shell';
+import { AirmuxBrand } from '@/components/layout/responsive-shell';
 import { useSession } from '@/lib/session';
 import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
@@ -17,7 +17,7 @@ export default function Onboarding() {
   return (
     <div className="min-h-[100dvh] bg-background">
       <header className="mx-auto flex w-full max-w-3xl items-center justify-between gap-4 px-4 py-6 sm:px-8">
-        <GatewayBrand href="/onboarding" />
+        <AirmuxBrand href="/onboarding" />
         <Button variant="ghost" onClick={logout}>
           Sign out
         </Button>
@@ -47,7 +47,8 @@ function SetupSteps() {
   if (!credentialsQuery.data || !enrollment.data || !providersQuery.data)
     return <ErrorState message="Setup progress is unavailable. Reload to try again." />;
 
-  const keysSaved = credentialsQuery.data.filter((credential) => credential.enabled).length;
+  const savedCredentials = credentialsQuery.data.filter((credential) => credential.enabled);
+  const keysSaved = savedCredentials.length;
   const hasKeys = keysSaved > 0;
   const organization = enrollment.data.orgs.find((org) => org.id === enrollment.data.personal_org_id);
   const hasOrg = organization !== undefined;
@@ -71,10 +72,23 @@ function SetupSteps() {
               description="Instance keys are available to every organization. Add one or more provider accounts."
               actions={<Badge variant={hasKeys ? 'success' : 'outline'}>{hasKeys ? 'Complete' : 'To do'}</Badge>}
             />
-            {hasKeys && (
+            {hasKeys ? (
               <p className="text-sm text-success">
                 {keysSaved} instance provider {keysSaved === 1 ? 'key' : 'keys'} saved
               </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">No provider keys added yet</p>
+            )}
+            {hasKeys && (
+              <ul aria-label="Saved provider keys" className="flex flex-wrap gap-2">
+                {savedCredentials.map((credential) => (
+                  <li key={credential.id}>
+                    <Badge variant="outline">
+                      {credential.provider_name} · {credential.name}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
             )}
             {providers.length === 0 && (
               <Alert>
@@ -118,7 +132,12 @@ function SetupSteps() {
                 </div>
               </Alert>
             ) : (
-              <Button onClick={() => setCreateOpen(true)}>Create organization</Button>
+              <div className="space-y-2">
+                <Button disabled={!hasKeys} onClick={() => setCreateOpen(true)}>
+                  Create organization
+                </Button>
+                {!hasKeys && <p className="text-sm text-muted-foreground">Add a provider key before creating an organization.</p>}
+              </div>
             )}
           </Card>
         </li>
@@ -132,10 +151,7 @@ function SetupSteps() {
           </div>
         </Alert>
       )}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <Button asChild variant="ghost">
-          <Link href="/instance">Finish later</Link>
-        </Button>
+      <div className="flex justify-end">
         <Button
           disabled={!complete}
           onClick={() => {
@@ -148,9 +164,6 @@ function SetupSteps() {
           Finish setup
         </Button>
       </div>
-      <p className="text-sm text-muted-foreground">
-        Each completed step is saved. Return to this page after signing in, or choose Resume setup from the instance overview.
-      </p>
       <AddProviderCredentialDialog
         open={addOpen}
         onOpenChange={setAddOpen}

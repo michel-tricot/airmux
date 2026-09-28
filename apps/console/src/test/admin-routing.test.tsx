@@ -71,6 +71,7 @@ function installAdminHandlers() {
         data: { user_id: USER.id, email: USER.email, name: USER.name, instance_role: 'owner', orgs: USER.orgs },
       }),
     ),
+    http.get('/api/v1/enroll', () => HttpResponse.json({ data: { orgs: [ORG], personal_org_id: ORG.id, pending_invitations: [] } })),
     http.get('/api/v1/organizations', () => paged([ORG])),
     http.get('/api/v1/organizations/:orgId', () => HttpResponse.json<{ data: Api.OrgOut }>({ data: ORG })),
     http.get('/api/v1/users', () => enveloped([USER])),

@@ -13,7 +13,7 @@ interface ResponsiveShellProps {
   mainClassName?: string;
 }
 
-export function GatewayBrand({ href, onClick }: { href: string; onClick?: () => void }) {
+export function AirmuxBrand({ href, onClick }: { href: string; onClick?: () => void }) {
   return (
     <Link
       href={href}
@@ -23,7 +23,7 @@ export function GatewayBrand({ href, onClick }: { href: string; onClick?: () => 
       <span className="flex h-6 w-6 items-center justify-center rounded bg-primary">
         <TerminalSquare className="h-4 w-4 text-primary-foreground" />
       </span>
-      <span>GATEWAY</span>
+      <span>AIRMUX</span>
     </Link>
   );
 }

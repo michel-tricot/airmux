@@ -27,6 +27,7 @@ const credential: Api.ProviderCredentialOut = {
 };
 let credentials: Api.ProviderCredentialOut[];
 let organization: Api.OrgOut | undefined;
+let memberships: string[];
 
 function renderSetup() {
   window.history.replaceState(null, '', '/onboarding');
@@ -36,10 +37,11 @@ function renderSetup() {
 beforeEach(() => {
   credentials = [];
   organization = undefined;
+  memberships = [];
   server.use(
     http.get('/api/v1/auth/me', () =>
       HttpResponse.json<{ data: Api.MeOut }>({
-        data: { user_id: 'owner-1', email: 'owner@example.com', name: 'Owner', instance_role: 'owner', orgs: [] },
+        data: { user_id: 'owner-1', email: 'owner@example.com', name: 'Owner', instance_role: 'owner', orgs: memberships },
       }),
     ),
     http.get('/api/v1/instance/provider-credentials', () => enveloped(credentials)),
@@ -66,12 +68,11 @@ beforeEach(() => {
 });
 
 describe('instance setup', () => {
-  it('lands a returning administrator without a selected organization in the instance console', async () => {
+  it('returns an administrator without an organization to setup', async () => {
     window.history.replaceState(null, '', '/');
     render(<App />);
-    expect(await screen.findByRole('heading', { name: 'System Overview' })).toBeVisible();
-    await userEvent.click(screen.getByRole('link', { name: 'Resume setup' }));
     expect(await screen.findByText('0 of 2 steps complete')).toBeVisible();
+    expect(window.location.pathname).toBe('/onboarding');
   });
 
   it('adds multiple keys, resumes from saved resources, creates an organization, and opens that organization', async () => {
@@ -81,6 +82,8 @@ describe('instance setup', () => {
     expect(screen.queryByRole('navigation', { name: 'Instance navigation' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Finish setup' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Create organization' })).toBeDisabled();
+    expect(screen.getByText('No provider keys added yet')).toBeVisible();
 
     for (const name of ['primary', 'backup']) {
       await user.click(screen.getByRole('button', { name: /Add (another )?provider key/i }));
@@ -91,6 +94,7 @@ describe('instance setup', () => {
       await user.click(within(dialog).getByRole('button', { name: 'Add Key' }));
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
       expect(await screen.findByText(`${credentials.length} instance provider ${credentials.length === 1 ? 'key' : 'keys'} saved`)).toBeVisible();
+      expect(screen.getByText(`openai · ${name}`)).toBeVisible();
     }
     expect(screen.queryByDisplayValue('test-provider-secret')).not.toBeInTheDocument();
     firstSession.unmount();
@@ -98,6 +102,9 @@ describe('instance setup', () => {
     const resumedSession = renderSetup();
     expect(await screen.findByText('1 of 2 steps complete')).toBeVisible();
     expect(screen.getByText('2 instance provider keys saved')).toBeVisible();
+    expect(screen.getByText('openai · primary')).toBeVisible();
+    expect(screen.getByText('openai · backup')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Create organization' })).toBeEnabled();
 
     await user.click(screen.getByRole('button', { name: 'Create organization' }));
     const dialog = screen.getByRole('dialog', { name: 'Create Organization' });
@@ -117,19 +124,23 @@ describe('instance setup', () => {
   });
 
   it('does not treat membership in another organization as completing the organization step', async () => {
+    memberships = [ORG.id];
     server.use(http.get('/api/v1/enroll', () => HttpResponse.json({ data: { orgs: [ORG], personal_org_id: null, pending_invitations: [] } })));
-    renderSetup();
+    window.history.replaceState(null, '', '/instance');
+    render(<App />);
     expect(await screen.findByText('0 of 2 steps complete')).toBeVisible();
+    expect(window.location.pathname).toBe('/onboarding');
     expect(screen.getByRole('button', { name: 'Create organization' })).toBeVisible();
   });
 
-  it('allows leaving and resuming incomplete setup from navigation', async () => {
-    const user = userEvent.setup();
-    renderSetup();
-    await user.click(await screen.findByRole('link', { name: 'Finish later' }));
-    expect(await screen.findByRole('heading', { name: 'System Overview' })).toBeVisible();
-    await user.click(screen.getByRole('link', { name: 'Resume setup' }));
+  it('blocks direct navigation to the instance console before setup', async () => {
+    window.history.replaceState(null, '', '/instance');
+    render(<App />);
     expect(await screen.findByText('0 of 2 steps complete')).toBeVisible();
+    expect(window.location.pathname).toBe('/onboarding');
+    expect(screen.getByRole('link', { name: 'AIRMUX' })).toHaveAttribute('href', '/onboarding');
+    expect(screen.queryByRole('link', { name: 'Finish later' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Finish setup' })).toBeDisabled();
   });
 
   it('offers membership recovery when the existing organization is no longer accessible', async () => {
@@ -171,12 +182,17 @@ describe('instance setup', () => {
     expect(await screen.findByText('1 of 2 steps complete')).toBeVisible();
   });
 
-  it('blocks setup for an instance auditor', async () => {
+  it.each([null, 'auditor'] as const)('returns a %s user to the regular organization picker', async (instanceRole) => {
     server.use(
-      http.get('/api/v1/auth/permissions', () => HttpResponse.json({ data: { permissions: ['organizations.read', 'provider-credentials.read'] } })),
+      http.get('/api/v1/auth/me', () =>
+        HttpResponse.json<{ data: Api.MeOut }>({
+          data: { user_id: 'user-1', email: 'user@example.com', name: 'User', instance_role: instanceRole, orgs: [] },
+        }),
+      ),
     );
     renderSetup();
-    expect(await screen.findByRole('alert')).toHaveTextContent('You do not have access to this instance page');
-    expect(screen.queryByRole('link', { name: 'Resume setup' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Select Organization' })).toBeVisible();
+    expect(screen.getByText('Create your personal organization')).toBeVisible();
+    expect(window.location.pathname).toBe('/orgs');
   });
 });

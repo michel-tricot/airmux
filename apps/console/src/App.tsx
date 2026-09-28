@@ -189,6 +189,7 @@ function AuthorizedAdminSection() {
 function Router() {
   const [location] = useLocation();
   const { user, isLoading, error, orgId, retry, isRetrying } = useSession();
+  const setupEnrollment = useEnrollment({ query: { enabled: user?.instance_role === 'owner', retry: false } });
 
   if (isLoading) return <Splash>Loading your session...</Splash>;
   if (error && !isApiErrorStatus(error, 401) && isControlPlaneUnreachable(error)) {
@@ -213,7 +214,7 @@ function Router() {
   if (!user) return <Login />;
 
   if (location === '/onboarding') {
-    if (!user.instance_role) return <Redirect to="/org" />;
+    if (user.instance_role !== 'owner') return <Redirect to={orgId ? '/org' : '/orgs'} replace />;
     return (
       <RoutedErrorBoundary>
         <AuthorizationProvider scope={{ level: 'instance' }}>
@@ -229,6 +230,14 @@ function Router() {
         <CliApprove />
       </RoutedErrorBoundary>
     );
+  }
+
+  if (user.instance_role === 'owner') {
+    if (setupEnrollment.isLoading) return <Splash>Loading setup progress...</Splash>;
+    if (setupEnrollment.isError || !setupEnrollment.data) {
+      return <ErrorState error={setupEnrollment.error} resource="setup progress" onRetry={() => setupEnrollment.refetch()} />;
+    }
+    if (setupEnrollment.data.personal_org_id === null) return <Redirect to="/onboarding" replace />;
   }
 
   if (location === '/orgs' || location.startsWith('/orgs/')) {
