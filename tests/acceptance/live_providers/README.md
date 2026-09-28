@@ -28,10 +28,10 @@ These bounds limit test traffic; provider budgets on dedicated test keys should 
 
 Configure `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` as GitHub environment secrets in `release`.
 The `nightly` workflow runs this suite on main and manual dispatch, and `release` runs it before
-publication. It is separate from ordinary PR CI because it uses credentials and incurs
+publication. It is separate from the CI - Pull Request workflow because it uses credentials and incurs
 provider charges. PRs still run the deterministic acceptance suites and the missing-credentials guard.
 The environment permits the `main` branch and protected `v*` release tags only, with administrator bypass disabled.
-Nightly and manual main runs need no approval; dispatches from arbitrary branches cannot access credentials.
+CI - Nightly and manual main runs need no approval; dispatches from arbitrary branches cannot access credentials.
 
 For releases, the live job downloads and installs the exact wheel that the subsequent PyPI job publishes.
 The test checkout uses the release's validated commit SHA. Both jobs download the build's immutable artifact ID.

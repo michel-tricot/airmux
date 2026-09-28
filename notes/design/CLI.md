@@ -42,7 +42,7 @@ orchestration invokes the explicit migration and taxonomy commands from the same
 and standalone gateway commands explicitly override the container entry point instead of adding a second command dispatcher
 to the role script.
 
-Main CI builds that image once from the validated Python candidate, exercises every topology against it, and publishes the
+CI - Main builds that image once from the validated Python candidate, exercises every topology against it, and publishes the
 validated main-branch image under its source commit. The release workflow promotes that digest under the public version;
 it does not rebuild the image.
 

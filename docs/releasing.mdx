@@ -5,24 +5,24 @@ description: "Prepare, publish, and recover a release."
 
 ## Publish a release
 
-The root `VERSION` file is the public package version. Merging a version-only pull request into `main` starts Publish Release automatically. It waits for Main CI and Security to finish on that merge commit, then releases the artifacts built from that exact commit. Later merges into `main` do not change the release source. The other workspace projects stay at `0.0.0`.
+The root `VERSION` file is the public package version. Merging a version-only pull request into `main` starts Release - Publish automatically. It waits for CI - Main and CI - Security to finish on that merge commit, then releases the artifacts built from that exact commit. Later merges into `main` do not change the release source. The other workspace projects stay at `0.0.0`.
 
 ### Checklist
 
-1. Run **Actions → Prepare Release** on `main`, then merge its pull request
-2. Watch the automatic **Publish Release** run after the merge. It waits for **Main CI** and **Security** on the version commit
+1. Run **Actions → Release - Prepare** on `main`, then merge its pull request
+2. Watch the automatic **Release - Publish** run after the merge. It waits for **CI - Main** and **CI - Security** on the version commit
 3. Check the GitHub release and its Compose file, PyPI package, and GHCR version and `latest` tags
 
-Prepare Release creates a branch that changes `VERSION` and provides a link to open its pull request. Publish Release starts on a `main` push whose final commit changes only `VERSION`. It checks that the version has not already been tagged and that Main CI and Security passed for the source SHA. It uses the validated Python and container artifacts from that exact commit's successful Main CI run. Main CI builds and tests Linux AMD64 and ARM64 images on native runners and combines their digests into one manifest. Release installation and container verification run on both architectures, and the published Compose file pins the combined manifest digest. It checks installation and live providers before creating the tag, then publishes and verifies the package and image. The `release` environment supplies provider credentials and `RELEASE_GITHUB_TOKEN`; PyPI uses its trusted publisher for `release.yml`.
+Release - Prepare creates a branch that changes `VERSION` and provides a link to open its pull request. Release - Publish starts on a `main` push whose final commit changes only `VERSION`. It checks that the version has not already been tagged and that CI - Main and CI - Security passed for the source SHA. It uses the validated Python and container artifacts from that exact commit's successful CI - Main run. CI - Main builds and tests Linux AMD64 and ARM64 images on native runners and combines their digests into one manifest. Release installation and container verification run on both architectures, and the published Compose file pins the combined manifest digest. It checks installation and live providers before creating the tag, then publishes and verifies the package and image. The `release` environment supplies provider credentials and `RELEASE_GITHUB_TOKEN`; PyPI uses its trusted publisher for `release.yml`.
 
-**Actions → Publish Release** also accepts a full source SHA on `main` for manual recovery. The source can be the version pull request's merge commit or a later green fix with the same version. A manual run checks both workflows and artifacts for that exact SHA without waiting for them.
+**Actions → Release - Publish** also accepts a full source SHA on `main` for manual recovery. The source can be the version pull request's merge commit or a later green fix with the same version. A manual run checks both workflows and artifacts for that exact SHA without waiting for them.
 
 ### If a release fails
 
 | Failed stage | Action |
 | --- | --- |
-| Main CI or Security | Fix the failure on a PR, merge it without changing `VERSION`, then dispatch **Publish Release** with the new green source SHA |
-| `prepare` before the tag | Confirm the source SHA is on `main`, its version tag is unused, and both main checks passed for that exact SHA; then dispatch **Publish Release** with that SHA |
+| CI - Main or CI - Security | Fix the failure on a PR, merge it without changing `VERSION`, then dispatch **Release - Publish** with the new green source SHA |
+| `prepare` before the tag | Confirm the source SHA is on `main`, its version tag is unused, and both main checks passed for that exact SHA; then dispatch **Release - Publish** with that SHA |
 | `installation` or `live-providers` before the tag | Retry transient failures on the original run. To change release code, fix it on a PR, merge it without changing `VERSION`, then dispatch with the new green source SHA |
-| After the tag or during publication | Rerun failed jobs on the original **Publish Release** run while its Main CI artifacts are available. Keep the tag on its original commit |
+| After the tag or during publication | Rerun failed jobs on the original **Release - Publish** run while its CI - Main artifacts are available. Keep the tag on its original commit |
 | After PyPI or GHCR publication | Inspect the published version and digest, then rerun failed verification or announcement jobs on the original run. If the source must change, prepare a new version; published package bytes and release tags cannot be replaced |

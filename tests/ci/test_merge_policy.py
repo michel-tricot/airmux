@@ -59,8 +59,8 @@ def test_ci_events_and_candidate_coverage():
     assert pull_request[True]["workflow_call"]["outputs"]["artifact-id"]["value"] == "${{ jobs.package.outputs.artifact-id }}"
     assert set(main[True]) == {"push", "workflow_dispatch"}
     assert main[True]["push"] == {"branches": ["main"]}
-    assert pull_request["name"] == "PR CI"
-    assert main["name"] == "Main CI"
+    assert pull_request["name"] == "CI - Pull Request"
+    assert main["name"] == "CI - Main"
     assert main["jobs"]["required"]["name"] == "Main CI required"
     assert main["jobs"]["fast"]["uses"] == "./.github/workflows/ci.yml"
     for name in ("gateway", "full-stack", "browser", "docker"):
@@ -108,14 +108,14 @@ def test_nightly_extended_checks_are_manual_and_cold_docker_is_removed():
         assert "if" not in workflow["jobs"][name]
 
 
-def test_workflow_display_names_are_title_case():
+def test_workflow_display_names_are_grouped():
     expected = {
-        "ci.yml": "PR CI",
-        "main-ci.yml": "Main CI",
-        "security.yml": "Security",
-        "nightly.yml": "Nightly",
-        "prepare-release.yml": "Prepare Release",
-        "release.yml": "Publish Release",
+        "ci.yml": "CI - Pull Request",
+        "main-ci.yml": "CI - Main",
+        "security.yml": "CI - Security",
+        "nightly.yml": "CI - Nightly",
+        "prepare-release.yml": "Release - Prepare",
+        "release.yml": "Release - Publish",
     }
     actual = {path.name: yaml.safe_load(path.read_text())["name"] for path in (ROOT / ".github/workflows").glob("*.yml")}
     assert actual == expected
