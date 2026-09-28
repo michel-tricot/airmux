@@ -128,7 +128,7 @@ def execution_case(target: Target, case: Case) -> Case:
     if tests_output_limit:
         return case
     requested = max(case.max_output_tokens, PAIRED_OUTPUT_FLOOR)
-    maximum = min(requested, target.max_output_tokens) if target.max_output_tokens is not None else requested
+    maximum = min(requested, target.max_output_tokens or requested, max(1, target.context_window // 2))
     request = case.request.model_copy(update={"max_tokens": maximum})
     follow_up = case.follow_up.model_copy(update={"max_tokens": maximum}) if case.follow_up is not None else None
     return case.model_copy(update={"request": request, "follow_up": follow_up})

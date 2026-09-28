@@ -36,8 +36,69 @@ from model_audit.catalog_tasks.outcomes import (
     ValidationFailed,
 )
 from model_audit.catalog_tasks.sources.base import GenericModelSource
+from model_audit.catalog_tasks.sources.bedrock import Bedrock
 
 ROOT = Path(__file__).parents[2]
+
+
+def test_bedrock_joins_account_models_with_foundation_metadata(monkeypatch):
+    source = Bedrock()
+
+    def get(url, key):
+        assert key == "bedrock-key"
+        if url == source.url:
+            return {"data": [{"id": "qwen.qwen3-32b"}, {"id": "google.gemma-4-e2b"}, {"id": "anthropic.claude-sonnet-5"}]}
+        return {
+            "modelSummaries": [
+                {
+                    "modelId": "qwen.qwen3-32b-v1:0",
+                    "inputModalities": ["TEXT"],
+                    "outputModalities": ["TEXT"],
+                    "inferenceAPIsSupported": {"openAiChatCompletions": True},
+                },
+                {
+                    "modelId": "anthropic.claude-sonnet-5",
+                    "inputModalities": ["TEXT", "IMAGE"],
+                    "outputModalities": ["TEXT"],
+                    "inferenceAPIsSupported": {"openAiChatCompletions": False},
+                },
+            ]
+        }
+
+    monkeypatch.setattr(source, "get", get)
+    models = [model for item in source.items(source.fetch("bedrock-key")) if (model := source.normalize(item)) is not None]
+
+    assert [model["id"] for model in models] == ["qwen.qwen3-32b", "google.gemma-4-e2b"]
+    assert models[0]["input_modalities"] == ["text"]
+    assert models[0]["context_length"] == 32768
+    assert models[1]["input_modalities"] == ["text", "image"]
+
+
+def test_bootstrap_keeps_provider_routing_fields(catalog):
+    entry = {
+        "id": "bedrock",
+        "ingress": ["oai"],
+        "primary_surface": "oai",
+        "egress_kind": "aws_bedrock",
+        "param_aliases": {"max_output_tokens": "max_completion_tokens"},
+    }
+
+    bootstrap.write_yaml("providers", [entry])
+
+    provider = yaml.safe_load((catalog / "providers.yml").read_text())["providers"][0]
+    assert provider["primary_surface"] == "oai"
+    assert provider["egress_kind"] == "aws_bedrock"
+    assert provider["param_aliases"] == {"max_output_tokens": "max_completion_tokens"}
+
+
+def test_bootstrap_retains_azure_openai_standin_schema(catalog):
+    schema = catalog / "schemas" / "completion" / "oai.openai.request.json"
+    schema.parent.mkdir(parents=True)
+    schema.write_text('{"type":"object"}')
+
+    block = bootstrap.schema_block({"id": "azure-openai", "ingress": ["oai"]})
+
+    assert block == {"completion": {"oai": {"request": "schemas/completion/oai.openai.request.json"}}}
 
 
 @pytest.fixture

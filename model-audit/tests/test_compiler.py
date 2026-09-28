@@ -33,6 +33,12 @@ def test_pairs_raise_and_clamp_the_shared_execution_budget():
     assert adjusted.max_output_tokens == 2048
 
 
+def test_pairs_leave_context_for_the_prompt_when_output_limit_equals_context():
+    adjusted = execution_case(target(context_window=4096, max_output_tokens=4096), case())
+
+    assert adjusted.max_output_tokens == 2048
+
+
 def test_pairs_preserve_an_explicit_output_limit_test():
     original = case(
         claims=(Claim(dimension="option", name="max_tokens"),),

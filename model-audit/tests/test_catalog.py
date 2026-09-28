@@ -19,7 +19,7 @@ def test_catalog_targets_carry_the_applied_gateway_egress(tmp_path):
                         "env_var": "OPENAI_API_KEY",
                         "ingress": ["oai", "oai_responses"],
                         "auth": ["bearer"],
-                        "param_aliases": {"max_tokens": "max_completion_tokens"},
+                        "param_aliases": {"max_tokens": "max_tokens"},
                     }
                 ]
             }
@@ -27,7 +27,19 @@ def test_catalog_targets_carry_the_applied_gateway_egress(tmp_path):
         encoding="utf-8",
     )
     (tmp_path / "models" / "openai.json").write_text(
-        json.dumps({"models": [{"id": "gpt-test", "context_length": 1000}, {"id": "not-routable", "context_length": 1000}]}),
+        json.dumps(
+            {
+                "models": [
+                    {
+                        "id": "gpt-test",
+                        "context_length": 1000,
+                        "base_url": "https://api.openai.com/special/v1",
+                        "param_aliases": {"max_tokens": "max_completion_tokens"},
+                    },
+                    {"id": "not-routable", "context_length": 1000},
+                ]
+            }
+        ),
         encoding="utf-8",
     )
     (tmp_path / "taxonomy.yml").write_text(
@@ -53,3 +65,4 @@ def test_catalog_targets_carry_the_applied_gateway_egress(tmp_path):
         ("openai/gpt-test", "oai_responses", "openai_responses"),
     ]
     assert all(target.param_aliases == {"max_tokens": "max_completion_tokens"} for target in catalog.targets)
+    assert all(target.base_url == "https://api.openai.com/special/v1" for target in catalog.targets)

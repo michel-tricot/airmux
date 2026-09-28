@@ -151,8 +151,8 @@ providers:
   icon_color: bedrock
   homepage: https://aws.amazon.com/bedrock/
   docs: https://docs.aws.amazon.com/bedrock/latest/userguide/inference-chat-completions.html
-  base_url: https://bedrock-mantle.us-east-1.api.aws/openai/v1
-  openapi: https://raw.githubusercontent.com/openai/openai-openapi/master/openapi.yaml
+  base_url: https://bedrock-mantle.us-east-1.api.aws/v1
+  openapi: null
   models_url: https://bedrock-mantle.us-east-1.api.aws/v1/models
   ingress:
   - oai

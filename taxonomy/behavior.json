@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "generated_from": "1a35cee1ea692003",
+  "generated_from": "e492de3764b7ecb9",
   "behaviors": [
     {
       "provider_id": "anthropic",
@@ -518,6 +518,6721 @@
         "cde5a25599e46db5a7298b45"
       ],
       "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/deepseek.v3.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "ed4200383fc460a827f90e5f"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/deepseek.v3.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "83d0a71921c8c3479c310786"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/deepseek.v3.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "5985753290f76e801708f126"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/deepseek.v3.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "de0f2acfb98a6b93d97a5e35"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/deepseek.v3.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "d20db97891370544ad75b19e"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/deepseek.v3.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "fba811ae0ad480fef0ea498d"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/deepseek.v3.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "06db0aa9a8e81a9cdde0a6f5"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/deepseek.v3.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "65e731798a61ed0b87041076"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/deepseek.v3.2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "0df1e17b9f8665778fdeeda0"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/deepseek.v3.2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f93ec8c8e3d045b48d540ced"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/deepseek.v3.2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_image",
+        "profile": {}
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "d8d59f68239fe5bd40ecce19"
+      ],
+      "observed_at": "2026-09-28T23:22:25.993692+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/deepseek.v3.2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "dbfd6ad231e10cfb100fa4a5"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/deepseek.v3.2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "bb37ee6d070b03d87414e555"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/deepseek.v3.2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "140440e9238105a5a0df05c2"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/deepseek.v3.2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "4892173f15bbda8d4b0e2156"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/deepseek.v3.2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "1c352776d2f8b0ad037605fb"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/deepseek.v3.2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "a52b0b6650d54ebe5276ef40"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-3-12b-it",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "d62c15080e0db14414a8fb79"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-3-12b-it",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "aff8de4ded653b8cf487b9e9"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-3-12b-it",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "c9b644e695d2479ddfe6a1aa"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-3-12b-it",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "8f870c2410506b944a92f286"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-3-12b-it",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "cae3aa2fb824552ca70fe641"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-3-12b-it",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "86b593f4a5d7f9fed367d445"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-3-12b-it",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "b87cae205e703267f3d762db"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-3-12b-it",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "cd80fb0aca5d09f47a718697"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-3-27b-it",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "64a123acc01daa0f78dfa0c9"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-3-27b-it",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "1407bbec6886f2be4646b740"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-3-27b-it",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "24e8f2b4ec22470a3c4d653b"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-3-27b-it",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "89045eba537b5048797d3b4d"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-3-27b-it",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "66d2d1e6c10a5058c47035a0"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-3-27b-it",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "93af98681b97c4357d8edf1e"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-3-27b-it",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "0c541865ee6055c33cc86be2"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-3-27b-it",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "3b311d1eafd65b93f3427929"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-3-4b-it",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "792707b53c2e763c43795963"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-3-4b-it",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "14c2340dfe4f19712c633f41"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-3-4b-it",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "7affe2eff6255e574285872a"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-3-4b-it",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "d1a0e0201c84e0ef7a9431c9"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-3-4b-it",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "40758ae8af79b42613abeafe"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-3-4b-it",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "8f8d120dbf7caa8e6054cc74"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-3-4b-it",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "862c2db3250fda64d793dc5d"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-3-4b-it",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "60f00dc14f19b1306f949cd2"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-4-26b-a4b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f7f2e4be5d8c19bf09b19ed5"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-4-26b-a4b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "a04c17eb72cba2bb6859e74a"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-4-26b-a4b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "bfd38094947efd71cf10b4f9"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-4-26b-a4b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "575aede1bc8affe7ab6152f5"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-4-26b-a4b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "8d3f42cd8f45d702f8775753"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-4-26b-a4b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "7206e1e66ecb8ccc539aed4e"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-4-26b-a4b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "949b0bd4684c64544264e489"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-4-26b-a4b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "13623d6e317137915d3cedaf"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "4c69db6c9b958e4ba4b354d1"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "01a6b58c89ce19995d7d5c22"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "2c554e81e22620138b050cbb"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "8235e7fccf62bfe2185cb941"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "31304999359684368ac0e749"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "afac2e0ac7ac59c9f10aff45"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "ad07650f752c5a05fd716797"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "de08a834460a76f9bc4722d8"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-4-e2b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "fa58c1ca37b8c62a1aedc609"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-4-e2b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "d20d862045cecb58b4b8a87e"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-4-e2b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_image",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "871f45fc118b118f21db7bfe"
+      ],
+      "observed_at": "2026-09-28T23:22:23.138366+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-4-e2b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "b114a15db03bac27dc2f0c9b"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-4-e2b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "7c6c246792238448cef0042a"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-4-e2b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "63dc2239b550e707237c7386"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-4-e2b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "647c091c63005e4eeef824bc"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-4-e2b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "176d9279c46beb2c23cc21e7"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/google.gemma-4-e2b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "4c2449894f6c8afadb611934"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/minimax.minimax-m2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "e4263152ab6e8dfbfecf489f"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/minimax.minimax-m2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "b132d7ae77afd251a12b6a6e"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/minimax.minimax-m2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "1a24b9b8eb84636a5a18c352"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/minimax.minimax-m2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "05e16e8fd43a1cee47ead92a"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/minimax.minimax-m2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "2aaab0ce53f08bcd612c5069"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/minimax.minimax-m2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "df216e0843a368aade6178e3"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/minimax.minimax-m2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "ddd70922193f9f9319cf802d"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/minimax.minimax-m2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "67fee71b8fae9117c0ee9782"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/minimax.minimax-m2.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "eb473c30600acfd53710f17f"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/minimax.minimax-m2.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "891ca1dce3966b5057db4241"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/minimax.minimax-m2.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "13e3bcf28e12a661f4ca828f"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/minimax.minimax-m2.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "b88ee05ee84fadca86ddd284"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/minimax.minimax-m2.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "6d82174e017f6067bf83e653"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/minimax.minimax-m2.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "b479464a66c9bb37b820ba01"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/minimax.minimax-m2.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "a581ba7aabfa3390af6bc682"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/minimax.minimax-m2.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "deb42a2f1fb23bbb25ac368a"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/minimax.minimax-m2.5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "6a00540d9e11e6a2abea103b"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/minimax.minimax-m2.5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "7434a90e510bf996c671f180"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/minimax.minimax-m2.5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f1d0fb145138d50f09cd5a89"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/minimax.minimax-m2.5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "1e99f1700c7c1943253ae252"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/minimax.minimax-m2.5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "c48b953938fa3f61ba9d7e5a"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/minimax.minimax-m2.5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "a0c13250b4ae9df0c6be8a43"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/minimax.minimax-m2.5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "e76e067ac99294285df546ac"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/minimax.minimax-m2.5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "aebbd24c14e4ef1d645bc118"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.devstral-2-123b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "aa2697b3b7ccbccdefb772b7"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.devstral-2-123b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "570694481171cf1c727e5a40"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.devstral-2-123b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "6e89a1d9443630adf16ec04d"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.devstral-2-123b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "3dae2005b9a39e378e3a2d79"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.devstral-2-123b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "d28efd1572b9d22e450f3354"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.devstral-2-123b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "c6c90e20fa03875d710ecc55"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.devstral-2-123b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "bf1aa36e310eedf2dfe420e1"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.devstral-2-123b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "2b14aa506ed747adf56c52be"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.magistral-small-2509",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "4b59da3202de6ee41ab6e14a"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.magistral-small-2509",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "2a53b08fe579474e078fae2b"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.magistral-small-2509",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "724ff6cca56ba4071519e12b"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.magistral-small-2509",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "ba21a3c76807506533c4bcd1"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.magistral-small-2509",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "a02b0b8af217388e4bfa2325"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.magistral-small-2509",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "bf37a304a05a285cb4c0dc10"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.magistral-small-2509",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "4094023c2faf1d6262eed9ce"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.magistral-small-2509",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "0b4bc601a40015280f517648"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.ministral-3-14b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "87437bcc59dc17e986ad6654"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.ministral-3-14b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "81fe842102a40c278cce607d"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.ministral-3-14b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "6e34d36f72f9fab049855ba1"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.ministral-3-14b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "1e3c6ef21ea910ec16d42396"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.ministral-3-14b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f9d98fb5cb48d02e506ef479"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.ministral-3-14b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "8775c5d6e787faf229802f0c"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.ministral-3-14b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "73bf0fd7422d537eb05518e3"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.ministral-3-14b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "be7cab3350e112a0e2e03121"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.ministral-3-3b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "588111ebe771fd189d27823a"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.ministral-3-3b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "2c922dbe75d105bd4edd6418"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.ministral-3-3b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "ba4ba3755cc0b2118ba0f137"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.ministral-3-3b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "cc8fc9bd8c4cf1c275d8f16a"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.ministral-3-3b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "21cc89d5b2833c5ec90162bb"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.ministral-3-3b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "84cddcf8bf752d69928af027"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.ministral-3-3b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "a3dff321eeb8029752db0142"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.ministral-3-3b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "d30da26e613e5c0e68eb536a"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.ministral-3-8b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "4fa626596dcbb725de3530ef"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.ministral-3-8b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "14714c93b6195ac4468a6728"
+      ],
+      "observed_at": "2026-09-28T23:33:21.836329+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.ministral-3-8b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "44da75f0be8a6a67dc724e57"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.ministral-3-8b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "e036ac05db8f4819636d3243"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.ministral-3-8b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "d1a9302b75456b24c2059ec4"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.ministral-3-8b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "28ce65e94e9a852ed84f2f63"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.ministral-3-8b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "01efcfb41b9ce04ce1e2b828"
+      ],
+      "observed_at": "2026-09-28T23:33:21.836329+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.ministral-3-8b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "14fdcbf9f5941b556d8b8f1c"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.mistral-large-3-675b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "0dc1ac9bd29a4bc3622d07cd"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.mistral-large-3-675b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "5e21affb8b180e07bb1840e8"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.mistral-large-3-675b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "e77229bcb4b9f0969bd674dc"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.mistral-large-3-675b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "38208f0ad6f7f556d823a038"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.mistral-large-3-675b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "3be8aa39fb378b328b96fbb1"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.mistral-large-3-675b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f06be7f637430cc5fe8bd169"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.mistral-large-3-675b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "0a971decbb0c90746cb527db"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.mistral-large-3-675b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "b3e6806b017fca2ffad3a80e"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.voxtral-mini-3b-2507",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f13f51e0f31f9ba25fe487c0"
+      ],
+      "observed_at": "2026-09-28T23:33:24.449033+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.voxtral-mini-3b-2507",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "ac6d5ef6ed941948ce15fbf7"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.voxtral-mini-3b-2507",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "ca6d94beac3c14a1e5a63bb6"
+      ],
+      "observed_at": "2026-09-28T23:33:24.449033+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.voxtral-mini-3b-2507",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "026c395805a286f3e2d80579"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.voxtral-mini-3b-2507",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "40e81c92d03dc8105e1aa7ed"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.voxtral-mini-3b-2507",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "17175fe7877ccaa9d3ffa38d"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.voxtral-mini-3b-2507",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "a9fe1e8621e88741ade49409"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.voxtral-mini-3b-2507",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "6bc8c6994b5ae1b7e2d8e81c"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.voxtral-small-24b-2507",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "237cb664d5626b013d71d606"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.voxtral-small-24b-2507",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "e403bf0085657d95123bfce9"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.voxtral-small-24b-2507",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "61ca4b6a4a053ee6dfbb4c44"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.voxtral-small-24b-2507",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "b28440562c5ef8b8ca96888d"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.voxtral-small-24b-2507",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "fd1b88cdfb61b4d859e4edd4"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.voxtral-small-24b-2507",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "9dd4ac64530d1bc9759ae2ab"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.voxtral-small-24b-2507",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "77f5016cf3e4059417304a11"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/mistral.voxtral-small-24b-2507",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "edb29497133334dad5389058"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/moonshotai.kimi-k2-thinking",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "d5af80ddd839a0924ad95183"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/moonshotai.kimi-k2-thinking",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "b8b498ed4c714a6d5866061a"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/moonshotai.kimi-k2-thinking",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "a4ac216cb624cc47ec288a81"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/moonshotai.kimi-k2-thinking",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f0ab8c6cc70e76f74ac7478d"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/moonshotai.kimi-k2-thinking",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "5c3cc5ae352e4ec636b3acd5"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/moonshotai.kimi-k2-thinking",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "36bcdb19c5208d6f396bad2b"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/moonshotai.kimi-k2-thinking",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "eaa29674970bafc216358cc5"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/moonshotai.kimi-k2-thinking",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "b1f3a917084e003765e5edbb"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/moonshotai.kimi-k2.5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "2cfb2c57ef35618fe505ec51"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/moonshotai.kimi-k2.5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "6914e9d41110b7052e086d32"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/moonshotai.kimi-k2.5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "7b55a8a4611f4c20614adf3b"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/moonshotai.kimi-k2.5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "084f5b0d56a06c51d59d8476"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/moonshotai.kimi-k2.5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "75fa1f8c76d2255b124ac7e8"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/moonshotai.kimi-k2.5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "33a4003c713289579a1c0d22"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/moonshotai.kimi-k2.5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "aabe8ec3906b5628e6e77663"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/moonshotai.kimi-k2.5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "3606bed4b753adb1afac5072"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-nano-12b-v2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "09225e92b1bccb0e3c227a1b"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-nano-12b-v2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "c176c9e3451807c0f079c134"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-nano-12b-v2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f3f526d9096ce2f2f4de6c81"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-nano-12b-v2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "dd385617778331695784f95c"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-nano-12b-v2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "0d4f4a2908e1c36dc1d88db1"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-nano-12b-v2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "27670b91ff1c462706fa0982"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-nano-12b-v2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "9173f058e1053d4bc36b51d5"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-nano-12b-v2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "344194d196415665bff05d1e"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-nano-3-30b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "98d2ec6c416c33194effbeb8"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-nano-3-30b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "62e50fbf7f0cd5e05f365072"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-nano-3-30b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "ed4d240967bfdd6ab059c592"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-nano-3-30b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "382b5d253f6ddb6923c9dbfe"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-nano-3-30b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "d6bb5bcb4307d111e8c8f376"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-nano-3-30b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "e806143e626639f055029418"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-nano-3-30b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "eb4f3caa412281e3e9d02b47"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-nano-3-30b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "9316185312a3271785b56d16"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-nano-9b-v2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "21ad1511d4c40008109060cd"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-nano-9b-v2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "2b1850b1f961167372770ff8"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-nano-9b-v2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "c4c93c6189c49086a709f443"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-nano-9b-v2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "5d80bda52ffd367eff1d65e3"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-nano-9b-v2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "31666f340b48df755651283a"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-nano-9b-v2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "6ac8c28ae646ab1ba2100745"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-nano-9b-v2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "3a18b27d3bcdbdba0267f8f7"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-nano-9b-v2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "d875c3b7bce077b1577c04c5"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-super-3-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "12beb187801727f620e0b88c"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-super-3-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "1615d53636d08d73fc7770ec"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-super-3-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "b8e06fa7c5443abac320db6a"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-super-3-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "0d716c073b1d525a0f4a3d61"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-super-3-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "0839bd134c2adb7b482f2988"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-super-3-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "25db80a5732b1123531c4e70"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-super-3-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "cb497068889bf165e266c756"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/nvidia.nemotron-super-3-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "d389398f206f88863b8c0b17"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.4",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "88f11aaa02ced07978a01e58"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.4",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "ef21d652ee6ff97cba267772"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.4",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "17b5fdb610b9a1840c4c16f0"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.4",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "6196c55a0cef46cedd68d3a1"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.4",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "c1a94bdfc8db82d8b859f2f8"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.4",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "26e070f3f11ec14fe659f918"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.4",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "9ce21da14657cf2e707d1f16"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.4",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "2a58f74a479a70a0cf6eea6c"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "911c94741d243bc6a63aa30c"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "0a0858dc63bc39579f9f29a1"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "0fc7303df141589097321756"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "edcd20ec5768b84de272fad5"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "63f7cdac4009f07f76f408d0"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "352b3135aa11370dadb1485d"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "b281f6bcc7c1ba5f0a13b18e"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "40488e061e804330b2095699"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.6-luna",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "861661dd28906ab44fe725a3"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.6-luna",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "5fd25bce9d0a5a8220c39c37"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.6-luna",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "7f5a6e382048849b04328b55"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.6-luna",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "2dacebe0ac26f5ca1212ede3"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.6-luna",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "3bf03355bf0e5d4bce0ae192"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.6-luna",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "67e145c5da1e3b5469656adb"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.6-luna",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "ead14db1787759116079a251"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.6-luna",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "e9a8e31847d029834a59b44d"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.6-sol",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "64e7077a5371b874f4bc1365"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.6-sol",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "3a846e19bb5a1b13ab31e233"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.6-sol",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_image",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "3f669dfd5cfec8e00761bc02"
+      ],
+      "observed_at": "2026-09-28T23:23:31.696379+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.6-sol",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "9c8bc2f7bffb05374d8f27ce"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.6-sol",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "232602f0a9337b184b661ed4"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.6-sol",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "8c243fabbf5d0208a26cb268"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.6-sol",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "3c9c50934fbf06e2ef4380da"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.6-sol",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "efc603373fd4f29e56df617b"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.6-sol",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "7d7ef22be4dc70b58f28ee82"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.6-terra",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "a920ae7956683d05ab1917d3"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.6-terra",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "336fb57ac2caad674dea8018"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.6-terra",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "d32bae648817401ca516c071"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.6-terra",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "fd0730ca82014526dce27688"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.6-terra",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "46e5c3a20ad67b8650496992"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.6-terra",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "67313c4bd3d82183ed22f90a"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.6-terra",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "cea10da824d3986b4749c500"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-5.6-terra",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "474220fd33799e37494b7071"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-6-luna",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "1d5764ac096aebf36199e58a"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-6-luna",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "463b98fac943917d718573bf"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-6-luna",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "c381ae20f82c31a8ea5a6b1c"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-6-luna",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "6529a7e12b116d716f74e008"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-6-luna",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "cf6e84296a21a75af7062e2a"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-6-luna",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "7f8c23f9c2371cae415a031a"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-6-luna",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "239607ae22ca690e8f235ea1"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-6-luna",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "bddbf828c30410c5ae37b379"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-6-sol",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "baaab97e528d7de37e1dadd3"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-6-sol",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "ca6782cf21a19d13a0b70522"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-6-sol",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "220504c724779492f3fff873"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-6-sol",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "09d5eb2a4f26a0636bf026c9"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-6-sol",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "2c67cf4c735520828b2a17d5"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-6-sol",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "b01205a05dd7816d27820c92"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-6-sol",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "4d3f74e557049c2cfd6fab56"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-6-sol",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "3a120405e374ae7c41ba1124"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "3ab91636b5738f15959288a6"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "07bc19eccc9bb7832a825ddb"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "b872147dbf4aa99f4520d1f2"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "22b8316e26cb75a1f06c001b"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "7118ba35a1681f0e6b8501e6"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "7c475622f7261c33ba83a3c7"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "41dca0414976b6ebdb06c674"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "86b6fc3a66bb3114c9315df2"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "8db32bd7e03dceb5eea5c36b"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "30d006f2eb8294cd01b20ee2"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "6300c320f4677489d9cdf717"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "ad6de1f937ad4c298246bb74"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "ca269ca0f519f51dc24b1b73"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "3c62d6dac2e8673890fdeb23"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "b6e2e5997180cd28206a5424"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/openai.gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "145bc5febddd6bb376430ed7"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-235b-a22b-2507",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "e03066e5ab2a38b734304bfb"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-235b-a22b-2507",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "e48bdb326265d4b67e9d57a9"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-235b-a22b-2507",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "7423d9ab8760cbdedde35236"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-235b-a22b-2507",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "c7a4cd6943983787d607f261"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-235b-a22b-2507",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "85dea96218e15aecc0c8731f"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-235b-a22b-2507",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "7ff8d4734d4177aa7a64915a"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-235b-a22b-2507",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "a5a7e9c3310b0d8cd5f26f82"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-235b-a22b-2507",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "2d3277f5186c6894456ab32d"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-32b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "streaming",
+        "profile": {
+          "content": "text"
+        }
+      },
+      "verdict": "unknown",
+      "evidence_ids": [
+        "005f930d0b70dcbbdfb91216"
+      ],
+      "observed_at": "2026-09-28T23:21:34.955502+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-32b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "4428a418f1fecdbbe2379f1c"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-32b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "text_generation",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "0d28d4e66e7476d2f170260f"
+      ],
+      "observed_at": "2026-09-28T23:21:34.955502+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-32b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "649bf2b4a2fb27e10e621b89"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-32b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "d2905687f20d1777b7e5d37b"
+      ],
+      "observed_at": "2026-09-28T23:21:34.955502+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-32b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "output_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "355a608860c05e1a48a10bce"
+      ],
+      "observed_at": "2026-09-28T23:21:34.955502+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-32b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "logprobs",
+        "profile": {
+          "enabled": true,
+          "top": 2
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "5aafbb5b971ba0395eec46a6"
+      ],
+      "observed_at": "2026-09-28T23:21:34.955502+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-32b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "max_tokens",
+        "profile": {
+          "value": 1024
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "61579393a47e2b2216f27720"
+      ],
+      "observed_at": "2026-09-28T23:21:34.955502+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-32b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "624c5269831d31bfd4ff4e16"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-32b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "c1f1ff63623cc0c96d4bb467"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-32b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "976f2d094521757e556dbbe9"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-32b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "5a5b5e4666283600be044605"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-32b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "a9ad3b0a4f6e2f57bf11f3aa"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-32b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f4cfe8b7df23467a5b4be39c"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-coder-30b-a3b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "7e16f5027d693ff225578262"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-coder-30b-a3b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "b34f76b323b10d73903b3bb7"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-coder-30b-a3b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "50bb68c9e4e8d11ed84fea7b"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-coder-30b-a3b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "e2e0a29e9322b75a8cfa1913"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-coder-30b-a3b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "ac0990b58287d1c8e6df3fc7"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-coder-30b-a3b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "2119ea347cc84a62f64ab58c"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-coder-30b-a3b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "c1445d007b0f2caa9c2e9a2e"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-coder-30b-a3b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "da1051966a1fa2bd12d7dde7"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-coder-480b-a35b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "edc5005a7c5fe6eae00def9b"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-coder-480b-a35b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "3ab47913a675a66f6b4b6af1"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-coder-480b-a35b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f8a9b0c77887d7400fd95af7"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-coder-480b-a35b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "6623baea95ed67bfda5803cb"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-coder-480b-a35b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "5a43b1490b23a29c00927ff5"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-coder-480b-a35b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "b3576a0207a15a0d3f879285"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-coder-480b-a35b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "5251be65157acccf83ff7430"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-coder-480b-a35b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "dd42a3dacb631aa3341fb250"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-coder-next",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "63f6f9d5190db329e6d76f0a"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-coder-next",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "bad7be337368fdf3aac11c0d"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-coder-next",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "8a697580e6e8aee38aea18fd"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-coder-next",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "be1a10eb6d27f8dd6104190b"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-coder-next",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f1c6f039ce2d9b4c6c60c582"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-coder-next",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "5a35983389ac4b86e1a721cf"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-coder-next",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "131bc37127f33ee4f997867c"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-coder-next",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "827108b0c4b4609e0c1044d1"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-next-80b-a3b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "0b995af777fb4b8b3e37b2f1"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-next-80b-a3b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "c750bfd561569a77d71dc1a2"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-next-80b-a3b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "5ded7b38a47186c4ded6571c"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-next-80b-a3b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "7813946e2403af21aa50720d"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-next-80b-a3b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "31084ea72db9de0905359ab4"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-next-80b-a3b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "827c6d5073613be08f7bfa9e"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-next-80b-a3b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "988421716b40426190f67e04"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-next-80b-a3b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "59741cc0d652c64471e83dc6"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-vl-235b-a22b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "b73ba0e3c2c97b3525e54a32"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-vl-235b-a22b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "482675cdd12e9c813a66cc24"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-vl-235b-a22b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_image",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "75a76174f9b3769c521b03df"
+      ],
+      "observed_at": "2026-09-28T23:23:47.324861+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-vl-235b-a22b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "4dfdb5d52c2d70ac39e0474c"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-vl-235b-a22b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "ed0fb47699b4daf58eeb1a59"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-vl-235b-a22b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "6f44ec2831b0176af6cf7891"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-vl-235b-a22b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "12eec03b2f71cded0a9c0fb8"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-vl-235b-a22b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "ea3132b61d653969cbd215b1"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/qwen.qwen3-vl-235b-a22b-instruct",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "c1f0b33ddfef62dc67137fe1"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/writer.palmyra-vision-7b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "be6b750b3bfb335c98ccb62b"
+      ],
+      "observed_at": "2026-09-28T23:31:25.752352+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/writer.palmyra-vision-7b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "unknown",
+      "evidence_ids": [
+        "a98049bf1c6dc5fdc47e7c29"
+      ],
+      "observed_at": "2026-09-28T23:31:25.752352+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/writer.palmyra-vision-7b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "3a4ce5a523a872c339973978"
+      ],
+      "observed_at": "2026-09-28T23:31:25.752352+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/writer.palmyra-vision-7b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "ce2bb86e09536302ae2ad70b"
+      ],
+      "observed_at": "2026-09-28T23:31:25.752352+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/writer.palmyra-vision-7b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "71f1a78a70c61daa7c6c8d0f"
+      ],
+      "observed_at": "2026-09-28T23:31:25.752352+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/writer.palmyra-vision-7b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "9d2685ad4ac9a989e0d2d65b"
+      ],
+      "observed_at": "2026-09-28T23:31:25.752352+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/writer.palmyra-vision-7b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "unknown",
+      "evidence_ids": [
+        "a555fb68e8a67149a208a717"
+      ],
+      "observed_at": "2026-09-28T23:31:25.752352+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/writer.palmyra-vision-7b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "93c8bfc081642d8c08d24162"
+      ],
+      "observed_at": "2026-09-28T23:31:25.752352+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/xai.grok-4.3",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "17a96f1e7470b0ee55f57d7d"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/xai.grok-4.3",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "97908c37bad9aa2bce336fb0"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/xai.grok-4.3",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_image",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "8604b279181eda64d99dc22c"
+      ],
+      "observed_at": "2026-09-28T23:23:55.314590+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/xai.grok-4.3",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "3560edce5690d31b7ef5dd63"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/xai.grok-4.3",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "66b3142ec759ee419db8fbf2"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/xai.grok-4.3",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "be4cd3788ab4b2acf3ecbd7c"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/xai.grok-4.3",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "d9b06b3977d8379fe1c2bbda"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/xai.grok-4.3",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "ff1e034985eda17364a67ac9"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/xai.grok-4.3",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "6a8e280a8bed2e4d8d0561d6"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/zai.glm-4.7",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "c76dc9951626080f1df00c67"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/zai.glm-4.7",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f5d579186be2151f8034731a"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/zai.glm-4.7",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "7f8e701f4c19fc537b144093"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/zai.glm-4.7",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "ab6010e8290840f0fe01696e"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/zai.glm-4.7",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "228b282f9e6a109280d66891"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/zai.glm-4.7",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "0a7ea3a0048197adc49ef7ca"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/zai.glm-4.7",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "0b777657aa91bc23d83c8860"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/zai.glm-4.7",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "aa49cb92cae1ac431df1797f"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/zai.glm-4.7-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "284fab39d97e0496b51e0a4d"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/zai.glm-4.7-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "dcd3fb6b34785c75a3717c2b"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/zai.glm-4.7-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "e38471861ca07a0adbbd1b99"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/zai.glm-4.7-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "1f376aebedaa1dd89849d4c2"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/zai.glm-4.7-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "52baa814699c79481394acf2"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/zai.glm-4.7-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "9958d8a83bf896d9f01cb382"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/zai.glm-4.7-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "618113dae353ba9e2126537a"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/zai.glm-4.7-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "985663c121437bace9365da1"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/zai.glm-5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "0dbac470dca55a962bb93a4d"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/zai.glm-5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "a7a623bbfc85588d11640960"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/zai.glm-5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "5598557f5d5d25bedbd92e00"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/zai.glm-5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "b5485f2db836e9835880afe2"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/zai.glm-5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "56409900daaad020ec86abc4"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/zai.glm-5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f976a03311dfc64654657844"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/zai.glm-5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "fe6420eddfab2143b1b5c1d6"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
+    },
+    {
+      "provider_id": "bedrock",
+      "model_id": "bedrock/zai.glm-5",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "fb93beada5279035e6f2705c"
+      ],
+      "observed_at": "2026-09-28T23:29:34.474655+00:00"
     },
     {
       "provider_id": "cerebras",

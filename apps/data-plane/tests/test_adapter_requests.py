@@ -150,17 +150,29 @@ def test_the_upstream_request_names_the_upstream_model_and_spends_the_injected_c
     assert any("sk-test" in value for name, value in upstream.headers.items() if name in {"authorization", "x-api-key", "api-key"})
 
 
-def test_bedrock_uses_the_regional_openai_compatible_endpoint_and_bearer_key():
+@pytest.mark.parametrize(
+    ("upstream_model", "path"),
+    [
+        ("qwen.qwen3-32b", "/v1/chat/completions"),
+        ("openai.gpt-oss-20b", "/v1/chat/completions"),
+        ("openai.gpt-5.6-terra", "/openai/v1/chat/completions"),
+        ("openai.gpt-6-sol", "/openai/v1/chat/completions"),
+        ("google.gemma-4-e2b", "/openai/v1/chat/completions"),
+        ("xai.grok-4.3", "/openai/v1/chat/completions"),
+    ],
+)
+def test_bedrock_uses_each_models_chat_route_and_bearer_key(upstream_model, path):
     provider = PROVIDER.model_copy(
         update={
             "kind": "aws_bedrock",
-            "base_url": "https://bedrock-mantle.us-east-1.api.aws/openai/v1",
+            "base_url": "https://bedrock-mantle.us-east-1.api.aws/v1",
             "param_aliases": {"max_output_tokens": "max_completion_tokens"},
         }
     )
-    upstream = REGISTRY["aws_bedrock"](provider, Secret("bedrock-key")).transform_request(request_of(CORPUS[0]), MODEL)
+    model = MODEL.model_copy(update={"upstream_model": upstream_model})
+    upstream = REGISTRY["aws_bedrock"](provider, Secret("bedrock-key")).transform_request(request_of(CORPUS[0]), model)
 
-    assert upstream.url == "https://bedrock-mantle.us-east-1.api.aws/openai/v1/chat/completions"
+    assert upstream.url == f"https://bedrock-mantle.us-east-1.api.aws{path}"
     assert upstream.headers["authorization"] == "Bearer bedrock-key"
     body = json.loads(upstream.body)
     assert body["max_completion_tokens"] == 4096

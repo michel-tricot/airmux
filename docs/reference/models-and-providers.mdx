@@ -54,10 +54,13 @@ inference endpoints; current content support is described below.
 The shipped taxonomy includes Anthropic, AWS Bedrock, Azure OpenAI, Cerebras, DeepSeek, Fireworks, Groq, Mistral, OpenAI,
 Together, and xAI provider entries. The deployed catalog is authoritative and may differ after a taxonomy update.
 
-The Bedrock entry uses the in-region Mantle Chat Completions endpoint and a Bedrock API key. Mantle's `/v1/models`
-endpoint lists account-available model IDs, but the gateway catalog only includes models with documented modality and
-capability metadata. The current entry includes `openai.gpt-5.6-terra` and maps the canonical output limit to
-`max_completion_tokens`.
+The Bedrock entry uses the in-region Mantle Chat Completions endpoint and a Bedrock API key. Catalog sync intersects
+the account-available IDs from Mantle's `/v1/models` with the Bedrock foundation-model API and documented model cards.
+The shipped catalog has 46 Bedrock Chat Completions models. Each model uses its documented `/v1` or `/openai/v1` route;
+model-specific parameter support comes from direct API observations. The canonical output limit maps to
+`max_completion_tokens` on the `/openai/v1` models. The gateway currently accepts text and image input and text output
+for the Bedrock models that advertise those modalities.
+Most of these models have no verified catalog price yet, so gateway cost estimates for them are zero until pricing is added.
 
 Azure OpenAI uses a resource endpoint ending in `/openai/v1`; its model's `upstream_model` is the deployment name.
 Replace `RESOURCE` with the Azure resource name. Store the provider key through the normal provider credential workflow.
@@ -69,7 +72,7 @@ For example, a catalog input can define the endpoints and deployments directly:
 providers:
   - provider_id: bedrock
     kind: aws_bedrock
-    base_url: https://bedrock-mantle.us-east-1.api.aws/openai/v1
+    base_url: https://bedrock-mantle.us-east-1.api.aws/v1
   - provider_id: azure_openai
     kind: azure_openai
     base_url: https://RESOURCE.openai.azure.com/openai/v1
