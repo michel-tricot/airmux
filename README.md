@@ -34,11 +34,12 @@
 
 `airmux` gives agents one self-hosted origin for calling multiple LLM providers. Clients send `Chat Completions`, `Responses`, or `Messages` requests through any SDK or integration that can target the corresponding HTTP API. `airmux` authenticates the workspace, applies policy, selects a model and scoped provider credential, translates the request, and records the result.
 
-![Workspace request history showing status, cost, tokens, inference key, and model](docs/images/webapp-workspace-requests.png)
+![Organization usage dashboard showing spend, requests, tokens, cost per request, and a trend chart](docs/images/readme-screenshot.png)
 
-*Example request history in the webapp, using synthetic data*
+*Example organization usage in the webapp, using synthetic data*
 
-> [!NOTE] `airmux` is pre-1.0. Configuration, APIs, and migrations may change before the first stable release.
+> [!NOTE]
+> `airmux` is pre-1.0. Configuration, APIs, and migrations may change before the first stable release.
 
 ## Quickstart
 
