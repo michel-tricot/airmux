@@ -1,7 +1,7 @@
 # `airmux`
 
-`airmux` is a self-hosted gateway between your app and its LLM providers. Change the client's base URL and API key;
-keep using Chat Completions, Responses, or Messages.
+`airmux` is a self-hosted gateway between your agents and their LLM providers. Change the client's base URL and API key and
+keep using `Chat Completions`, `Responses`, or `Messages` endpoints.
 
 <div align="center">
   <p>
@@ -18,9 +18,9 @@ keep using Chat Completions, Responses, or Messages.
   </p>
 </div>
 
-![Organization usage dashboard showing spend, requests, tokens, cost per request, and a trend chart](docs/images/readme-screenshot.png)
+![Production workspace usage dashboard showing spend, requests, tokens, cost per request, and a trend chart](docs/images/readme-screenshot.png)
 
-*Example organization usage in the webapp, using synthetic data*
+*Example Production workspace usage in the webapp, using synthetic data*
 
 For each request, `airmux` applies workspace policy, picks a provider credential, calls the model, and records tokens and cost.
 It replies in the caller's API format.
