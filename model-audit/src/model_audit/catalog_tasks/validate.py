@@ -51,7 +51,7 @@ PROFILE_FIELDS = {"param_aliases", "params_closed", "accepted_params", "egress_k
 INGRESS = {"oai", "oai_responses", "anthropic", "google", "other_standard", "custom"}
 # ingresses that carry a schema; google is the one shape we have not extracted
 WIRE = {"oai", "oai_responses", "anthropic", "custom"}
-EGRESS = {"openai_compatible", "openai_responses", "anthropic", "aws_bedrock", "azure_openai"}
+EGRESS = {"openai_compatible", "openai_responses", "anthropic", "aws_bedrock"}
 AUTH_BARE = {"bearer", "sigv4", "oauth"}
 PARTS = {"request", "response", "stream"}
 # bare markers name a source; "alias:<model id>" names the sibling a value was inherited

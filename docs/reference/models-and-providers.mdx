@@ -51,7 +51,7 @@ inference endpoints; current content support is described below.
 | `accepted_params` | Known accepted top-level extras |
 | `params_closed` | Whether undeclared extras must be dropped |
 
-The shipped taxonomy includes Anthropic, AWS Bedrock, Azure OpenAI, Cerebras, DeepSeek, Fireworks, Groq, Mistral, OpenAI,
+The shipped taxonomy includes Anthropic, AWS Bedrock, Cerebras, DeepSeek, Fireworks, Groq, Mistral, OpenAI,
 Together, and xAI provider entries. The deployed catalog is authoritative and may differ after a taxonomy update.
 
 The Bedrock entry uses the in-region Mantle Chat Completions endpoint and a Bedrock API key. Catalog sync intersects
@@ -62,29 +62,17 @@ model-specific parameter support comes from direct API observations. The canonic
 for the Bedrock models that advertise those modalities.
 Most of these models have no verified catalog price yet, so gateway cost estimates for them are zero until pricing is added.
 
-Azure OpenAI uses a resource endpoint ending in `/openai/v1`; its model's `upstream_model` is the deployment name.
-Replace `RESOURCE` with the Azure resource name. Store the provider key through the normal provider credential workflow.
-See [provider credentials](/docs/features/provider-credentials) for setup and capability limits.
-
-For example, a catalog input can define the endpoints and deployments directly:
+For example, a catalog input can define a Bedrock model and its endpoint:
 
 ```yaml
 providers:
   - provider_id: bedrock
     kind: aws_bedrock
     base_url: https://bedrock-mantle.us-east-1.api.aws/v1
-  - provider_id: azure_openai
-    kind: azure_openai
-    base_url: https://RESOURCE.openai.azure.com/openai/v1
 models:
   - model_id: bedrock/openai.gpt-5.6-terra
     provider_id: bedrock
     upstream_model: openai.gpt-5.6-terra
-    input_modalities: [text]
-    output_modalities: [text]
-  - model_id: azure_openai/support-chat
-    provider_id: azure_openai
-    upstream_model: support-chat
     input_modalities: [text]
     output_modalities: [text]
 ```

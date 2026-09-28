@@ -91,16 +91,6 @@ def test_bootstrap_keeps_provider_routing_fields(catalog):
     assert provider["param_aliases"] == {"max_output_tokens": "max_completion_tokens"}
 
 
-def test_bootstrap_retains_azure_openai_standin_schema(catalog):
-    schema = catalog / "schemas" / "completion" / "oai.openai.request.json"
-    schema.parent.mkdir(parents=True)
-    schema.write_text('{"type":"object"}')
-
-    block = bootstrap.schema_block({"id": "azure-openai", "ingress": ["oai"]})
-
-    assert block == {"completion": {"oai": {"request": "schemas/completion/oai.openai.request.json"}}}
-
-
 @pytest.fixture
 def catalog(tmp_path, monkeypatch):
     taxonomy = tmp_path / "taxonomy"

@@ -42,7 +42,7 @@ FIELD_ORDER = (
 # no parameters of its own for that surface
 STANDIN = (
     {(p, i) for p in ("nvidia", "hyperbolic", "lambda") for i in ("oai",)}
-    | {(p, i) for p in ("baseten", "bedrock", "vertex", "azure-openai") for i in ("oai", "anthropic")}
+    | {(p, i) for p in ("baseten", "bedrock", "vertex") for i in ("oai", "anthropic")}
     | {("deepseek", "anthropic"), ("minimax", "anthropic")}
 )
 WIRE = ("oai", "oai_responses", "anthropic", "custom")

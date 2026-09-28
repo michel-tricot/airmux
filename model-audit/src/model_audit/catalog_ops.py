@@ -35,7 +35,7 @@ class ProviderDefinition(BaseModel):
     openapi: str | None = Field(None, pattern=r"^https?://")
     ingress: tuple[Literal["oai", "oai_responses", "anthropic", "google", "other_standard", "custom"], ...] = Field(min_length=1)
     primary_surface: Literal["oai", "oai_responses", "anthropic", "google", "other_standard", "custom"]
-    egress_kind: Literal["openai_compatible", "openai_responses", "anthropic", "aws_bedrock", "azure_openai"] | None = Field(None)
+    egress_kind: Literal["openai_compatible", "openai_responses", "anthropic", "aws_bedrock"] | None = Field(None)
     param_aliases: tuple[tuple[str, str], ...] = ()
     auth: tuple[str, ...] = Field(min_length=1)
     env_var: str = Field(pattern=r"^[A-Z][A-Z0-9_]+$")
@@ -193,7 +193,7 @@ def add_provider(root: Path, definition: ProviderDefinition, *, replace: bool = 
     entry = provider_entry(definition)
     if existing is not None:
         entry["schema"] = existing.get("schema")
-    if definition.egress_kind in {"aws_bedrock", "azure_openai"}:
+    if definition.egress_kind == "aws_bedrock":
         openai = next((provider for provider in document["providers"] if provider["id"] == "openai"), None)
         if openai is not None:
             openai_schema = openai.get("schema")
