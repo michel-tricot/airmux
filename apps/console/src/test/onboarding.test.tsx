@@ -66,12 +66,11 @@ beforeEach(() => {
 });
 
 describe('instance setup', () => {
-  it('lands a returning administrator without a selected organization in the instance console', async () => {
+  it('returns an administrator without an organization to setup', async () => {
     window.history.replaceState(null, '', '/');
     render(<App />);
-    expect(await screen.findByRole('heading', { name: 'System Overview' })).toBeVisible();
-    await userEvent.click(screen.getByRole('link', { name: 'Resume setup' }));
     expect(await screen.findByText('0 of 2 steps complete')).toBeVisible();
+    expect(window.location.pathname).toBe('/onboarding');
   });
 
   it('adds multiple keys, resumes from saved resources, creates an organization, and opens that organization', async () => {
@@ -81,6 +80,7 @@ describe('instance setup', () => {
     expect(screen.queryByRole('navigation', { name: 'Instance navigation' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Finish setup' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Create organization' })).toBeDisabled();
 
     for (const name of ['primary', 'backup']) {
       await user.click(screen.getByRole('button', { name: /Add (another )?provider key/i }));
@@ -98,6 +98,7 @@ describe('instance setup', () => {
     const resumedSession = renderSetup();
     expect(await screen.findByText('1 of 2 steps complete')).toBeVisible();
     expect(screen.getByText('2 instance provider keys saved')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Create organization' })).toBeEnabled();
 
     await user.click(screen.getByRole('button', { name: 'Create organization' }));
     const dialog = screen.getByRole('dialog', { name: 'Create Organization' });
@@ -123,13 +124,14 @@ describe('instance setup', () => {
     expect(screen.getByRole('button', { name: 'Create organization' })).toBeVisible();
   });
 
-  it('allows leaving and resuming incomplete setup from navigation', async () => {
-    const user = userEvent.setup();
-    renderSetup();
-    await user.click(await screen.findByRole('link', { name: 'Finish later' }));
-    expect(await screen.findByRole('heading', { name: 'System Overview' })).toBeVisible();
-    await user.click(screen.getByRole('link', { name: 'Resume setup' }));
+  it('blocks direct navigation to the instance console before setup', async () => {
+    window.history.replaceState(null, '', '/instance');
+    render(<App />);
     expect(await screen.findByText('0 of 2 steps complete')).toBeVisible();
+    expect(window.location.pathname).toBe('/onboarding');
+    expect(screen.getByRole('link', { name: 'AIRMUX' })).toHaveAttribute('href', '/onboarding');
+    expect(screen.queryByRole('link', { name: 'Finish later' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Finish setup' })).toBeDisabled();
   });
 
   it('offers membership recovery when the existing organization is no longer accessible', async () => {

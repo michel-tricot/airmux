@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 import App from '@/App';
-import { paged, server } from './msw';
+import { ORG, paged, server } from './msw';
 import { now } from './fixtures';
 
 function installUser(instanceRole: Api.InstanceRole | null = null) {
@@ -22,7 +22,7 @@ function installUser(instanceRole: Api.InstanceRole | null = null) {
   server.use(
     http.get('/api/v1/auth/me', () =>
       HttpResponse.json<{ data: Api.MeOut }>({
-        data: { user_id: 'admin-user', name: 'Admin', email: 'admin@example.com', instance_role: 'owner', orgs: [] },
+        data: { user_id: 'admin-user', name: 'Admin', email: 'admin@example.com', instance_role: 'owner', orgs: [ORG.id] },
       }),
     ),
     http.get('/api/v1/users/target-user', () => HttpResponse.json({ data: user })),

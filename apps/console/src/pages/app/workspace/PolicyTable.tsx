@@ -142,7 +142,7 @@ export function PolicyTable({
                         </Button>
                         <ConfirmButton
                           title={`Delete ${policy.name}?`}
-                          description="This policy will stop applying when gateways adopt the updated configuration."
+                          description="This policy will stop applying when data planes adopt the updated configuration."
                           confirmLabel="Delete policy"
                           pending={deletePending}
                           aria-label={`Delete ${policy.name}`}

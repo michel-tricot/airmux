@@ -122,7 +122,7 @@ export function UsageReporting({
     <PageShell>
       <PageHeader
         title={workspaceName ?? 'Usage'}
-        description={`${scopeName} · gateway usage`}
+        description={`${scopeName} · Airmux usage`}
         actions={<ReportRefreshButton queries={[report, attribution]} />}
       />
 

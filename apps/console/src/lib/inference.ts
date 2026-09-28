@@ -182,11 +182,11 @@ function parseEvent(data: string): ParsedEvent {
   try {
     body = objectOf(JSON.parse(data));
   } catch {
-    throw new Error('The gateway returned an invalid streaming event');
+    throw new Error('Airmux returned an invalid streaming event');
   }
-  if (body.error) throw new Error(errorMessage(body) ?? 'The gateway stream failed');
+  if (body.error) throw new Error(errorMessage(body) ?? 'The Airmux stream failed');
   const parsed = chunkSchema.safeParse(body);
-  if (!parsed.success) throw new Error('The gateway returned an invalid streaming event');
+  if (!parsed.success) throw new Error('Airmux returned an invalid streaming event');
   const event = parsed.data;
   const choice = event.choices[0];
   return {
@@ -198,7 +198,7 @@ function parseEvent(data: string): ParsedEvent {
 }
 
 async function streamedContent(response: Response, startedAt: number, onDelta?: (content: string) => void): Promise<InferenceResult> {
-  if (!response.body) throw new Error('The gateway returned an empty stream');
+  if (!response.body) throw new Error('Airmux returned an empty stream');
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let pending = '';
@@ -215,7 +215,7 @@ async function streamedContent(response: Response, startedAt: number, onDelta?: 
     const data = dataLines.join('\n');
     dataLines = [];
     if (data === '[DONE]') {
-      if (!closing) throw new Error('The gateway returned an incomplete stream');
+      if (!closing) throw new Error('Airmux returned an incomplete stream');
       complete = true;
       return;
     }
@@ -256,7 +256,7 @@ async function streamedContent(response: Response, startedAt: number, onDelta?: 
         break;
       }
     }
-    if (!complete) throw new Error('The gateway returned an incomplete stream');
+    if (!complete) throw new Error('Airmux returned an incomplete stream');
   } finally {
     void reader.cancel().catch(() => undefined);
     reader.releaseLock();
@@ -266,7 +266,7 @@ async function streamedContent(response: Response, startedAt: number, onDelta?: 
 
 function bufferedResult(body: unknown, durationMs: number): InferenceResult {
   const parsed = responseSchema.safeParse(body);
-  if (!parsed.success) throw new Error('The gateway returned an invalid completion response');
+  if (!parsed.success) throw new Error('Airmux returned an invalid completion response');
   const response = parsed.data;
   const choice = response.choices[0];
   return {
@@ -299,7 +299,7 @@ export async function inferenceCompletion(options: InferenceCompletionOptions): 
   if (!response.ok) throw await responseError(response);
   if (options.stream) return streamedContent(response, startedAt, options.onDelta);
   const body: unknown = await response.json().catch(() => {
-    throw new Error('The gateway returned an invalid completion response');
+    throw new Error('Airmux returned an invalid completion response');
   });
   return bufferedResult(body, performance.now() - startedAt);
 }

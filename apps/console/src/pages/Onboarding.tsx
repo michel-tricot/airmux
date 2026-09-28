@@ -1,5 +1,5 @@
 import { useEnrollment } from '@workspace/api-client-react';
-import { GatewayBrand } from '@/components/layout/responsive-shell';
+import { AirmuxBrand } from '@/components/layout/responsive-shell';
 import { useSession } from '@/lib/session';
 import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
@@ -17,7 +17,7 @@ export default function Onboarding() {
   return (
     <div className="min-h-[100dvh] bg-background">
       <header className="mx-auto flex w-full max-w-3xl items-center justify-between gap-4 px-4 py-6 sm:px-8">
-        <GatewayBrand href="/onboarding" />
+        <AirmuxBrand href="/onboarding" />
         <Button variant="ghost" onClick={logout}>
           Sign out
         </Button>
@@ -118,7 +118,12 @@ function SetupSteps() {
                 </div>
               </Alert>
             ) : (
-              <Button onClick={() => setCreateOpen(true)}>Create organization</Button>
+              <div className="space-y-2">
+                <Button disabled={!hasKeys} onClick={() => setCreateOpen(true)}>
+                  Create organization
+                </Button>
+                {!hasKeys && <p className="text-sm text-muted-foreground">Add a provider key before creating an organization.</p>}
+              </div>
             )}
           </Card>
         </li>
@@ -132,10 +137,7 @@ function SetupSteps() {
           </div>
         </Alert>
       )}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <Button asChild variant="ghost">
-          <Link href="/instance">Finish later</Link>
-        </Button>
+      <div className="flex justify-end">
         <Button
           disabled={!complete}
           onClick={() => {
@@ -148,9 +150,6 @@ function SetupSteps() {
           Finish setup
         </Button>
       </div>
-      <p className="text-sm text-muted-foreground">
-        Each completed step is saved. Return to this page after signing in, or choose Resume setup from the instance overview.
-      </p>
       <AddProviderCredentialDialog
         open={addOpen}
         onOpenChange={setAddOpen}

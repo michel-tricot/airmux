@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { ErrorState } from '@/components/shared/states';
-import { GatewayBrand, ResponsiveShell } from '@/components/layout/responsive-shell';
+import { AirmuxBrand, ResponsiveShell } from '@/components/layout/responsive-shell';
 import { useAuthorization, useScopedAuthorization } from '@/features/permissions/hooks';
 import { workspaceAccess } from '@/features/workspaces/policy';
 import { workspaceRoutes } from '@/pages/app/workspace/routes';
@@ -56,7 +56,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const sidebar = (close: () => void) => (
     <div className="flex min-h-full flex-col bg-card text-card-foreground">
       <div className="hidden h-14 shrink-0 items-center justify-between gap-2 border-b border-border/50 px-4 md:flex">
-        <GatewayBrand href="/org" onClick={close} />
+        <AirmuxBrand href="/org" onClick={close} />
         {canSwitchOrg && (
           <Button
             variant="ghost"
@@ -196,7 +196,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <ResponsiveShell
-        brand={<GatewayBrand href="/org" />}
+        brand={<AirmuxBrand href="/org" />}
         navigationLabel="Workspace navigation"
         sidebar={sidebar}
         asideClassName="border-border bg-card shadow-sm"

@@ -3,7 +3,7 @@ import { Users, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, Button } from '@/components/ui/elements';
 import { useSession } from '@/lib/session';
-import { GatewayBrand, ResponsiveShell } from '@/components/layout/responsive-shell';
+import { AirmuxBrand, ResponsiveShell } from '@/components/layout/responsive-shell';
 import { useAuthorization } from '@/features/permissions/hooks';
 import { instanceRoutes } from '@/pages/instance-routes';
 
@@ -19,7 +19,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const sidebar = (close: () => void) => (
     <div className="flex min-h-full flex-col bg-sidebar text-sidebar-foreground">
       <div className="hidden h-16 shrink-0 items-center border-b border-sidebar-border/50 px-6 md:flex">
-        <GatewayBrand href="/instance" />
+        <AirmuxBrand href="/instance" />
       </div>
       <nav aria-label="Instance navigation" className="flex-1 space-y-1 px-4 py-6">
         <div className="mb-4 px-2 font-mono text-[10px] font-bold uppercase tracking-widest text-sidebar-foreground/50">Administration</div>
@@ -79,7 +79,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <ResponsiveShell
-      brand={<GatewayBrand href="/instance" />}
+      brand={<AirmuxBrand href="/instance" />}
       navigationLabel="Instance navigation"
       sidebar={sidebar}
       asideClassName="border-sidebar-border bg-sidebar shadow-xl"
