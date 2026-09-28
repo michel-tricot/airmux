@@ -47,7 +47,8 @@ function SetupSteps() {
   if (!credentialsQuery.data || !enrollment.data || !providersQuery.data)
     return <ErrorState message="Setup progress is unavailable. Reload to try again." />;
 
-  const keysSaved = credentialsQuery.data.filter((credential) => credential.enabled).length;
+  const savedCredentials = credentialsQuery.data.filter((credential) => credential.enabled);
+  const keysSaved = savedCredentials.length;
   const hasKeys = keysSaved > 0;
   const organization = enrollment.data.orgs.find((org) => org.id === enrollment.data.personal_org_id);
   const hasOrg = organization !== undefined;
@@ -71,10 +72,23 @@ function SetupSteps() {
               description="Instance keys are available to every organization. Add one or more provider accounts."
               actions={<Badge variant={hasKeys ? 'success' : 'outline'}>{hasKeys ? 'Complete' : 'To do'}</Badge>}
             />
-            {hasKeys && (
+            {hasKeys ? (
               <p className="text-sm text-success">
                 {keysSaved} instance provider {keysSaved === 1 ? 'key' : 'keys'} saved
               </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">No provider keys added yet</p>
+            )}
+            {hasKeys && (
+              <ul aria-label="Saved provider keys" className="flex flex-wrap gap-2">
+                {savedCredentials.map((credential) => (
+                  <li key={credential.id}>
+                    <Badge variant="outline">
+                      {credential.provider_name} · {credential.name}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
             )}
             {providers.length === 0 && (
               <Alert>

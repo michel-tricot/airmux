@@ -25,6 +25,7 @@ function installUser(instanceRole: Api.InstanceRole | null = null) {
         data: { user_id: 'admin-user', name: 'Admin', email: 'admin@example.com', instance_role: 'owner', orgs: [ORG.id] },
       }),
     ),
+    http.get('/api/v1/enroll', () => HttpResponse.json({ data: { orgs: [ORG], personal_org_id: ORG.id, pending_invitations: [] } })),
     http.get('/api/v1/users/target-user', () => HttpResponse.json({ data: user })),
     http.get('/api/v1/organizations', () => paged([])),
     http.put('/api/v1/users/target-user/instance-role', async ({ request }) => {
