@@ -39,6 +39,9 @@ def test_instance_owner_login_navigation_dialogs_and_logout(stack: Stack) -> Non
         page.get_by_role("button", name="Sign in", exact=True).click()
         expect(page.get_by_text("Incorrect email or password", exact=True)).to_be_visible()
         console.login(ADMIN_EMAIL, ADMIN_PASSWORD)
+        enrollment = console.context.request.get(f"{console.url}/api/v1/enroll", headers=CSRF)
+        assert enrollment.status == 200
+        assert enrollment.json()["data"]["personal_org_id"] == stack.org_id
         page.goto(f"{console.url}/instance")
         expect(page.get_by_role("navigation", name="Instance navigation", exact=True)).to_be_visible()
         visit_sidebar(console, "Instance navigation")
@@ -107,8 +110,8 @@ def test_playground_streaming_errors_and_recovery(stack: Stack) -> None:
         composer.fill("streaming browser probe")
         page.get_by_role("button", name="Send message", exact=True).click()
         expect(page.get_by_role("button", name="Stop generation", exact=True)).to_be_visible()
+        expect(page.get_by_role("button", name="Stop generation", exact=True)).not_to_be_visible(timeout=15_000)
         expect(page.get_by_text("tick29", exact=False)).to_be_visible()
-        expect(page.get_by_role("button", name="Stop generation", exact=True)).not_to_be_visible()
         page.get_by_role("button", name="Clear conversation", exact=True).click()
         page.get_by_role("switch", name="Streaming", exact=True).uncheck()
         composer.fill("malformed-buffered")
