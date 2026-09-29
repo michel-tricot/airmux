@@ -65,7 +65,18 @@ def test_policy_changes_reach_running_gateway_and_preserve_workspace_scope(stack
 
         def toggle(command: str) -> dict[str, object]:
             result = subprocess.run(  # noqa: S603 runs the local CLI against the isolated acceptance stack
-                [_bin("airmux"), "policies", command, str(policy["id"]), "--org", stack.org_id, "--workspace", str(workspace["id"]), "-f", "json"],
+                [
+                    _bin("airmux"),
+                    "policies",
+                    command,
+                    str(policy["id"]),
+                    "--organization",
+                    stack.org_id,
+                    "--workspace",
+                    str(workspace["id"]),
+                    "-f",
+                    "json",
+                ],
                 cwd=stack.tmp,
                 env={
                     **stack.env,

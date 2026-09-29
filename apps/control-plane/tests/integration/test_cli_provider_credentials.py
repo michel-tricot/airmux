@@ -42,7 +42,7 @@ def cli(tmp_path, monkeypatch):
         monkeypatch.setattr("cli.client._bearer_client", _client)
         monkeypatch.setenv("AIRMUX_CLI_CONFIG", str(tmp_path / "config.toml"))
         monkeypatch.setenv("AIRMUX_MANAGEMENT_KEY", org["authorization"].removeprefix("Bearer "))
-        monkeypatch.setenv("AIRMUX_ORG_ID", str(org_id))
+        monkeypatch.setenv("AIRMUX_ORGANIZATION_ID", str(org_id))
         yield cp, workspace["slug"]
 
 
@@ -130,18 +130,18 @@ def test_disable_and_enable_preserve_the_credential_and_secret(cli):
         assert stored(cp, updated) == KEY
 
 
-def test_rm_deletes_the_credential(cli):
+def test_remove_deletes_the_credential(cli):
     cp, workspace = cli
     run("provider-credentials", "add", "openai", "--workspace", workspace, stdin=f"{KEY}\n")
     credential = listed(cp, workspace)[0]
-    run("provider-credentials", "rm", credential["id"])
+    run("provider-credentials", "remove", credential["id"])
     assert listed(cp, workspace) == []
 
 
-def test_an_org_wide_key_is_not_scoped_to_a_workspace(cli):
+def test_an_organization_wide_key_is_not_scoped_to_a_workspace(cli):
     cp, _ = cli
-    run("provider-credentials", "add", "openai", "--org-wide", stdin=f"{KEY}\n")
-    credential = json.loads(run("provider-credentials", "list", "--org-wide", "-f", "json"))[0]
+    run("provider-credentials", "add", "openai", "--organization-wide", stdin=f"{KEY}\n")
+    credential = json.loads(run("provider-credentials", "list", "--organization-wide", "-f", "json"))[0]
     assert credential["scope"] == "org"
     assert credential["workspace_id"] is None
     assert stored(cp, credential) == KEY

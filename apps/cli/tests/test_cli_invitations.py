@@ -47,7 +47,7 @@ def test_invitation_commands_use_the_active_org_and_show_a_link_only_when_minted
         )
         return httpx.Response(200, request=request, json={"data": data})
 
-    monkeypatch.setenv("AIRMUX_ORG_ID", str(org_id))
+    monkeypatch.setenv("AIRMUX_ORGANIZATION_ID", str(org_id))
 
     def access_client(_url: str) -> httpx.Client:
         return httpx.Client(base_url="http://control-plane", transport=httpx.MockTransport(respond))
@@ -55,10 +55,10 @@ def test_invitation_commands_use_the_active_org_and_show_a_link_only_when_minted
     monkeypatch.setattr(resources, "access_client", access_client)
     monkeypatch.setattr(client, "access_client", access_client)
 
-    created = runner.invoke(app, ["orgs", "invitations", "create", "person@example.com", "-f", "json"])
-    listed = runner.invoke(app, ["orgs", "invitations", "list", "-f", "json"])
-    reissued = runner.invoke(app, ["orgs", "invitations", "reissue", str(invitation_id), "-f", "json"])
-    revoked = runner.invoke(app, ["orgs", "invitations", "revoke", str(invitation_id), "-f", "json"])
+    created = runner.invoke(app, ["organizations", "invitations", "create", "person@example.com", "-f", "json"])
+    listed = runner.invoke(app, ["organizations", "invitations", "list", "-f", "json"])
+    reissued = runner.invoke(app, ["organizations", "invitations", "reissue", str(invitation_id), "-f", "json"])
+    revoked = runner.invoke(app, ["organizations", "invitations", "revoke", str(invitation_id), "-f", "json"])
 
     assert all(result.exit_code == 0 for result in (created, listed, reissued, revoked))
     assert json.loads(created.stdout)[0]["url"].endswith("token=secret")
@@ -82,18 +82,18 @@ def test_invitation_grants_require_a_complete_workspace_pair(monkeypatch):
         submitted.append(json.loads(request.content))
         return httpx.Response(409, request=request, json={"detail": "A pending invitation already exists for this email"})
 
-    monkeypatch.setenv("AIRMUX_ORG_ID", str(uuid4()))
+    monkeypatch.setenv("AIRMUX_ORGANIZATION_ID", str(uuid4()))
     monkeypatch.setattr(
         resources,
         "access_client",
         lambda _url: httpx.Client(base_url="http://control-plane", transport=httpx.MockTransport(respond)),
     )
 
-    incomplete = runner.invoke(app, ["orgs", "invitations", "create", "person@example.com", "--workspace", str(workspace_id)])
-    invalid_role = runner.invoke(app, ["orgs", "invitations", "create", "person@example.com", "--role", "owner"])
+    incomplete = runner.invoke(app, ["organizations", "invitations", "create", "person@example.com", "--workspace", str(workspace_id)])
+    invalid_role = runner.invoke(app, ["organizations", "invitations", "create", "person@example.com", "--role", "owner"])
     complete = runner.invoke(
         app,
-        ["orgs", "invitations", "create", "person@example.com", "--workspace", str(workspace_id), "--workspace-role", "viewer"],
+        ["organizations", "invitations", "create", "person@example.com", "--workspace", str(workspace_id), "--workspace-role", "viewer"],
     )
 
     assert incomplete.exit_code == 1

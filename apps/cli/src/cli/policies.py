@@ -8,7 +8,7 @@ from pydantic import ValidationError
 
 from api_models import DeletedOutUUID, PolicyBudgetStatus, PolicyCreate, PolicyOut, PolicyUpdate
 from cli.client import access_client, access_get, ensure_ok, org_path, payload, resolve_workspace
-from cli.common import OrgOption, console, policies_app
+from cli.common import OrganizationOption, console, policies_app
 from cli.output import Col, FormatOption, OutputFormat, print_rows
 
 PolicyFile = Annotated[Path, typer.Argument(exists=True, dir_okay=False, readable=True, help="JSON policy configuration")]
@@ -17,7 +17,9 @@ POLICY_COLS = [Col("id", "ID"), Col("name", "Name"), Col("enabled", "Enabled"), 
 
 
 @policies_app.command("list")
-def list_policies(workspace: WorkspaceOption = "", control_plane_url: str = "", fmt: FormatOption = OutputFormat.table, _org: OrgOption = "") -> None:
+def list_policies(
+    workspace: WorkspaceOption = "", control_plane_url: str = "", fmt: FormatOption = OutputFormat.table, _organization: OrganizationOption = ""
+) -> None:
     """List inference policies in the workspace."""
     policies = access_get(org_path(f"/workspaces/{resolve_workspace(workspace)}/policies"), control_plane_url, PolicyOut)
     print_rows("policies", policies, POLICY_COLS, fmt)
@@ -29,7 +31,7 @@ def create_policy(
     workspace: WorkspaceOption = "",
     control_plane_url: str = "",
     fmt: FormatOption = OutputFormat.table,
-    _org: OrgOption = "",
+    _organization: OrganizationOption = "",
 ) -> None:
     """Create a policy from JSON."""
     body = _configuration(configuration, PolicyCreate)
@@ -47,7 +49,7 @@ def update_policy(
     workspace: WorkspaceOption = "",
     control_plane_url: str = "",
     fmt: FormatOption = OutputFormat.table,
-    _org: OrgOption = "",
+    _organization: OrganizationOption = "",
 ) -> None:
     """Update a policy using a partial JSON configuration."""
     body = _configuration(configuration, PolicyUpdate)
@@ -62,7 +64,11 @@ def update_policy(
 
 @policies_app.command("delete")
 def delete_policy(
-    policy_id: str, workspace: WorkspaceOption = "", control_plane_url: str = "", fmt: FormatOption = OutputFormat.table, _org: OrgOption = ""
+    policy_id: str,
+    workspace: WorkspaceOption = "",
+    control_plane_url: str = "",
+    fmt: FormatOption = OutputFormat.table,
+    _organization: OrganizationOption = "",
 ) -> None:
     """Delete a workspace policy."""
     with access_client(control_plane_url) as client:
@@ -78,7 +84,11 @@ def _set_enabled(policy_id: str, enabled: bool, workspace: str, control_plane_ur
 
 @policies_app.command("enable")
 def enable_policy(
-    policy_id: str, workspace: WorkspaceOption = "", control_plane_url: str = "", fmt: FormatOption = OutputFormat.table, _org: OrgOption = ""
+    policy_id: str,
+    workspace: WorkspaceOption = "",
+    control_plane_url: str = "",
+    fmt: FormatOption = OutputFormat.table,
+    _organization: OrganizationOption = "",
 ) -> None:
     """Enable a workspace policy."""
     _set_enabled(policy_id, True, workspace, control_plane_url, fmt)
@@ -86,7 +96,11 @@ def enable_policy(
 
 @policies_app.command("disable")
 def disable_policy(
-    policy_id: str, workspace: WorkspaceOption = "", control_plane_url: str = "", fmt: FormatOption = OutputFormat.table, _org: OrgOption = ""
+    policy_id: str,
+    workspace: WorkspaceOption = "",
+    control_plane_url: str = "",
+    fmt: FormatOption = OutputFormat.table,
+    _organization: OrganizationOption = "",
 ) -> None:
     """Disable a workspace policy."""
     _set_enabled(policy_id, False, workspace, control_plane_url, fmt)
@@ -111,7 +125,7 @@ def policy_status(  # noqa: PLR0913 CLI exposes independent filtering and output
     limit: Annotated[int, typer.Option(min=1, max=1000)] = 100,
     control_plane_url: str = "",
     fmt: FormatOption = OutputFormat.table,
-    _org: OrgOption = "",
+    _organization: OrganizationOption = "",
 ) -> None:
     """Show observed spending for each budget rule."""
     with access_client(control_plane_url) as client:

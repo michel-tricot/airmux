@@ -21,18 +21,18 @@ class Invocation:
 
     dev: bool = False
     version: bool = False
-    org: str = ""
+    organization: str = ""
 
 
 invocation = Invocation()
 
 
-def _select_org(value: str) -> str:
-    invocation.org = value
+def _select_organization(value: str) -> str:
+    invocation.organization = value
     return value
 
 
-OrgOption = Annotated[str, typer.Option("--org", help="Target organization ID", callback=_select_org)]
+OrganizationOption = Annotated[str, typer.Option("--organization", help="Target organization ID", callback=_select_organization)]
 
 
 def _show_version(value: bool) -> bool:
@@ -54,7 +54,7 @@ def _main(
     load_dotenv(find_dotenv(usecwd=True))
     invocation.dev = dev
     invocation.version = version_
-    invocation.org = ""
+    invocation.organization = ""
 
 
 GETTING_STARTED = "Getting started"
@@ -63,11 +63,11 @@ SERVICES = "Services"
 RESOURCES = "Manage resources"
 GOODIES = "Goodies"
 
-orgs_app = typer.Typer(help="Organizations you belong to")
+organizations_app = typer.Typer(help="Organizations you belong to")
 org_members_app = typer.Typer(help="People in your organization")
-orgs_app.add_typer(org_members_app, name="members", no_args_is_help=True)
+organizations_app.add_typer(org_members_app, name="members", no_args_is_help=True)
 org_invitations_app = typer.Typer(help="Email invitations to your organization")
-orgs_app.add_typer(org_invitations_app, name="invitations", no_args_is_help=True)
+organizations_app.add_typer(org_invitations_app, name="invitations", no_args_is_help=True)
 workspaces_app = typer.Typer(help="Isolated environments for keys, credentials and usage")
 workspace_members_app = typer.Typer(help="Who can use a workspace")
 workspaces_app.add_typer(workspace_members_app, name="members", no_args_is_help=True)
@@ -91,7 +91,7 @@ control_plane_app = typer.Typer(help="Initialize and run the control plane, mana
 app.add_typer(control_plane_app, name="control-plane", rich_help_panel=SERVICES)
 
 for name, sub in (
-    ("orgs", orgs_app),
+    ("organizations", organizations_app),
     ("workspaces", workspaces_app),
     ("inference-keys", inference_keys_app),
     ("provider-credentials", provider_credentials_app),

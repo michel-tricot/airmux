@@ -43,7 +43,7 @@ def test_config_rejects_incomplete_selection(selection, message):
 def test_workspace_default_cannot_cross_organization_override(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("AIRMUX_CLI_CONFIG", str(tmp_path / "config.toml"))
     save_config(CliConfig(org_id="org-a", workspace="production"))
-    monkeypatch.setenv("AIRMUX_ORG_ID", "org-b")
+    monkeypatch.setenv("AIRMUX_ORGANIZATION_ID", "org-b")
 
     with pytest.raises(typer.Exit):
         resolve_workspace("")
@@ -54,7 +54,7 @@ def test_workspace_default_cannot_cross_organization_override(tmp_path, monkeypa
 def test_profile_workspace_cannot_cross_organization_override(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("AIRMUX_CLI_CONFIG", str(tmp_path / "config.toml"))
     upsert_profile("acme", Profile(scope="org", org_id="org-a", org_name="Acme", workspace="production"))
-    monkeypatch.setenv("AIRMUX_ORG_ID", "org-b")
+    monkeypatch.setenv("AIRMUX_ORGANIZATION_ID", "org-b")
 
     with pytest.raises(typer.Exit):
         resolve_workspace("")
@@ -69,7 +69,7 @@ def test_organization_target_precedence(tmp_path, monkeypatch):
     save_config(load_config().model_copy(update={"org_id": "saved-org"}))
     assert resolve_org_id() == "saved-org"
 
-    monkeypatch.setenv("AIRMUX_ORG_ID", "environment-org")
+    monkeypatch.setenv("AIRMUX_ORGANIZATION_ID", "environment-org")
     assert resolve_org_id() == "environment-org"
     assert resolve_org_id("explicit-org") == "explicit-org"
 
@@ -88,7 +88,7 @@ def test_selecting_org_and_workspace_keeps_instance_credentials(tmp_path, monkey
         return_value=httpx.Response(200, json={"data": workspace})
     )
 
-    selected_org = runner.invoke(app, ["orgs", "switch", org_id])
+    selected_org = runner.invoke(app, ["organizations", "switch", org_id])
     selected_workspace = runner.invoke(app, ["workspaces", "use", "production"])
 
     assert selected_org.exit_code == selected_workspace.exit_code == 0
@@ -109,7 +109,7 @@ def test_org_switch_clears_workspace_only_after_a_valid_response(tmp_path, monke
     save_config(CliConfig(org_id=org_a, workspace="production"))
     route = respx.get(f"http://cp.test/api/v1/organizations/{org_b}").mock(return_value=httpx.Response(404, json={"detail": "Not found"}))
 
-    invalid = runner.invoke(app, ["orgs", "switch", org_b])
+    invalid = runner.invoke(app, ["organizations", "switch", org_b])
     assert invalid.exit_code == 1
     assert load_config().org_id == org_a
     assert load_config().workspace == "production"
@@ -121,7 +121,7 @@ def test_org_switch_clears_workspace_only_after_a_valid_response(tmp_path, monke
             json={"data": {"id": org_b, "name": "Beta", "slug": "beta", "personal_for": None, "created_at": now, "updated_at": now}},
         )
     )
-    valid = runner.invoke(app, ["orgs", "switch", org_b])
+    valid = runner.invoke(app, ["organizations", "switch", org_b])
     assert valid.exit_code == 0, valid.output
     assert load_config().org_id == org_b
     assert load_config().workspace is None
@@ -130,7 +130,7 @@ def test_org_switch_clears_workspace_only_after_a_valid_response(tmp_path, monke
 def test_status_reports_conflicting_environment_org(tmp_path, monkeypatch):
     monkeypatch.setenv("AIRMUX_CLI_CONFIG", str(tmp_path / "config.toml"))
     save_config(CliConfig(org_id="org-a", workspace="production"))
-    monkeypatch.setenv("AIRMUX_ORG_ID", "org-b")
+    monkeypatch.setenv("AIRMUX_ORGANIZATION_ID", "org-b")
 
     status = runner.invoke(app, ["status", "-f", "json"])
     assert status.exit_code == 0, status.output
@@ -161,7 +161,7 @@ def test_policy_toggle_accepts_explicit_target_and_reports_state(tmp_path, monke
     org_id, workspace_id, policy_id = (str(uuid4()) for _ in range(3))
     monkeypatch.setenv("AIRMUX_CLI_CONFIG", str(tmp_path / "config.toml"))
     monkeypatch.setenv("AIRMUX_MANAGEMENT_KEY", "instance-key")
-    monkeypatch.setenv("AIRMUX_ORG_ID", str(uuid4()))
+    monkeypatch.setenv("AIRMUX_ORGANIZATION_ID", str(uuid4()))
     monkeypatch.setenv("AIRMUX_CONTROL_PLANE_URL", "http://cp.test")
     policy = {
         "id": policy_id,
@@ -183,7 +183,7 @@ def test_policy_toggle_accepts_explicit_target_and_reports_state(tmp_path, monke
 
     endpoint = f"http://cp.test/api/v1/organizations/{org_id}/workspaces/production/policies/{policy_id}"
     respx.patch(endpoint).mock(side_effect=respond)
-    result = runner.invoke(app, ["policies", "disable", policy_id, "--org", org_id, "--workspace", "production", "-f", "json"])
+    result = runner.invoke(app, ["policies", "disable", policy_id, "--organization", org_id, "--workspace", "production", "-f", "json"])
 
     assert result.exit_code == 0, result.output
     assert json.loads(result.stdout)[0]["enabled"] is False
@@ -195,13 +195,13 @@ def test_policy_toggle_accepts_explicit_target_and_reports_state(tmp_path, monke
         *(("policies", command) for command in ("list", "create", "update", "delete", "enable", "disable", "status")),
         *(("workspaces", command) for command in ("list", "create", "use")),
         *(("workspaces", "members", command) for command in ("list", "add", "role", "remove")),
-        *(("orgs", "members", command) for command in ("list", "add", "role", "remove")),
-        *(("orgs", "invitations", command) for command in ("list", "create", "reissue", "revoke")),
+        *(("organizations", "members", command) for command in ("list", "add", "role", "remove")),
+        *(("organizations", "invitations", command) for command in ("list", "create", "reissue", "revoke")),
         *(
             (group, command)
             for group, commands in {
                 "inference-keys": ("list", "create", "revoke"),
-                "provider-credentials": ("add", "list", "rotate", "rm", "enable", "disable"),
+                "provider-credentials": ("add", "list", "rotate", "remove", "enable", "disable"),
                 "events": ("list", "tail"),
                 "providers": ("list",),
                 "models": ("list",),
@@ -214,4 +214,4 @@ def test_policy_toggle_accepts_explicit_target_and_reports_state(tmp_path, monke
 def test_org_scoped_commands_expose_org_option(command):
     result = runner.invoke(app, [*command, "--help"])
     assert result.exit_code == 0, result.output
-    assert "--org" in result.output
+    assert "--organization" in result.output

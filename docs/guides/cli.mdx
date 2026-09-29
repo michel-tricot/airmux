@@ -35,7 +35,7 @@ airmux doctor
 ```
 
 `status` shows the effective organization, workspace, and credential source. Select credentials with
-`airmux profiles use <profile>`. Select an organization with `airmux orgs switch <organization-id>` and a workspace with
+`airmux profiles use <profile>`. Select an organization with `airmux organizations switch <organization-id>` and a workspace with
 `airmux workspaces use <workspace>`. These selections also work with instance and environment management keys.
 
 ## Manage a workspace
@@ -71,7 +71,7 @@ airmux policies enable "$POLICY_ID"
 airmux events list --limit 20
 ```
 
-Use `--org <organization-id>` on an organization-scoped command to target another organization for that command.
+Use `--organization <organization-id>` on an organization-scoped command to target another organization for that command.
 Use `--workspace <slug-or-id>` to target another workspace. An explicit organization requires an explicit workspace
 when the saved workspace belongs to a different organization.
 

@@ -81,7 +81,7 @@ inside a running container.
 airmux login --url https://llm.example.com
 airmux profiles list
 airmux profiles use my-org
-airmux orgs switch "$ORG_ID"
+airmux organizations switch "$ORGANIZATION_ID"
 airmux workspaces use production
 airmux status
 airmux doctor
@@ -89,17 +89,17 @@ airmux doctor
 
 The control-plane URL resolves from an explicit option, `--dev` where supported, environment, active profile, then
 the local default. Credentials resolve from `AIRMUX_MANAGEMENT_KEY`, then the active profile. The target organization
-resolves from a command's `--org`, `AIRMUX_ORG_ID`, saved selection, then the active profile. The workspace resolves
-from `--workspace`, saved selection, then the active profile when its organization matches the effective organization.
-`orgs switch` and `workspaces use` save targets independently of credentials. Switching organizations clears the saved
+resolves from a command's `--organization`, `AIRMUX_ORGANIZATION_ID`, saved selection, then the active profile. The workspace
+resolves from `--workspace`, saved selection, then the active profile when its organization matches the effective organization.
+`organizations switch` and `workspaces use` save targets independently of credentials. Switching organizations clears the saved
 workspace. A saved workspace from another organization fails before a request; pass `--workspace` or select a new one.
 
-| Environment variable          | Purpose                                           |
-| ----------------------------- | ------------------------------------------------- |
+| Environment variable       | Purpose                                           |
+| -------------------------- | ------------------------------------------------- |
 | `AIRMUX_CONTROL_PLANE_URL` | Override the management origin                    |
 | `AIRMUX_GATEWAY_URL`       | Override the inference origin used by diagnostics |
 | `AIRMUX_MANAGEMENT_KEY`    | Override the saved profile token                  |
-| `AIRMUX_ORG_ID`            | Override the selected organization                |
+| `AIRMUX_ORGANIZATION_ID`   | Override the selected organization                |
 | `AIRMUX_CLI_CONFIG`        | Override the credential and target config path    |
 
 ## Output formats
@@ -113,7 +113,7 @@ commands always return their complete set and do not expose pagination flags. `e
 newest event it has already shown, so a burst larger than one page is not skipped.
 
 ```bash
-airmux orgs list --limit 25 -f json
+airmux organizations list --limit 25 -f json
 airmux events list --all -f text
 airmux commands -f table
 ```
@@ -142,31 +142,31 @@ You can also set up an instance through the web app. See the [quickstart](/docs/
 | `login`                                            | Sign in through the browser device flow                                                                       |
 | `status`                                           | Show active endpoints, organization, workspace, and authentication source                                     |
 | `doctor`                                           | Check profile permissions, control-plane access, authentication, and gateway readiness                        |
-| `profiles list`, `profiles use`, `profiles remove` | Manage saved deployment and organization contexts                                                             |
+| `profiles list`, `profiles use`, `profiles remove` | Manage saved credentials and deployment endpoints                                                             |
 
 ## Organization and workspace commands
 
-| Command group        | Commands                           |
-| -------------------- | ---------------------------------- |
-| `orgs`               | `create`, `list`, `mine`, `switch` |
-| `orgs members`       | `add`, `list`, `role`, `remove`    |
-| `orgs invitations`   | `create`, `list`, `reissue`, `revoke` |
-| `workspaces`         | `create`, `list`, `use`            |
-| `workspaces members` | `add`, `list`, `role`, `remove`    |
-| `users`              | `list`, `role`                     |
-| `service-accounts`   | `create`, `list`                   |
+| Command group                | Commands                                 |
+| ---------------------------- | ---------------------------------------- |
+| `organizations`              | `create`, `list`, `mine`, `switch`        |
+| `organizations members`      | `add`, `list`, `role`, `remove`           |
+| `organizations invitations`  | `create`, `list`, `reissue`, `revoke`      |
+| `workspaces`                 | `create`, `list`, `use`                  |
+| `workspaces members`         | `add`, `list`, `role`, `remove`           |
+| `users`                      | `list`, `role`                           |
+| `service-accounts`           | `create`, `list`                         |
 
 Set or change a user's role at each scope:
 
 ```bash
 airmux users role "$USER_ID" auditor
-airmux orgs members role "$USER_ID" --role admin
+airmux organizations members role "$USER_ID" --role admin
 airmux workspaces members role "$USER_ID" --workspace production --role viewer
 ```
 
 Instance roles are `owner`, `auditor`, `data_plane`, or `none` to remove the role. Organization roles are
 `owner`, `admin`, `member`, or `data_plane`. Workspace roles are `admin`, `member`, or `viewer`.
-Organization commands accept `--org <organization-id>` and otherwise use the effective organization. Workspace commands
+Organization commands accept `--organization <organization-id>` and otherwise use the effective organization. Workspace commands
 also accept `--workspace <slug-or-id>` and otherwise use the selected workspace.
 The membership commands assign a role even when the user is not yet a member, just like `members add`.
 All three commands accept `-f table|json|text` and enforce the existing authorization and owner protections.
@@ -177,7 +177,7 @@ All three commands accept `-f table|json|text` and enforce the existing authoriz
 | ---------------------- | ------------------------------------------------------ |
 | `inference-keys`       | `create`, `list`, `revoke`                             |
 | `management-keys`      | `create`, `list`, `revoke`                             |
-| `provider-credentials` | `add`, `list`, `rotate`, `enable`, `disable`, `rm`    |
+| `provider-credentials` | `add`, `list`, `rotate`, `enable`, `disable`, `remove`    |
 | `providers`            | `list`                                                 |
 | `models`               | `list`                                                 |
 | `policies`             | `create`, `list`, `update`, `enable`, `disable`, `delete`, `status` |
@@ -191,7 +191,7 @@ Define policy rules inline in the JSON configuration's `definition.rules` array,
 Pass the file to `airmux policies create CONFIGURATION` or `airmux policies update POLICY_ID CONFIGURATION`.
 Use `airmux policies enable POLICY_ID` or `airmux policies disable POLICY_ID` to change activation without a file.
 Both commands show the updated policy, including `enabled`. `policies status` reports budget spending.
-For organization-wide provider credentials, use `--org-wide`; `--org` selects the target organization.
+For organization-wide provider credentials, use `--organization-wide`; `--organization` selects the target organization.
 See [Create a workspace policy](/docs/guides/policies#create-a-workspace-policy) for a complete example.
 
 ## Automation pattern
@@ -199,7 +199,7 @@ See [Create a workspace policy](/docs/guides/policies#create-a-workspace-policy)
 ```bash
 export AIRMUX_CONTROL_PLANE_URL='https://llm.example.com'
 export AIRMUX_MANAGEMENT_KEY='sk-cp-your-key'
-export AIRMUX_ORG_ID='your-org-id'
+export AIRMUX_ORGANIZATION_ID='your-organization-id'
 
 airmux workspaces list -f json
 airmux inference-keys create deployment --workspace production

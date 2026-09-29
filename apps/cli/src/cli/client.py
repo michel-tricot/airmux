@@ -79,14 +79,22 @@ def access_client(control_plane_url: str = "", token: str | None = None) -> http
 def effective_org_id(override: str = "") -> str | None:
     config = load_config()
     profile = active_profile(config)
-    return override or invocation.org or os.environ.get("AIRMUX_ORG_ID") or config.org_id or (profile.org_id if profile is not None else None)
+    return (
+        override
+        or invocation.organization
+        or os.environ.get("AIRMUX_ORGANIZATION_ID")
+        or config.org_id
+        or (profile.org_id if profile is not None else None)
+    )
 
 
 def resolve_org_id(override: str = "") -> str:
     selected_org = effective_org_id(override)
     if selected_org:
         return str(selected_org)
-    console.print("[red]No organization selected. Pass --org, set AIRMUX_ORG_ID, or run [bold]airmux orgs switch <id>[/bold].[/red]")
+    console.print(
+        "[red]No organization selected. Pass --organization, set AIRMUX_ORGANIZATION_ID, or run [bold]airmux organizations switch <id>[/bold].[/red]"
+    )
     raise typer.Exit(1)
 
 
