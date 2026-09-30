@@ -100,4 +100,6 @@ def test_fly_setup_action_is_allowed_by_repository_policy():
     workflow = yaml.safe_load((ROOT / ".github/workflows/deploy-fly.yml").read_text())
     policy = json.loads((ROOT / ".github/policy/actions.json").read_text())
     fly_setup = next(step for step in workflow["jobs"]["deploy"]["steps"] if step.get("uses", "").startswith("superfly/"))
-    assert fly_setup["uses"] in policy["selected_actions_url"]["patterns_allowed"]
+    assert fly_setup["uses"].startswith("superfly/flyctl-actions/setup-flyctl@")
+    assert "superfly/flyctl-actions/setup-flyctl@*" in policy["selected_actions_url"]["patterns_allowed"]
+    assert policy["sha_pinning_required"] is True
