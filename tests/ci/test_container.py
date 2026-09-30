@@ -17,6 +17,11 @@ def test_dockerfile_builds_one_role_based_image() -> None:
     assert not ROLES.intersection(stages)
 
 
+def test_docker_build_context_includes_the_console_version() -> None:
+    assert "COPY VERSION ./VERSION" in (ROOT / "Dockerfile").read_text(encoding="utf-8")
+    assert "!VERSION" in (ROOT / ".dockerignore").read_text(encoding="utf-8").splitlines()
+
+
 def test_compose_topologies_project_the_same_image_into_roles() -> None:
     compact_text = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
     split_text = (ROOT / "docker-compose.split.yml").read_text(encoding="utf-8")
