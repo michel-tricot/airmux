@@ -113,6 +113,30 @@ function renderAt(path: string) {
 beforeEach(installAdminHandlers);
 
 describe('instance administration routes', () => {
+  it('shows the system overview without a setup action', async () => {
+    renderAt('/instance');
+    await screen.findByRole('heading', { name: 'System Overview' });
+
+    expect(screen.queryByRole('link', { name: 'Resume setup' })).not.toBeInTheDocument();
+  });
+
+  it('preserves active navigation and switching between instance and workspace consoles', async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem('airmux_org_id', ORG.id);
+    renderAt(`/instance/organizations/${ORG.id}`);
+    await screen.findByRole('heading', { level: 1, name: ORG.name });
+
+    const navigation = screen.getByRole('navigation', { name: 'Instance navigation' });
+    expect(within(navigation).getByRole('link', { name: 'Organizations' })).toHaveAttribute('aria-current', 'page');
+    expect(within(navigation).getByRole('link', { name: 'Overview' })).not.toHaveAttribute('aria-current');
+
+    await user.click(screen.getByRole('link', { name: 'Workspace console' }));
+    await screen.findByRole('navigation', { name: 'Workspace navigation' });
+    await user.click(screen.getByRole('link', { name: 'Instance console' }));
+    await screen.findByRole('heading', { name: 'System Overview' });
+    expect(screen.getByRole('link', { name: 'Overview' })).toHaveAttribute('aria-current', 'page');
+  });
+
   it.each([
     ['/instance', 'System Overview'],
     ['/instance/organizations', 'Organizations'],
