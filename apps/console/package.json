@@ -32,7 +32,7 @@
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",
     "date-fns": "^4.4.0",
-    "dompurify": "3.4.15",
+    "dompurify": "3.4.16",
     "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",

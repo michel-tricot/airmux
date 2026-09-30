@@ -51,6 +51,15 @@ def test_dependabot_covers_bun_workspace_manifests_and_native_lockfile():
     assert manifests <= members
 
 
+def test_dompurify_pin_excludes_known_xss_advisory():
+    manifest = json.loads((ROOT / "apps/console/package.json").read_text())
+    lockfile = (ROOT / "bun.lock").read_text()
+    version = manifest["dependencies"]["dompurify"]
+    assert tuple(map(int, version.split("."))) >= (3, 4, 16)
+    assert f'"dompurify": "{version}"' in lockfile
+    assert f'"dompurify": ["dompurify@{version}"' in lockfile
+
+
 def test_dependabot_excludes_only_the_local_airmux_project_from_registry_updates():
     configuration = yaml.safe_load((ROOT / ".github/dependabot.yml").read_text())
     sources = tomllib.loads((ROOT / "pyproject.toml").read_text())["tool"]["uv"]["sources"]
