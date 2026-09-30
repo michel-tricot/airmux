@@ -31,6 +31,8 @@ fly ssh console --app "$APP_NAME" --user airmux --command "/app/deploy/docker/st
 
 Each deploy runs migrations in a temporary Machine before starting the app. The temporary Machine does not have the `/state` volume. Apply the bundled model catalog with the `fly ssh console` command after the first deploy and after each upgrade. For a custom domain, set `PUBLIC_URL` to its exact HTTPS origin before deploying.
 
+If the catalog command stalls at `Connecting to ...`, see [If Fly SSH hangs](#if-fly-ssh-hangs).
+
 ## Verify and set up
 
 ```bash
@@ -63,6 +65,20 @@ curl -fsS "${PUBLIC_URL}/healthz"
 ```
 
 The config deploys the current published `latest` image. Fly runs migrations before replacing the app Machine; run the catalog command only after `fly deploy` succeeds. Confirm the version link in the webapp and check that new requests appear in usage. For recovery, see [operations](/docs/deployment/operations).
+
+## If Fly SSH hangs
+
+If `fly ssh console` stays at `Connecting to ...` without running the command, use the Machines API to apply the catalog on the started app Machine. Copy its ID from the list after the latest deploy:
+
+```bash
+fly machine list --app "$APP_NAME"
+MACHINE_ID=replace-with-started-machine-id
+fly machine exec --app "$APP_NAME" "$MACHINE_ID" \
+  "runuser -u airmux -- /app/deploy/docker/start.sh taxonomy"
+curl -fsS "${PUBLIC_URL}/healthz"
+```
+
+This runs taxonomy as the `airmux` user without opening an SSH console. Use the current Machine ID after each deploy. Run it only after `fly deploy` succeeds; Fly's release command has already applied migrations by then. The GitHub Actions workflow also uses `fly ssh console` for the catalog step. If it stalls there, apply the catalog with these commands and verify the app; that workflow run will still show as failed.
 
 ## Deploy from GitHub Actions
 

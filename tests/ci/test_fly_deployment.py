@@ -73,6 +73,15 @@ def test_fly_guide_shows_the_full_update_command():
     assert 'fly ssh console --app "$APP_NAME" --user airmux --command "/app/deploy/docker/start.sh taxonomy"' in update
 
 
+def test_fly_guide_documents_taxonomy_fallback_when_ssh_hangs():
+    guide = (ROOT / "docs/deployment/fly.mdx").read_text()
+    fallback = guide.split("## If Fly SSH hangs", maxsplit=1)[1]
+    assert 'fly machine list --app "$APP_NAME"' in fallback
+    assert 'fly machine exec --app "$APP_NAME" "$MACHINE_ID" \\' in fallback
+    assert '"runuser -u airmux -- /app/deploy/docker/start.sh taxonomy"' in fallback
+    assert "GitHub Actions" in fallback
+
+
 def test_fly_workflow_deploys_and_updates_catalog_on_manual_dispatch():
     workflow = yaml.safe_load((ROOT / ".github/workflows/deploy-fly.yml").read_text())
     assert workflow["name"] == "Deploy - Fly"
