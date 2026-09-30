@@ -92,6 +92,7 @@ def test_fly_workflow_deploys_and_updates_catalog_on_manual_dispatch():
     assert workflow["concurrency"]["cancel-in-progress"] is False
     job = workflow["jobs"]["deploy"]
     assert job["if"] == "github.ref == 'refs/heads/main'"
+    assert job["environment"] == "production"
     deployment = next(step for step in job["steps"] if step.get("name") == "Deploy and update catalog")
     assert deployment["env"]["FLY_API_TOKEN"] == "${{ secrets.FLY_API_TOKEN }}"
     assert deployment["env"]["APP_NAME"] == "${{ vars.FLY_APP_NAME }}"
