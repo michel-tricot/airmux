@@ -42,7 +42,8 @@ COPY lib/api-client-react lib/api-client-react
 COPY lib/api-spec lib/api-spec
 COPY apps/console apps/console
 RUN bun install --frozen-lockfile
-RUN bun run --filter '@workspace/gateway-console' build
+COPY VERSION ./VERSION
+RUN VITE_AIRMUX_VERSION="$(cat VERSION)" bun run --filter '@workspace/gateway-console' build
 
 FROM python:3.13-slim-bookworm AS image
 ARG AIRMUX_VERSION

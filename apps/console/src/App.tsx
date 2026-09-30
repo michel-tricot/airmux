@@ -270,6 +270,7 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
 
 function App() {
   const [client] = useState(createQueryClient);
+  const version = import.meta.env.VITE_AIRMUX_VERSION || 'dev';
   return (
     <QueryClientProvider client={client}>
       <SessionProvider>
@@ -280,6 +281,14 @@ function App() {
             </Suspense>
           </WouterRouter>
           <Toaster />
+          <a
+            href={`https://github.com/michel-tricot/airmux/releases${version === 'dev' ? '' : `/tag/v${version}`}`}
+            target="_blank"
+            rel="noreferrer"
+            className="fixed bottom-2 right-3 z-10 font-mono text-xs text-muted-foreground/70 hover:text-muted-foreground focus-visible:rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          >
+            {version === 'dev' ? version : `v${version}`}
+          </a>
         </TooltipProvider>
       </SessionProvider>
     </QueryClientProvider>

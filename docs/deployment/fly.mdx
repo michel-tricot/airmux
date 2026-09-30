@@ -1,0 +1,77 @@
+---
+title: "Fly.io"
+description: "Run the full airmux platform on one Fly Machine with one managed Postgres database."
+---
+
+The sample [deploy/fly/fly.toml](https://github.com/michel-tricot/airmux/blob/main/deploy/fly/fly.toml) runs the published `ghcr.io/michel-tricot/airmux:latest` image in one Machine, without building the repository. A Fly volume preserves `/state`; one Fly Managed Postgres database holds the control-plane data. The config is not at the repository root, so Fly only uses it when you pass `--config`.
+
+## Deploy
+
+From a clone of this repository, install and sign in to [flyctl](https://fly.io/docs/flyctl/install/). Choose a unique app name and a region that supports Managed Postgres. The Fly config needs no edits: pass the app name, region, and public URL to `fly deploy`. Replace `CLUSTER_ID` with the ID printed by `fly mpg create`:
+
+```bash
+APP_NAME=your-unique-app-name
+REGION=iad
+PUBLIC_URL="https://${APP_NAME}.fly.dev"
+fly apps create "$APP_NAME"
+fly volumes create state --app "$APP_NAME" --region "$REGION" --size 1
+fly mpg create --region "$REGION"
+CLUSTER_ID=replace-with-cluster-id
+fly mpg attach "$CLUSTER_ID" --app "$APP_NAME" --database fly-db --username fly-user
+fly deploy \
+  --app "$APP_NAME" \
+  --config deploy/fly/fly.toml \
+  --primary-region "$REGION" \
+  --env "AIRMUX_CONSOLE_URL=$PUBLIC_URL" \
+  --ha=false
+fly ssh console --app "$APP_NAME" --user airmux --command "/app/deploy/docker/start.sh taxonomy"
+```
+
+`fly mpg create` asks you to choose a plan and reports the cluster ID. The attach command sets the `DATABASE_URL` secret; do not put the connection string in `fly.toml`. `--ha=false` creates one app Machine rather than a spare. The managed database is one logical database service, though Fly manages its own internal replicas.
+
+Each deploy runs migrations in a temporary Machine before starting the app. The temporary Machine does not have the `/state` volume. Apply the bundled model catalog with the `fly ssh console` command after the first deploy and after each upgrade. For a custom domain, set `PUBLIC_URL` to its exact HTTPS origin before deploying.
+
+## Verify and set up
+
+```bash
+curl -fsS "${PUBLIC_URL}/healthz"
+fly status --app "$APP_NAME"
+```
+
+Open the URL, create the owner account, then add an organization, provider credential, and inference key. Follow the [webapp guide](/docs/guides/webapp) or run `airmux quickstart --url "$PUBLIC_URL"` locally. Confirm a test request appears in usage before sending production traffic.
+
+The single Machine and volume are not highly available. Leave auto-stop disabled so the gateway can flush usage in the background.
+
+## Update
+
+From the repository clone, pull the current Fly config. Before deploying, preserve both a Managed Postgres backup and a `/state` [volume snapshot](https://fly.io/docs/volumes/volume-snapshots/) as one recovery point. Use the same app name, region, and public URL as the initial deployment. If you use a custom domain, set `PUBLIC_URL` to its exact HTTPS origin.
+
+```bash
+git pull --ff-only
+APP_NAME=your-unique-app-name
+REGION=iad
+PUBLIC_URL="https://${APP_NAME}.fly.dev"
+fly deploy \
+  --app "$APP_NAME" \
+  --config deploy/fly/fly.toml \
+  --primary-region "$REGION" \
+  --env "AIRMUX_CONSOLE_URL=$PUBLIC_URL" \
+  --ha=false
+fly ssh console --app "$APP_NAME" --user airmux --command "/app/deploy/docker/start.sh taxonomy"
+fly status --app "$APP_NAME"
+curl -fsS "${PUBLIC_URL}/healthz"
+```
+
+The config deploys the current published `latest` image. Fly runs migrations before replacing the app Machine; run the catalog command only after `fly deploy` succeeds. Confirm the version link in the webapp and check that new requests appear in usage. For recovery, see [operations](/docs/deployment/operations).
+
+## Deploy from GitHub Actions
+
+After the first manual deployment, fork this repository. Create an [app-scoped deploy token](https://fly.io/docs/flyctl/integrating/#token-types):
+
+```bash
+fly tokens create deploy --app "$APP_NAME" -x 720h
+```
+
+In the fork's **Settings → Secrets and variables → Actions**, save the token as the repository secret `FLY_API_TOKEN`. Set repository variables `FLY_APP_NAME` to the existing app name and `FLY_REGION` to its region. Set `AIRMUX_CONSOLE_URL` only if the public URL differs from `https://<app-name>.fly.dev`.
+
+Before each update, sync the fork's `main` branch and preserve the database backup and volume snapshot described above. In your fork's GitHub Actions, run **Deploy - Fly** from `main`; there are no inputs to fill in. The workflow deploys the published `latest` image, runs migrations through Fly's release command, applies the bundled catalog, and checks the app's health. It does not run on pushes or releases.

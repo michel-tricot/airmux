@@ -1,6 +1,7 @@
 *
 !pyproject.toml
 !uv.lock
+!VERSION
 !lib
 !apps
 !deploy

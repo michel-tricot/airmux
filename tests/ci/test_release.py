@@ -23,7 +23,17 @@ def test_release_branch_changes_only_the_public_version():
     assert 'version_file = Path("VERSION")' in commands
     assert 'test "$(git diff --name-only)" = "VERSION"' in commands
     assert "refs/heads/$RELEASE_BRANCH" in commands
-    assert "compare/main...$RELEASE_BRANCH?expand=1" in commands
+    assert "repos/$GITHUB_REPOSITORY/pulls" in commands
+
+
+def test_prepare_release_opens_a_ready_pull_request_that_triggers_checks():
+    job = PREPARE_RELEASE["jobs"]["release-branch"]
+    assert job["environment"] == "release"
+    create = next(step for step in job["steps"] if step.get("name") == "Create the release branch")
+    assert create["env"]["GH_TOKEN"] == "${{ secrets.RELEASE_GITHUB_TOKEN }}"
+    assert '-f head="$RELEASE_BRANCH"' in create["run"]
+    assert "-F draft=false" in create["run"]
+    assert "RELEASE_GITHUB_TOKEN" in create["run"]
 
 
 def test_release_is_manual_and_requires_complete_checks_on_the_exact_main_commit():

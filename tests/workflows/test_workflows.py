@@ -89,7 +89,7 @@ def test_workflow_security_boundaries(path):
             "docker": {"contents": "read", "packages": "write"},
             "container": {"contents": "read", "packages": "write"},
             "installation": {"contents": "read", "actions": "read", "packages": "read"},
-            "release-branch": {"contents": "write"},
+            "release-branch": {"contents": "read"},
             "publish": {"contents": "read", "actions": "read", "id-token": "write", "packages": "write"},
             "verify-pypi": {"contents": "read", "actions": "read"},
             "verify-container": {"contents": "read", "packages": "read"},

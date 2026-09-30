@@ -129,8 +129,8 @@ Adding a resource is four steps; test_api_hygiene and test_api_parity name the e
   enclosing model; construct a known concrete variant directly
 - Closed vocabularies use a shared Literal or StrEnum. Identifiers use their domain type after boundary
   normalization; opaque external identifiers stay bounded non-empty strings and are never forced into UUID
-- A database column is non-null when the domain requires the value. Before the first production release,
-  keep one baseline migration and fold every schema change into it instead of adding a follow-up migration
+- A database column is non-null when the domain requires the value. Do not consolidate migrations or fold
+  schema changes into the baseline. Add a new migration for each schema change, even before the first production release
 - CLI control-plane responses are decoded into generated `api_models` in `cli.client`. Commands never
   consume raw response dicts, and payload helpers always require the expected response model
 - Optional update fields, partial stream deltas, provider wire JSON, JSON Schema values, and the canonical
