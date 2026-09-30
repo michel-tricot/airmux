@@ -1,9 +1,3 @@
-app = "airmux-example"
-primary_region = "iad"
-
-[env]
-  AIRMUX_CONSOLE_URL = "https://airmux-example.fly.dev"
-
 [build]
   image = "ghcr.io/michel-tricot/airmux:latest"
 

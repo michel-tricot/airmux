@@ -7,31 +7,37 @@ The sample [deploy/fly/fly.toml](https://github.com/michel-tricot/airmux/blob/ma
 
 ## Deploy
 
-From a clone of this repository, install and sign in to [flyctl](https://fly.io/docs/flyctl/install/). Edit `app`, `primary_region`, and `AIRMUX_CONSOLE_URL` in `deploy/fly/fly.toml`. Set the URL to `https://<app-name>.fly.dev`. Choose a unique app name and a region that supports Managed Postgres, then use those same values below. Replace `CLUSTER_ID` with the ID printed by `fly mpg create`:
+From a clone of this repository, install and sign in to [flyctl](https://fly.io/docs/flyctl/install/). Choose a unique app name and a region that supports Managed Postgres. The Fly config needs no edits: pass the app name, region, and public URL to `fly deploy`. Replace `CLUSTER_ID` with the ID printed by `fly mpg create`:
 
 ```bash
 APP_NAME=your-unique-app-name
 REGION=iad
+PUBLIC_URL="https://${APP_NAME}.fly.dev"
 fly apps create "$APP_NAME"
 fly volumes create state --app "$APP_NAME" --region "$REGION" --size 1
 fly mpg create --region "$REGION"
 CLUSTER_ID=replace-with-cluster-id
 fly mpg attach "$CLUSTER_ID" --app "$APP_NAME" --database fly-db --username fly-user
-fly deploy --config deploy/fly/fly.toml --ha=false
+fly deploy \
+  --app "$APP_NAME" \
+  --config deploy/fly/fly.toml \
+  --primary-region "$REGION" \
+  --env "AIRMUX_CONSOLE_URL=$PUBLIC_URL" \
+  --ha=false
 fly ssh console --app "$APP_NAME" --user airmux --command "/app/deploy/docker/start.sh taxonomy"
 ```
 
 `fly mpg create` asks you to choose a plan and reports the cluster ID. The attach command sets the `DATABASE_URL` secret; do not put the connection string in `fly.toml`. `--ha=false` creates one app Machine rather than a spare. The managed database is one logical database service, though Fly manages its own internal replicas.
 
-Each deploy runs migrations in a temporary Machine before starting the app. The temporary Machine does not have the `/state` volume. Apply the bundled model catalog with the `fly ssh console` command after the first deploy and after each upgrade. For a custom domain, set `AIRMUX_CONSOLE_URL` in `deploy/fly/fly.toml` to its exact HTTPS origin.
+Each deploy runs migrations in a temporary Machine before starting the app. The temporary Machine does not have the `/state` volume. Apply the bundled model catalog with the `fly ssh console` command after the first deploy and after each upgrade. For a custom domain, set `PUBLIC_URL` to its exact HTTPS origin before deploying.
 
 ## Verify and set up
 
 ```bash
-curl -fsS "https://${APP_NAME}.fly.dev/healthz"
+curl -fsS "${PUBLIC_URL}/healthz"
 fly status --app "$APP_NAME"
 ```
 
-Open the URL, create the owner account, then add an organization, provider credential, and inference key. Follow the [webapp guide](/docs/guides/webapp) or run `airmux quickstart --url https://<app-name>.fly.dev` locally. Confirm a test request appears in usage before sending production traffic.
+Open the URL, create the owner account, then add an organization, provider credential, and inference key. Follow the [webapp guide](/docs/guides/webapp) or run `airmux quickstart --url "$PUBLIC_URL"` locally. Confirm a test request appears in usage before sending production traffic.
 
-The single Machine and volume are not highly available. Leave auto-stop disabled so the gateway can flush usage in the background. Before an upgrade, preserve both the Managed Postgres backup and `/state` [volume snapshot](https://fly.io/docs/volumes/volume-snapshots/) as one recovery point. Then run `fly deploy --config deploy/fly/fly.toml --ha=false`, reapply the catalog with the command above, and check `/healthz` and usage. The `latest` tag may change between deploys. See [operations](/docs/deployment/operations) for recovery.
+The single Machine and volume are not highly available. Leave auto-stop disabled so the gateway can flush usage in the background. Before an upgrade, preserve both the Managed Postgres backup and `/state` [volume snapshot](https://fly.io/docs/volumes/volume-snapshots/) as one recovery point. Then run the deploy and catalog commands above again, and check `/healthz` and usage. The `latest` tag may change between deploys. See [operations](/docs/deployment/operations) for recovery.

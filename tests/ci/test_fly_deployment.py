@@ -49,7 +49,9 @@ def test_fly_config_runs_one_service_with_persistent_state():
     assert not (ROOT / "fly.toml").exists()
     assert not (ROOT / "deploy/fly.toml").exists()
     config = tomllib.loads((ROOT / "deploy/fly/fly.toml").read_text())
-    assert config["env"]["AIRMUX_CONSOLE_URL"] == "https://airmux-example.fly.dev"
+    assert "app" not in config
+    assert "primary_region" not in config
+    assert "env" not in config
     assert config["build"] == {"image": "ghcr.io/michel-tricot/airmux:latest"}
     assert config["deploy"]["release_command"] == "migrate"
     assert config["http_service"]["internal_port"] == 8080
