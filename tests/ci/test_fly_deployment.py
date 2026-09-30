@@ -52,7 +52,8 @@ def test_fly_release_stops_when_migration_fails(tmp_path: Path):
 
 
 def test_fly_config_runs_one_service_with_persistent_state():
-    config = tomllib.loads((ROOT / "fly.toml").read_text())
+    assert not (ROOT / "fly.toml").exists()
+    config = tomllib.loads((ROOT / "deploy/fly.toml").read_text())
     assert config["deploy"]["release_command"] == "release"
     assert config["http_service"]["internal_port"] == 8080
     assert config["http_service"]["auto_stop_machines"] == "off"
