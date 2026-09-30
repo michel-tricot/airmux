@@ -28,29 +28,9 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-python
-      - name: Build source once and rebuild the wheel from it
-        run: |
-          ./scripts/build-python-distribution.sh
-          mkdir candidate
-          cp dist/airmux-*.tar.gz candidate/
-          uv build --wheel --out-dir candidate dist/airmux-*.tar.gz
-          cd candidate
-          sha256sum airmux-* > SHA256SUMS
-      - name: Validate candidate metadata
-        run: uv run --no-sync pytest tests/installation/test_distribution.py --junitxml=package-results/package.xml
-        env:
-          AIRMUX_DISTRIBUTION_DIR: candidate
-      - name: Summarize package results
-        if: always()
-        continue-on-error: true
-        run: uv run --no-sync python tests/acceptance/gateway/ci_report.py package-results --summary "$GITHUB_STEP_SUMMARY"
-      - name: Upload candidate distributions
+      - uses: ./.github/actions/build-candidate
         id: candidate
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: candidate-${{ github.sha }}
-          path: candidate
-          if-no-files-found: error
           retention-days: 30
 
   gateway:

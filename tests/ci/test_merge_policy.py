@@ -70,14 +70,26 @@ def test_ci_events_and_candidate_coverage():
         assert main["jobs"][name]["needs"] == "candidate"
         assert "${{ needs.candidate.outputs.artifact-id }}" in str(main["jobs"][name])
     assert pull_request["jobs"]["package"]["outputs"]["artifact-id"] == "${{ steps.candidate.outputs.artifact-id }}"
-    assert main["jobs"]["candidate"]["steps"][:-1] == pull_request["jobs"]["package"]["steps"][:-1]
-    for job in (pull_request["jobs"]["package"], main["jobs"]["candidate"]):
-        assert any(step.get("run", "").startswith("./scripts/build-python-distribution.sh") for step in job["steps"])
-        upload = next(step for step in job["steps"] if step.get("id") == "candidate")
-        assert upload["with"]["name"] == "candidate-${{ github.sha }}"
-        assert upload["with"]["if-no-files-found"] == "error"
-    assert pull_request["jobs"]["package"]["steps"][-1]["with"]["retention-days"] == 7
-    assert main["jobs"]["candidate"]["steps"][-1]["with"]["retention-days"] == 30
+    for job, retention_days in ((pull_request["jobs"]["package"], 7), (main["jobs"]["candidate"], 30)):
+        assert len(job["steps"]) == 3
+        assert job["steps"][0]["uses"].startswith("actions/checkout@")
+        assert job["steps"][1]["uses"] == "./.github/actions/setup-python"
+        assert job["steps"][2] == {
+            "id": "candidate",
+            "uses": "./.github/actions/build-candidate",
+            "with": {"retention-days": retention_days},
+        }
+    candidate_action = yaml.safe_load((ROOT / ".github/actions/build-candidate/action.yml").read_text())
+    assert candidate_action["outputs"]["artifact-id"]["value"] == "${{ steps.candidate.outputs.artifact-id }}"
+    assert any(step.get("run", "").startswith("./scripts/build-python-distribution.sh") for step in candidate_action["runs"]["steps"])
+    upload = candidate_action["runs"]["steps"][-1]
+    assert upload["id"] == "candidate"
+    assert upload["with"] == {
+        "name": "candidate-${{ github.sha }}",
+        "path": "candidate",
+        "if-no-files-found": "error",
+        "retention-days": "${{ inputs.retention-days }}",
+    }
 
 
 def test_branch_protection_uses_pr_and_security_gates():
