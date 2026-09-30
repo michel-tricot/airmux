@@ -66,10 +66,10 @@ The config deploys the current published `latest` image. Fly runs migrations bef
 
 ## Deploy from GitHub Actions
 
-After the first manual deployment, create an [app-scoped deploy token](https://fly.io/docs/flyctl/integrating/#token-types) and save it as the repository Actions secret `FLY_API_TOKEN`:
+After the first manual deployment, fork this repository. Create an [app-scoped deploy token](https://fly.io/docs/flyctl/integrating/#token-types) and save it as the fork's Actions secret `FLY_API_TOKEN`:
 
 ```bash
 fly tokens create deploy --app "$APP_NAME" -x 720h
 ```
 
-Before each update, preserve the database backup and volume snapshot described above. In GitHub Actions, run **Deploy - Fly** from `main` with the existing app name and region. Leave `public_url` empty for the app's `fly.dev` URL, or enter the exact HTTPS origin of a custom domain. The workflow deploys the published `latest` image, runs migrations through Fly's release command, applies the bundled catalog, and checks the app's health. It does not run on pushes or releases.
+Before each update, sync the fork's `main` branch and preserve the database backup and volume snapshot described above. In your fork's GitHub Actions, run **Deploy - Fly** from `main` with the existing app name and region. Leave `public_url` empty for the app's `fly.dev` URL, or enter the exact HTTPS origin of a custom domain. The workflow deploys the published `latest` image, runs migrations through Fly's release command, applies the bundled catalog, and checks the app's health. It does not run on pushes or releases.
