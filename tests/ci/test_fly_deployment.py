@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import tomllib
@@ -93,3 +94,12 @@ def test_fly_workflow_deploys_and_updates_catalog_on_manual_dispatch():
     assert "--config deploy/fly/fly.toml" in commands
     assert '--primary-region "$REGION"' in commands
     assert "--ha=false" in commands
+
+
+def test_fly_setup_action_is_allowed_by_repository_policy():
+    workflow = yaml.safe_load((ROOT / ".github/workflows/deploy-fly.yml").read_text())
+    policy = json.loads((ROOT / ".github/policy/actions.json").read_text())
+    fly_setup = next(step for step in workflow["jobs"]["deploy"]["steps"] if step.get("uses", "").startswith("superfly/"))
+    assert fly_setup["uses"].startswith("superfly/flyctl-actions/setup-flyctl@")
+    assert "superfly/flyctl-actions/setup-flyctl@*" in policy["selected_actions_url"]["patterns_allowed"]
+    assert policy["sha_pinning_required"] is True
