@@ -5,6 +5,8 @@ import subprocess
 import tomllib
 from pathlib import Path
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -68,3 +70,20 @@ def test_fly_guide_shows_the_full_update_command():
     assert "--config deploy/fly/fly.toml" in update
     assert '--env "AIRMUX_CONSOLE_URL=$PUBLIC_URL"' in update
     assert 'fly ssh console --app "$APP_NAME" --user airmux --command "/app/deploy/docker/start.sh taxonomy"' in update
+
+
+def test_fly_workflow_deploys_and_updates_catalog_on_manual_dispatch():
+    workflow = yaml.safe_load((ROOT / ".github/workflows/deploy-fly.yml").read_text())
+    assert workflow["name"] == "Deploy - Fly"
+    assert set(workflow[True]) == {"workflow_dispatch"}
+    assert workflow[True]["workflow_dispatch"]["inputs"]["app_name"]["required"] is True
+    assert workflow["concurrency"]["cancel-in-progress"] is False
+    job = workflow["jobs"]["deploy"]
+    assert job["if"] == "github.ref == 'refs/heads/main'"
+    deployment = next(step for step in job["steps"] if step.get("name") == "Deploy and update catalog")
+    assert deployment["env"]["FLY_API_TOKEN"] == "${{ secrets.FLY_API_TOKEN }}"
+    commands = deployment["run"]
+    assert commands.index("fly deploy") < commands.index("fly ssh console") < commands.index("curl -fsS")
+    assert "--config deploy/fly/fly.toml" in commands
+    assert '--primary-region "$REGION"' in commands
+    assert "--ha=false" in commands

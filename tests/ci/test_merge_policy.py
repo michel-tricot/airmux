@@ -116,6 +116,7 @@ def test_workflow_display_names_are_grouped():
         "nightly.yml": "CI - Nightly",
         "prepare-release.yml": "Release - Prepare",
         "release.yml": "Release - Publish",
+        "deploy-fly.yml": "Deploy - Fly",
     }
     actual = {path.name: yaml.safe_load(path.read_text())["name"] for path in (ROOT / ".github/workflows").glob("*.yml")}
     assert actual == expected
