@@ -17,9 +17,25 @@ jobs:
     name: Main CI fast checks
     uses: ./.github/workflows/ci.yml
 
+  candidate:
+    name: Main CI candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      artifact-id: ${{ steps.candidate.outputs.artifact-id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-python
+      - uses: ./.github/actions/build-candidate
+        id: candidate
+        with:
+          retention-days: 30
+
   gateway:
     name: Main CI gateway
-    needs: fast
+    needs: candidate
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -33,7 +49,7 @@ jobs:
       - uses: ./.github/actions/setup-python
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
-          artifact-ids: ${{ needs.fast.outputs.artifact-id }}
+          artifact-ids: ${{ needs.candidate.outputs.artifact-id }}
           path: candidate
       - uses: ./.github/actions/install-candidate
       - name: Run discovered installation suites
@@ -63,7 +79,7 @@ jobs:
 
   full-stack:
     name: Main CI full-stack
-    needs: fast
+    needs: candidate
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -73,7 +89,7 @@ jobs:
       - uses: ./.github/actions/setup-python
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
-          artifact-ids: ${{ needs.fast.outputs.artifact-id }}
+          artifact-ids: ${{ needs.candidate.outputs.artifact-id }}
           path: candidate
       - uses: ./.github/actions/install-candidate
       - run: uv run --no-sync pytest -n 2 tests/acceptance/full_stack/scenarios --junitxml=full-stack-results/full-stack.xml
@@ -96,7 +112,7 @@ jobs:
 
   browser:
     name: Main CI browser
-    needs: fast
+    needs: candidate
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -110,7 +126,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
-          artifact-ids: ${{ needs.fast.outputs.artifact-id }}
+          artifact-ids: ${{ needs.candidate.outputs.artifact-id }}
           path: candidate
       - uses: ./.github/actions/install-candidate
       - run: uv run --no-sync playwright install --with-deps chromium
@@ -134,7 +150,7 @@ jobs:
 
   docker:
     name: Main CI docker (${{ matrix.arch }})
-    needs: fast
+    needs: candidate
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     strategy:
@@ -161,7 +177,7 @@ jobs:
       - uses: ./.github/actions/setup-python
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
-          artifact-ids: ${{ needs.fast.outputs.artifact-id }}
+          artifact-ids: ${{ needs.candidate.outputs.artifact-id }}
           path: candidate
       - run: cd candidate && sha256sum --check SHA256SUMS
       - name: Build the candidate image once
@@ -310,7 +326,7 @@ jobs:
     name: Main CI required
     runs-on: ubuntu-latest
     timeout-minutes: 1
-    needs: [fast, gateway, full-stack, browser, docker, container]
+    needs: [fast, candidate, gateway, full-stack, browser, docker, container]
     if: always()
     steps:
       - name: Require every correctness job to succeed
