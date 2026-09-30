@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 
+from click import unstyle
 from typer.testing import CliRunner
 
 from cli.common import GOODIES, RESOURCES
@@ -102,10 +103,11 @@ def test_public_commands_and_options_use_full_names():
 
     result = runner.invoke(app, ["provider-credentials", "list", "--help"], env={"COLUMNS": "120"})
     assert result.exit_code == 0, result.output
-    assert "--organization" in result.output
-    assert "--organization-wide" in result.output
-    assert "--org " not in result.output
-    assert "--org-wide" not in result.output
+    help_text = unstyle(result.output)
+    assert "--organization" in help_text
+    assert "--organization-wide" in help_text
+    assert "--org " not in help_text
+    assert "--org-wide" not in help_text
 
     for command in (["orgs", "list"], ["provider-credentials", "rm", "credential-id"]):
         removed = runner.invoke(app, command)
