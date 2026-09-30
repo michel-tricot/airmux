@@ -57,10 +57,10 @@ def test_instance_role_command_rejects_unknown_roles():
 @pytest.mark.parametrize(
     ("scope", "role"),
     [
-        ("orgs", "owner"),
-        ("orgs", "admin"),
-        ("orgs", "member"),
-        ("orgs", "data_plane"),
+        ("organizations", "owner"),
+        ("organizations", "admin"),
+        ("organizations", "member"),
+        ("organizations", "data_plane"),
         ("workspaces", "admin"),
         ("workspaces", "member"),
         ("workspaces", "viewer"),
@@ -73,7 +73,7 @@ def test_membership_role_command_reports_the_updated_role(tmp_path, monkeypatch,
     monkeypatch.setenv("AIRMUX_CLI_CONFIG", str(tmp_path / "config.toml"))
     monkeypatch.setenv("AIRMUX_MANAGEMENT_KEY", "sk-test-roles")
     monkeypatch.setenv("AIRMUX_CONTROL_PLANE_URL", "http://cp.test")
-    monkeypatch.setenv("AIRMUX_ORG_ID", org_id)
+    monkeypatch.setenv("AIRMUX_ORGANIZATION_ID", org_id)
     membership = {"user_id": user_id, "org_id": org_id, "role": role, "status": "member"}
     if scope == "workspaces":
         membership = {**membership, "workspace_id": workspace_id, "email": "user@example.com", "name": "User", "service_account": False}
@@ -92,14 +92,14 @@ def test_membership_role_command_reports_the_updated_role(tmp_path, monkeypatch,
     assert json.loads(result.stdout)[0]["role"] == role
 
 
-@pytest.mark.parametrize(("scope", "role"), [("orgs", "viewer"), ("workspaces", "owner")])
+@pytest.mark.parametrize(("scope", "role"), [("organizations", "viewer"), ("workspaces", "owner")])
 def test_membership_role_command_rejects_roles_from_other_scopes(scope, role):
     result = runner.invoke(app, [scope, "members", "role", str(uuid4()), "--role", role])
     assert result.exit_code == 2
     assert "Invalid value" in result.output
 
 
-@pytest.mark.parametrize("scope", ["orgs", "workspaces"])
+@pytest.mark.parametrize("scope", ["organizations", "workspaces"])
 @respx.mock
 def test_membership_role_command_requires_an_explicit_role(scope):
     result = runner.invoke(app, [scope, "members", "role", str(uuid4())])

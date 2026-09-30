@@ -25,11 +25,11 @@ it through a trusted channel. `airmux` does not send the email for you.
 The CLI also creates invitations and prints the link once:
 
 ```bash
-airmux orgs invitations create person@example.com --role member
-airmux orgs invitations create person@example.com --role admin --workspace "$WORKSPACE_ID" --workspace-role viewer
-airmux orgs invitations list -f table
-airmux orgs invitations reissue "$INVITATION_ID"
-airmux orgs invitations revoke "$INVITATION_ID"
+airmux organizations invitations create person@example.com --role member
+airmux organizations invitations create person@example.com --role admin --workspace "$WORKSPACE_ID" --workspace-role viewer
+airmux organizations invitations list -f table
+airmux organizations invitations reissue "$INVITATION_ID"
+airmux organizations invitations revoke "$INVITATION_ID"
 ```
 
 Use the workspace ID from `airmux workspaces list`. Reissuing invalidates the previous link. The CLI does not send email.
@@ -62,14 +62,14 @@ and workspace context first:
 
 ```bash
 airmux users list -f table
-airmux orgs members add "$USER_ID" --role admin
+airmux organizations members add "$USER_ID" --role admin
 airmux workspaces members add "$USER_ID" --workspace production --role viewer
-airmux orgs members list -f table
+airmux organizations members list -f table
 airmux workspaces members list --workspace production -f table
 ```
 
 Remove a workspace membership with `airmux workspaces members remove "$USER_ID" --workspace production`. Remove an
-organization membership with `airmux orgs members remove "$USER_ID"`. Removing membership also revokes that person's
+organization membership with `airmux organizations members remove "$USER_ID"`. Removing membership also revokes that person's
 inference keys and sessions in the affected scope.
 
 ## Disable public signup

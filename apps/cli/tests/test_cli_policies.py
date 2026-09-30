@@ -18,7 +18,7 @@ def test_policy_create_and_update_preserve_typed_configuration(tmp_path, monkeyp
     policy_id = str(uuid4())
     monkeypatch.setenv("AIRMUX_CLI_CONFIG", str(tmp_path / "config.toml"))
     monkeypatch.setenv("AIRMUX_MANAGEMENT_KEY", "sk-test-policies")
-    monkeypatch.setenv("AIRMUX_ORG_ID", org_id)
+    monkeypatch.setenv("AIRMUX_ORGANIZATION_ID", org_id)
     monkeypatch.setenv("AIRMUX_CONTROL_PLANE_URL", "http://cp.test")
     definition = {
         "target": {"kind": "workspace"},
@@ -74,7 +74,7 @@ def test_budget_status_preserves_exact_spending_and_pagination(tmp_path, monkeyp
     org_id, workspace_id, policy_id = (str(uuid4()) for _ in range(3))
     monkeypatch.setenv("AIRMUX_CLI_CONFIG", str(tmp_path / "config.toml"))
     monkeypatch.setenv("AIRMUX_MANAGEMENT_KEY", "sk-test-policies")
-    monkeypatch.setenv("AIRMUX_ORG_ID", org_id)
+    monkeypatch.setenv("AIRMUX_ORGANIZATION_ID", org_id)
     monkeypatch.setenv("AIRMUX_CONTROL_PLANE_URL", "http://cp.test")
     action = {"kind": "budget", "amount_usd": "0.000000000123", "period": "month", "aggregation": "per_key"}
     status = {

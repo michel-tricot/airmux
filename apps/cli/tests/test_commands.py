@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 
+from click import unstyle
 from typer.testing import CliRunner
 
 from cli.common import GOODIES, RESOURCES
@@ -30,10 +31,11 @@ def test_every_command_is_listed_once():
         "airmux doctor",
         "airmux profiles list",
         "airmux profiles use",
-        "airmux orgs mine",
+        "airmux organizations mine",
         "airmux provider-credentials add",
         "airmux provider-credentials enable",
         "airmux provider-credentials disable",
+        "airmux provider-credentials remove",
         "airmux management-keys create",
         "airmux catalog apply",
         "airmux gateways list",
@@ -49,7 +51,7 @@ def test_a_command_takes_its_category_from_its_group():
     """Most commands never name a category; the group they sit in is the answer."""
     rows = {row["command"]: row["category"] for row in listed()}
 
-    assert rows["airmux orgs mine"] == RESOURCES
+    assert rows["airmux organizations mine"] == RESOURCES
     assert rows["airmux workspaces create"] == RESOURCES
     assert rows["airmux users list"] == RESOURCES
 
@@ -57,8 +59,8 @@ def test_a_command_takes_its_category_from_its_group():
 def test_all_resource_commands_share_one_category():
     rows = {row["command"]: row["category"] for row in listed()}
 
-    assert rows["airmux orgs list"] == RESOURCES
-    assert rows["airmux orgs create"] == RESOURCES
+    assert rows["airmux organizations list"] == RESOURCES
+    assert rows["airmux organizations create"] == RESOURCES
     assert rows["airmux providers list"] == RESOURCES
     assert rows["airmux models list"] == RESOURCES
 
@@ -83,7 +85,7 @@ def test_categories_follow_the_user_task():
         assert categories[f"airmux {command}"] == "Connection"
     for command in ("gateway init", "gateway serve", "control-plane init", "control-plane serve"):
         assert categories[f"airmux {command}"] == "Services"
-    for command in ("catalog apply", "gateways list", "orgs list"):
+    for command in ("catalog apply", "gateways list", "organizations list"):
         assert categories[f"airmux {command}"] == "Manage resources"
     assert categories["airmux completion"] == GOODIES
 
@@ -92,6 +94,25 @@ def test_categories_follow_the_user_task():
     headings = ("Getting started", "Connection", GOODIES, "Services", "Manage resources")
     positions = [result.stdout.index(heading) for heading in headings]
     assert positions == sorted(positions)
+
+
+def test_public_commands_and_options_use_full_names():
+    paths = [row["command"] for row in listed()]
+    assert not any(path.startswith("airmux orgs ") for path in paths)
+    assert "airmux provider-credentials rm" not in paths
+
+    result = runner.invoke(app, ["provider-credentials", "list", "--help"], env={"COLUMNS": "120"})
+    assert result.exit_code == 0, result.output
+    help_text = unstyle(result.output)
+    assert "--organization" in help_text
+    assert "--organization-wide" in help_text
+    assert "--org " not in help_text
+    assert "--org-wide" not in help_text
+
+    for command in (["orgs", "list"], ["provider-credentials", "rm", "credential-id"]):
+        removed = runner.invoke(app, command)
+        assert removed.exit_code == 2
+        assert "No such command" in removed.output
 
 
 def test_completion_installs_for_the_selected_shell(tmp_path, monkeypatch):

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import httpx
 import typer
 
-from cli.client import resolve_control_plane_url
+from cli.client import effective_org_id, resolve_control_plane_url
 from cli.common import CONNECTION, app, console, profiles_app
 from cli.output import Col, FormatOption, OutputFormat, print_rows
 from cli.profiles import active_profile, config_path, load_active_profile, load_config, remove_profile, set_active
@@ -70,7 +70,7 @@ def profiles_list(fmt: FormatOption = OutputFormat.table) -> None:
 
 @profiles_app.command("use")
 def profiles_use(name: str) -> None:
-    """Select the context used by commands without explicit scope flags."""
+    """Select saved credentials and deployment endpoints."""
     try:
         set_active(name)
     except KeyError:
@@ -95,7 +95,20 @@ def status(fmt: FormatOption = OutputFormat.table) -> None:
     """Show the context and endpoints the next command will use."""
     config = load_config()
     profile = active_profile(config)
-    organization = os.environ.get("AIRMUX_ORG_ID") or (profile.org_name if profile is not None and profile.scope == "org" else "")
+    org_id = effective_org_id()
+    organization = (
+        config.org_name
+        if org_id == config.org_id and config.org_name
+        else profile.org_name
+        if profile is not None and org_id == profile.org_id and profile.org_name
+        else org_id or ""
+    )
+    if config.workspace:
+        workspace = f"conflict: selected for {config.org_id}" if config.org_id != org_id else config.workspace_name or config.workspace
+    elif profile is not None and profile.workspace:
+        workspace = f"conflict: profile workspace for {profile.org_id}" if profile.org_id != org_id else profile.workspace_name or profile.workspace
+    else:
+        workspace = ""
     authentication = "environment" if os.environ.get("AIRMUX_MANAGEMENT_KEY") else "profile" if profile is not None and profile.token else "none"
     rows = [
         {
@@ -103,7 +116,7 @@ def status(fmt: FormatOption = OutputFormat.table) -> None:
             "control_plane": resolve_control_plane_url(),
             "gateway": resolve_gateway_url(),
             "organization": organization,
-            "workspace": (profile.workspace_name or profile.workspace) if profile is not None and profile.scope == "org" else "",
+            "workspace": workspace,
             "authentication": authentication,
         }
     ]

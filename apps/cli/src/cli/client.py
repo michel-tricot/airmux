@@ -9,7 +9,7 @@ import typer
 from pydantic import BaseModel
 
 from cli.common import console, invocation
-from cli.profiles import load_active_profile
+from cli.profiles import active_profile, load_config
 
 if TYPE_CHECKING:
     import httpx
@@ -54,7 +54,7 @@ def resolve_control_plane_url(override: str = "") -> str:
         return LOCAL_CONTROL_PLANE_URL
     if url := os.environ.get("AIRMUX_CONTROL_PLANE_URL"):
         return url
-    profile = load_active_profile()
+    profile = active_profile(load_config())
     if profile and profile.control_plane_url:
         return profile.control_plane_url
     return LOCAL_CONTROL_PLANE_URL
@@ -67,7 +67,7 @@ def _bearer_client(token: str, control_plane_url: str) -> httpx.Client:
 
 
 def access_client(control_plane_url: str = "", token: str | None = None) -> httpx.Client:
-    profile = load_active_profile()
+    profile = active_profile(load_config())
     environment_token = os.environ.get("AIRMUX_MANAGEMENT_KEY")
     selected_token = token or environment_token or (profile.token if profile is not None else None)
     if not selected_token:
@@ -76,12 +76,25 @@ def access_client(control_plane_url: str = "", token: str | None = None) -> http
     return _bearer_client(str(selected_token), control_plane_url)
 
 
+def effective_org_id(override: str = "") -> str | None:
+    config = load_config()
+    profile = active_profile(config)
+    return (
+        override
+        or invocation.organization
+        or os.environ.get("AIRMUX_ORGANIZATION_ID")
+        or config.org_id
+        or (profile.org_id if profile is not None else None)
+    )
+
+
 def resolve_org_id(override: str = "") -> str:
-    profile = load_active_profile()
-    selected_org = override or os.environ.get("AIRMUX_ORG_ID") or (profile.org_id if profile is not None and profile.scope == "org" else None)
+    selected_org = effective_org_id(override)
     if selected_org:
         return str(selected_org)
-    console.print("[red]No organization selected. Pass --org, set AIRMUX_ORG_ID, or sign in with [bold]airmux login[/bold].[/red]")
+    console.print(
+        "[red]No organization selected. Pass --organization, set AIRMUX_ORGANIZATION_ID, or run [bold]airmux organizations switch <id>[/bold].[/red]"
+    )
     raise typer.Exit(1)
 
 
@@ -146,15 +159,23 @@ def access_get[PayloadT: BaseModel](  # noqa: PLR0913, PLR0917 pagination contro
 
 
 def resolve_workspace(workspace: str) -> str:
-    """The workspace for key commands: the slug or id the caller passed, then the profile's stored default.
+    """The workspace for commands: the explicit slug or id, then the selected default.
 
     Every workspace path resolves either, so nothing is looked up here; a workspace that does not
     exist is a 404 from the command itself.
     """
     if workspace:
         return workspace
-    profile = load_active_profile()
-    default = profile.workspace if profile is not None and profile.scope == "org" else None
+    config = load_config()
+    profile = active_profile(config)
+    organization = resolve_org_id()
+    if config.workspace and config.org_id != organization:
+        console.print("[red]The selected workspace belongs to another organization. Pass --workspace or select one for this organization.[/red]")
+        raise typer.Exit(1)
+    if not config.workspace and profile is not None and profile.workspace and profile.org_id != organization:
+        console.print("[red]The profile workspace belongs to another organization. Pass --workspace or select one for this organization.[/red]")
+        raise typer.Exit(1)
+    default = config.workspace or (profile.workspace if profile is not None and profile.org_id == organization else None)
     if default:
         return str(default)
     console.print("[red]No workspace selected. Pass --workspace, or set a default with [bold]airmux workspaces use <name>[/bold].[/red]")

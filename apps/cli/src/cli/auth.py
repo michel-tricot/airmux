@@ -28,8 +28,8 @@ from api_models import (
 if TYPE_CHECKING:
     import httpx
 
-from cli.client import api_error, ensure_ok, payload, payload_rows, resolve_control_plane_url
-from cli.common import CONNECTION, GETTING_STARTED, app, console, orgs_app
+from cli.client import access_client, api_error, ensure_ok, payload, payload_rows, resolve_control_plane_url
+from cli.common import CONNECTION, GETTING_STARTED, app, console, organizations_app
 from cli.output import Col, FormatOption, OutputFormat, print_rows
 from cli.profiles import (
     DEFAULT_CONSOLE_URL,
@@ -37,7 +37,7 @@ from cli.profiles import (
     config_path,
     load_active_profile,
     load_config,
-    set_active,
+    select_org,
     upsert_url_profile,
 )
 
@@ -443,25 +443,22 @@ def login(
     raise typer.Exit(1)
 
 
-@orgs_app.command("switch")
-def orgs_switch(name: str, control_plane_url: str = "") -> None:
-    """Switch to another organization."""
-    if os.environ.get("AIRMUX_MANAGEMENT_KEY"):
-        console.print("[yellow]AIRMUX_MANAGEMENT_KEY is set and takes precedence. Unset it for this to take effect.[/yellow]")
+@organizations_app.command("switch")
+def organizations_switch(organization_ref: str, control_plane_url: str = "") -> None:
+    """Select an organization without changing credentials."""
     config = load_config()
-    if name in config.profiles:
-        set_active(name)
-        console.print(f"Switched to [bold]{name}[/bold]")
-        return
-    console.print(f"Not signed in to [bold]{name}[/bold]. Opening browser login, pick [bold]{name}[/bold] to approve.")
-    login(url="", control_plane_url=control_plane_url, no_browser=False, console_url="", gateway_url="")
-    active = load_config().active
-    if active != name:
-        console.print(f"[yellow]You approved [bold]{active}[/bold], not {name}. It is now active.[/yellow]")
+    profile = config.profiles.get(organization_ref)
+    org_id = profile.org_id if profile is not None and profile.scope == "org" else organization_ref
+    with access_client(control_plane_url) as client:
+        organization = payload(ensure_ok(client.get(f"/api/v1/organizations/{org_id}")), OrgOut)
+    select_org(str(organization.id), organization.name)
+    console.print(f"Using organization [bold]{organization.name}[/bold]")
+    if os.environ.get("AIRMUX_ORGANIZATION_ID") and os.environ["AIRMUX_ORGANIZATION_ID"] != str(organization.id):
+        console.print("[yellow]AIRMUX_ORGANIZATION_ID overrides this saved selection.[/yellow]")
 
 
-@orgs_app.command("mine")
-def orgs_mine(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+@organizations_app.command("mine")
+def organizations_mine(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List the organizations you belong to."""
     from cli.client import access_client  # noqa: PLC0415 lazy import keeps CLI startup fast
 
@@ -471,4 +468,4 @@ def orgs_mine(control_plane_url: str = "", fmt: FormatOption = OutputFormat.tabl
         {**organization.model_dump(mode="json"), "kind": "personal" if organization.id == standing.personal_org_id else "member"}
         for organization in standing.orgs
     ]
-    print_rows("orgs", rows, MINE_COLS, fmt)
+    print_rows("organizations", rows, MINE_COLS, fmt)

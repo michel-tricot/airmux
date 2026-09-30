@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError, version
+from typing import Annotated
 
 import typer
 from dotenv import find_dotenv, load_dotenv
@@ -15,15 +16,23 @@ console = Console()
 class Invocation:
     """What the run as a whole was told, as opposed to any one command.
 
-    --dev is the only such flag today. It lives here because the code that acts on it resolves a url
-    deep in the client, with no command in scope to ask.
+    The client resolves the deployment and organization below the command handler.
     """
 
     dev: bool = False
     version: bool = False
+    organization: str = ""
 
 
 invocation = Invocation()
+
+
+def _select_organization(value: str) -> str:
+    invocation.organization = value
+    return value
+
+
+OrganizationOption = Annotated[str, typer.Option("--organization", help="Target organization ID", callback=_select_organization)]
 
 
 def _show_version(value: bool) -> bool:
@@ -45,6 +54,7 @@ def _main(
     load_dotenv(find_dotenv(usecwd=True))
     invocation.dev = dev
     invocation.version = version_
+    invocation.organization = ""
 
 
 GETTING_STARTED = "Getting started"
@@ -53,11 +63,11 @@ SERVICES = "Services"
 RESOURCES = "Manage resources"
 GOODIES = "Goodies"
 
-orgs_app = typer.Typer(help="Organizations you belong to")
+organizations_app = typer.Typer(help="Organizations you belong to")
 org_members_app = typer.Typer(help="People in your organization")
-orgs_app.add_typer(org_members_app, name="members", no_args_is_help=True)
+organizations_app.add_typer(org_members_app, name="members", no_args_is_help=True)
 org_invitations_app = typer.Typer(help="Email invitations to your organization")
-orgs_app.add_typer(org_invitations_app, name="invitations", no_args_is_help=True)
+organizations_app.add_typer(org_invitations_app, name="invitations", no_args_is_help=True)
 workspaces_app = typer.Typer(help="Isolated environments for keys, credentials and usage")
 workspace_members_app = typer.Typer(help="Who can use a workspace")
 workspaces_app.add_typer(workspace_members_app, name="members", no_args_is_help=True)
@@ -72,7 +82,7 @@ policies_app = typer.Typer(help="Workspace inference restrictions and fallbacks"
 catalog_app = typer.Typer(help="Apply the instance provider and model catalog")
 events_app = typer.Typer(help="Requests, tokens and spend")
 gateways_app = typer.Typer(help="Gateways connected to this instance")
-profiles_app = typer.Typer(help="Saved deployment and organization contexts")
+profiles_app = typer.Typer(help="Saved deployment credentials")
 
 gateway_app = typer.Typer(help="Initialize, validate, and run a local or connected gateway", no_args_is_help=True)
 app.add_typer(gateway_app, name="gateway", rich_help_panel=SERVICES)
@@ -81,7 +91,7 @@ control_plane_app = typer.Typer(help="Initialize and run the control plane, mana
 app.add_typer(control_plane_app, name="control-plane", rich_help_panel=SERVICES)
 
 for name, sub in (
-    ("orgs", orgs_app),
+    ("organizations", organizations_app),
     ("workspaces", workspaces_app),
     ("inference-keys", inference_keys_app),
     ("provider-credentials", provider_credentials_app),
