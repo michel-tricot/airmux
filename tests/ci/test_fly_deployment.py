@@ -8,14 +8,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def run_release(tmp_path: Path, *, fail_migrate: bool = False) -> subprocess.CompletedProcess[str]:
+def run_migrate(tmp_path: Path, *, console_url: str | None) -> subprocess.CompletedProcess[str]:
     airmux = tmp_path / "airmux"
     calls = tmp_path / "calls"
-    airmux.write_text(
-        "#!/bin/sh\n"
-        'printf "%s | %s\\n" "$AIRMUX_CONSOLE_URL" "$*" >> "$CALLS"\n'
-        'if [ "${FAIL_MIGRATE:-}" = 1 ] && [ "$2" = migrate ]; then exit 7; fi\n'
-    )
+    airmux.write_text('#!/bin/sh\nprintf "%s | %s\\n" "$AIRMUX_CONSOLE_URL" "$*" >> "$CALLS"\n')
     airmux.chmod(0o755)
     environment: dict[str, str] = {
         **os.environ,
@@ -23,11 +19,13 @@ def run_release(tmp_path: Path, *, fail_migrate: bool = False) -> subprocess.Com
         "CALLS": str(calls),
         "AIRMUX_CONFIG": "/app/deploy/docker/airmux.yml",
         "FLY_APP_NAME": "example-airmux",
-        "FAIL_MIGRATE": "1" if fail_migrate else "0",
     }
-    environment.pop("AIRMUX_CONSOLE_URL", None)
+    if console_url is None:
+        environment.pop("AIRMUX_CONSOLE_URL", None)
+    else:
+        environment["AIRMUX_CONSOLE_URL"] = console_url
     return subprocess.run(  # noqa: S603 repository-owned startup script and temporary stub executable
-        ["sh", str(ROOT / "deploy/docker/start.sh"), "release"],  # noqa: S607 fixed shell executable
+        ["sh", str(ROOT / "deploy/docker/start.sh"), "migrate"],  # noqa: S607 fixed shell executable
         env=environment,
         cwd=ROOT,
         capture_output=True,
@@ -36,25 +34,24 @@ def run_release(tmp_path: Path, *, fail_migrate: bool = False) -> subprocess.Com
     )
 
 
-def test_fly_release_migrates_then_applies_taxonomy(tmp_path: Path):
-    result = run_release(tmp_path)
+def test_start_does_not_infer_console_url_from_fly_name(tmp_path: Path):
+    result = run_migrate(tmp_path, console_url=None)
     assert result.returncode == 0, result.stderr
-    assert (tmp_path / "calls").read_text().splitlines() == [
-        "https://example-airmux.fly.dev | control-plane migrate --config /app/deploy/docker/airmux.yml",
-        "https://example-airmux.fly.dev | control-plane taxonomy --config /app/deploy/docker/airmux.yml --file /app/taxonomy/taxonomy.yml",
-    ]
-
-
-def test_fly_release_stops_when_migration_fails(tmp_path: Path):
-    result = run_release(tmp_path, fail_migrate=True)
-    assert result.returncode == 7
-    assert len((tmp_path / "calls").read_text().splitlines()) == 1
+    assert (tmp_path / "calls").read_text().splitlines() == ["http://localhost:8080 | control-plane migrate --config /app/deploy/docker/airmux.yml"]
+    result = run_migrate(tmp_path, console_url="https://example-airmux.fly.dev")
+    assert result.returncode == 0, result.stderr
+    assert (tmp_path / "calls").read_text().splitlines()[-1] == (
+        "https://example-airmux.fly.dev | control-plane migrate --config /app/deploy/docker/airmux.yml"
+    )
 
 
 def test_fly_config_runs_one_service_with_persistent_state():
     assert not (ROOT / "fly.toml").exists()
-    config = tomllib.loads((ROOT / "deploy/fly.toml").read_text())
-    assert config["deploy"]["release_command"] == "release"
+    assert not (ROOT / "deploy/fly.toml").exists()
+    config = tomllib.loads((ROOT / "deploy/fly/fly.toml").read_text())
+    assert config["env"]["AIRMUX_CONSOLE_URL"] == "https://airmux-example.fly.dev"
+    assert config["build"] == {"image": "ghcr.io/michel-tricot/airmux:latest"}
+    assert config["deploy"]["release_command"] == "migrate"
     assert config["http_service"]["internal_port"] == 8080
     assert config["http_service"]["auto_stop_machines"] == "off"
     assert config["mounts"] == {"source": "state", "destination": "/state"}

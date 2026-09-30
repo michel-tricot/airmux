@@ -1,11 +1,14 @@
 app = "airmux-example"
 primary_region = "iad"
 
+[env]
+  AIRMUX_CONSOLE_URL = "https://airmux-example.fly.dev"
+
 [build]
-  dockerfile = "Dockerfile"
+  image = "ghcr.io/michel-tricot/airmux:latest"
 
 [deploy]
-  release_command = "release"
+  release_command = "migrate"
 
 [http_service]
   internal_port = 8080

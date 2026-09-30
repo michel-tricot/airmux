@@ -3,11 +3,11 @@ title: "Fly.io"
 description: "Run the full airmux platform on one Fly Machine with one managed Postgres database."
 ---
 
-The sample [deploy/fly.toml](https://github.com/michel-tricot/airmux/blob/main/deploy/fly.toml) runs the webapp, control plane, and gateway in one Machine. A Fly volume preserves `/state`; one Fly Managed Postgres database holds the control-plane data. No separate worker or proxy app is needed. The config is not at the repository root, so Fly only uses it when you pass `--config`.
+The sample [deploy/fly/fly.toml](https://github.com/michel-tricot/airmux/blob/main/deploy/fly/fly.toml) runs the published `ghcr.io/michel-tricot/airmux:latest` image in one Machine, without building the repository. A Fly volume preserves `/state`; one Fly Managed Postgres database holds the control-plane data. The config is not at the repository root, so Fly only uses it when you pass `--config`.
 
 ## Deploy
 
-From a clone of this repository, install and sign in to [flyctl](https://fly.io/docs/flyctl/install/). Edit `app` and `primary_region` in `deploy/fly.toml`. Choose a unique app name and a region that supports Managed Postgres, then use those same values below. Replace `CLUSTER_ID` with the ID printed by `fly mpg create`:
+From a clone of this repository, install and sign in to [flyctl](https://fly.io/docs/flyctl/install/). Edit `app`, `primary_region`, and `AIRMUX_CONSOLE_URL` in `deploy/fly/fly.toml`. Set the URL to `https://<app-name>.fly.dev`. Choose a unique app name and a region that supports Managed Postgres, then use those same values below. Replace `CLUSTER_ID` with the ID printed by `fly mpg create`:
 
 ```bash
 APP_NAME=your-unique-app-name
@@ -17,12 +17,13 @@ fly volumes create state --app "$APP_NAME" --region "$REGION" --size 1
 fly mpg create --region "$REGION"
 CLUSTER_ID=replace-with-cluster-id
 fly mpg attach "$CLUSTER_ID" --app "$APP_NAME" --database fly-db --username fly-user
-fly deploy . --config deploy/fly.toml --ha=false
+fly deploy --config deploy/fly/fly.toml --ha=false
+fly ssh console --app "$APP_NAME" --user airmux --command "/app/deploy/docker/start.sh taxonomy"
 ```
 
 `fly mpg create` asks you to choose a plan and reports the cluster ID. The attach command sets the `DATABASE_URL` secret; do not put the connection string in `fly.toml`. `--ha=false` creates one app Machine rather than a spare. The managed database is one logical database service, though Fly manages its own internal replicas.
 
-Each deploy runs migrations and applies the bundled model catalog before starting the Machine. The release command runs in a temporary Machine without the `/state` volume; it is not another continuously running app container. The app uses `https://<app-name>.fly.dev` as its public origin automatically. For a custom domain, set `AIRMUX_CONSOLE_URL` to its exact HTTPS origin with `fly secrets set AIRMUX_CONSOLE_URL=https://airmux.example.com`.
+Each deploy runs migrations in a temporary Machine before starting the app. The temporary Machine does not have the `/state` volume. Apply the bundled model catalog with the `fly ssh console` command after the first deploy and after each upgrade. For a custom domain, set `AIRMUX_CONSOLE_URL` in `deploy/fly/fly.toml` to its exact HTTPS origin.
 
 ## Verify and set up
 
@@ -33,4 +34,4 @@ fly status --app "$APP_NAME"
 
 Open the URL, create the owner account, then add an organization, provider credential, and inference key. Follow the [webapp guide](/docs/guides/webapp) or run `airmux quickstart --url https://<app-name>.fly.dev` locally. Confirm a test request appears in usage before sending production traffic.
 
-The single Machine and volume are not highly available. Leave auto-stop disabled so the gateway can flush usage in the background. Before an upgrade, preserve both the Managed Postgres backup and `/state` [volume snapshot](https://fly.io/docs/volumes/volume-snapshots/) as one recovery point. Then run `fly deploy . --config deploy/fly.toml --ha=false` again and check `/healthz` and usage. See [operations](/docs/deployment/operations) for recovery.
+The single Machine and volume are not highly available. Leave auto-stop disabled so the gateway can flush usage in the background. Before an upgrade, preserve both the Managed Postgres backup and `/state` [volume snapshot](https://fly.io/docs/volumes/volume-snapshots/) as one recovery point. Then run `fly deploy --config deploy/fly/fly.toml --ha=false`, reapply the catalog with the command above, and check `/healthz` and usage. The `latest` tag may change between deploys. See [operations](/docs/deployment/operations) for recovery.
