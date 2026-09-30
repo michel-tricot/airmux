@@ -58,3 +58,13 @@ def test_fly_config_runs_one_service_with_persistent_state():
     assert config["http_service"]["auto_stop_machines"] == "off"
     assert config["mounts"] == {"source": "state", "destination": "/state"}
     assert config["http_service"]["checks"][0]["path"] == "/healthz"
+
+
+def test_fly_guide_shows_the_full_update_command():
+    guide = (ROOT / "docs/deployment/fly.mdx").read_text()
+    assert "## Update" in guide
+    update = guide.split("## Update", maxsplit=1)[1]
+    assert "fly deploy \\" in update
+    assert "--config deploy/fly/fly.toml" in update
+    assert '--env "AIRMUX_CONSOLE_URL=$PUBLIC_URL"' in update
+    assert 'fly ssh console --app "$APP_NAME" --user airmux --command "/app/deploy/docker/start.sh taxonomy"' in update

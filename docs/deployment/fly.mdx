@@ -40,4 +40,26 @@ fly status --app "$APP_NAME"
 
 Open the URL, create the owner account, then add an organization, provider credential, and inference key. Follow the [webapp guide](/docs/guides/webapp) or run `airmux quickstart --url "$PUBLIC_URL"` locally. Confirm a test request appears in usage before sending production traffic.
 
-The single Machine and volume are not highly available. Leave auto-stop disabled so the gateway can flush usage in the background. Before an upgrade, preserve both the Managed Postgres backup and `/state` [volume snapshot](https://fly.io/docs/volumes/volume-snapshots/) as one recovery point. Then run the deploy and catalog commands above again, and check `/healthz` and usage. The `latest` tag may change between deploys. See [operations](/docs/deployment/operations) for recovery.
+The single Machine and volume are not highly available. Leave auto-stop disabled so the gateway can flush usage in the background.
+
+## Update
+
+From the repository clone, pull the current Fly config. Before deploying, preserve both a Managed Postgres backup and a `/state` [volume snapshot](https://fly.io/docs/volumes/volume-snapshots/) as one recovery point. Use the same app name, region, and public URL as the initial deployment. If you use a custom domain, set `PUBLIC_URL` to its exact HTTPS origin.
+
+```bash
+git pull --ff-only
+APP_NAME=your-unique-app-name
+REGION=iad
+PUBLIC_URL="https://${APP_NAME}.fly.dev"
+fly deploy \
+  --app "$APP_NAME" \
+  --config deploy/fly/fly.toml \
+  --primary-region "$REGION" \
+  --env "AIRMUX_CONSOLE_URL=$PUBLIC_URL" \
+  --ha=false
+fly ssh console --app "$APP_NAME" --user airmux --command "/app/deploy/docker/start.sh taxonomy"
+fly status --app "$APP_NAME"
+curl -fsS "${PUBLIC_URL}/healthz"
+```
+
+The config deploys the current published `latest` image. Fly runs migrations before replacing the app Machine; run the catalog command only after `fly deploy` succeeds. Confirm the version link in the webapp and check that new requests appear in usage. For recovery, see [operations](/docs/deployment/operations).
