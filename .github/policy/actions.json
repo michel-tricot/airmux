@@ -8,7 +8,8 @@
     "patterns_allowed": [
       "astral-sh/setup-uv@*",
       "oven-sh/setup-bun@*",
-      "pypa/gh-action-pypi-publish@*"
+      "pypa/gh-action-pypi-publish@*",
+      "superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1"
     ]
   }
 }
