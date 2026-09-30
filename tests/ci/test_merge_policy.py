@@ -10,7 +10,7 @@ import yaml
 
 ROOT = Path(__file__).parents[2]
 FAST_JOBS = {"quality", "python-unit", "python-integration", "frontend", "package"}
-MAIN_JOBS = {"fast", "gateway", "full-stack", "browser", "docker", "container"}
+MAIN_JOBS = {"fast", "candidate", "gateway", "full-stack", "browser", "docker", "container"}
 
 
 @pytest.mark.parametrize(("filename", "expected"), [("ci.yml", FAST_JOBS), ("main-ci.yml", MAIN_JOBS)])
@@ -56,17 +56,28 @@ def test_ci_events_and_candidate_coverage():
     assert set(pull_request["jobs"]) == FAST_JOBS | {"required"}
     assert set(main["jobs"]) == MAIN_JOBS | {"required"}
     assert set(pull_request[True]) == {"pull_request", "workflow_call"}
-    assert pull_request[True]["workflow_call"]["outputs"]["artifact-id"]["value"] == "${{ jobs.package.outputs.artifact-id }}"
+    assert pull_request[True]["workflow_call"] is None
     assert set(main[True]) == {"push", "workflow_dispatch"}
     assert main[True]["push"] == {"branches": ["main"]}
     assert pull_request["name"] == "CI - Pull Request"
     assert main["name"] == "CI - Main"
     assert main["jobs"]["required"]["name"] == "Main CI required"
     assert main["jobs"]["fast"]["uses"] == "./.github/workflows/ci.yml"
+    assert pull_request["jobs"]["package"]["if"] == "github.event_name == 'pull_request'"
+    assert "needs" not in main["jobs"]["candidate"]
+    assert main["jobs"]["candidate"]["outputs"]["artifact-id"] == "${{ steps.candidate.outputs.artifact-id }}"
     for name in ("gateway", "full-stack", "browser", "docker"):
-        assert "fast" in main["jobs"][name]["needs"]
-        assert "${{ needs.fast.outputs.artifact-id }}" in str(main["jobs"][name])
+        assert main["jobs"][name]["needs"] == "candidate"
+        assert "${{ needs.candidate.outputs.artifact-id }}" in str(main["jobs"][name])
     assert pull_request["jobs"]["package"]["outputs"]["artifact-id"] == "${{ steps.candidate.outputs.artifact-id }}"
+    assert main["jobs"]["candidate"]["steps"][:-1] == pull_request["jobs"]["package"]["steps"][:-1]
+    for job in (pull_request["jobs"]["package"], main["jobs"]["candidate"]):
+        assert any(step.get("run", "").startswith("./scripts/build-python-distribution.sh") for step in job["steps"])
+        upload = next(step for step in job["steps"] if step.get("id") == "candidate")
+        assert upload["with"]["name"] == "candidate-${{ github.sha }}"
+        assert upload["with"]["if-no-files-found"] == "error"
+    assert pull_request["jobs"]["package"]["steps"][-1]["with"]["retention-days"] == 7
+    assert main["jobs"]["candidate"]["steps"][-1]["with"]["retention-days"] == 30
 
 
 def test_branch_protection_uses_pr_and_security_gates():

@@ -4,10 +4,6 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_call:
-    outputs:
-      artifact-id:
-        description: Built candidate artifact ID
-        value: ${{ jobs.package.outputs.artifact-id }}
 
 concurrency:
   group: checks-${{ github.event.pull_request.number || github.sha }}
@@ -152,6 +148,7 @@ jobs:
           retention-days: 7
 
   package:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -184,7 +181,7 @@ jobs:
           name: candidate-${{ github.sha }}
           path: candidate
           if-no-files-found: error
-          retention-days: ${{ github.ref == 'refs/heads/main' && 30 || 7 }}
+          retention-days: 7
 
   required:
     runs-on: ubuntu-latest
