@@ -306,9 +306,8 @@ class Stack:
         with httpx.Client(base_url=self.cp_url, headers={"X-Requested-With": "XMLHttpRequest"}, timeout=10.0) as session:
             me = _payload(session.post("/api/v1/auth/signup", json={"email": ADMIN_EMAIL, "name": "Acceptance Admin", "password": ADMIN_PASSWORD}))
             assert me["instance_role"] == "owner", "the first signup should have claimed the instance"
-            org = _payload(session.post("/api/v1/organizations", json={"name": ORG}))
+            org = _payload(session.post("/api/v1/enroll/org", json={"name": ORG}))
             self.org_id = org["id"]
-            _payload(session.put(f"/api/v1/organizations/{self.org_id}/users/{me['user_id']}", json={"role": "owner"}))
             workspace = _payload(session.post(f"/api/v1/organizations/{self.org_id}/workspaces", json={"name": "acceptance"}))
             caller = _payload(
                 session.post(
