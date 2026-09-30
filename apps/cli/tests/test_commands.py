@@ -100,7 +100,7 @@ def test_public_commands_and_options_use_full_names():
     assert not any(path.startswith("airmux orgs ") for path in paths)
     assert "airmux provider-credentials rm" not in paths
 
-    result = runner.invoke(app, ["provider-credentials", "list", "--help"])
+    result = runner.invoke(app, ["provider-credentials", "list", "--help"], env={"COLUMNS": "120"})
     assert result.exit_code == 0, result.output
     assert "--organization" in result.output
     assert "--organization-wide" in result.output

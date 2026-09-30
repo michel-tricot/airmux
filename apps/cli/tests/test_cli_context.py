@@ -212,6 +212,6 @@ def test_policy_toggle_accepts_explicit_target_and_reports_state(tmp_path, monke
     ],
 )
 def test_org_scoped_commands_expose_org_option(command):
-    result = runner.invoke(app, [*command, "--help"])
+    result = runner.invoke(app, [*command, "--help"], env={"COLUMNS": "120"})
     assert result.exit_code == 0, result.output
     assert "--organization" in result.output
