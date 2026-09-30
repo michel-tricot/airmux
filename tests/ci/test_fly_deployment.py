@@ -70,16 +70,17 @@ def test_fly_guide_shows_the_full_update_command():
     assert "fly deploy \\" in update
     assert "--config deploy/fly/fly.toml" in update
     assert '--env "AIRMUX_CONSOLE_URL=$PUBLIC_URL"' in update
-    assert 'fly ssh console --app "$APP_NAME" --user airmux --command "/app/deploy/docker/start.sh taxonomy"' in update
+    assert 'fly machine list --app "$APP_NAME"' in update
+    assert 'fly machine exec --app "$APP_NAME" "$MACHINE_ID" \\' in update
+    assert '"runuser -u airmux -- /app/deploy/docker/start.sh taxonomy"' in update
 
 
-def test_fly_guide_documents_taxonomy_fallback_when_ssh_hangs():
+def test_fly_guide_uses_machine_exec_for_initial_deploy_and_update():
     guide = (ROOT / "docs/deployment/fly.mdx").read_text()
-    fallback = guide.split("## If Fly SSH hangs", maxsplit=1)[1]
-    assert 'fly machine list --app "$APP_NAME"' in fallback
-    assert 'fly machine exec --app "$APP_NAME" "$MACHINE_ID" \\' in fallback
-    assert '"runuser -u airmux -- /app/deploy/docker/start.sh taxonomy"' in fallback
-    assert "GitHub Actions" in fallback
+    deploy = guide.split("## Deploy", maxsplit=1)[1].split("## Verify and set up", maxsplit=1)[0]
+    assert 'fly machine list --app "$APP_NAME"' in deploy
+    assert 'fly machine exec --app "$APP_NAME" "$MACHINE_ID" \\' in deploy
+    assert "fly ssh console" not in guide
 
 
 def test_fly_workflow_deploys_and_updates_catalog_on_manual_dispatch():
@@ -99,7 +100,10 @@ def test_fly_workflow_deploys_and_updates_catalog_on_manual_dispatch():
     commands = deployment["run"]
     assert 'test -n "$APP_NAME"' in commands
     assert 'test -n "$REGION"' in commands
-    assert commands.index("fly deploy") < commands.index("fly ssh console") < commands.index("curl -fsS")
+    assert commands.index("fly deploy") < commands.index("fly machine exec") < commands.index("curl -fsS")
+    assert 'fly machine list --app "$APP_NAME" --json' in commands
+    assert '"runuser -u airmux -- /app/deploy/docker/start.sh taxonomy"' in commands
+    assert "fly ssh console" not in commands
     assert "--config deploy/fly/fly.toml" in commands
     assert '--primary-region "$REGION"' in commands
     assert "--ha=false" in commands

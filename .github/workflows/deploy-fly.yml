@@ -39,6 +39,8 @@ jobs:
             --primary-region "$REGION" \
             --env "AIRMUX_CONSOLE_URL=$PUBLIC_URL" \
             --ha=false
-          fly ssh console --app "$APP_NAME" --user airmux --command "/app/deploy/docker/start.sh taxonomy"
+          MACHINE_ID="$(fly machine list --app "$APP_NAME" --json | jq -er '.[] | select(.state == "started") | .id')"
+          fly machine exec --app "$APP_NAME" "$MACHINE_ID" \
+            "runuser -u airmux -- /app/deploy/docker/start.sh taxonomy"
           fly status --app "$APP_NAME"
           curl -fsS "$PUBLIC_URL/healthz"
