@@ -38,6 +38,7 @@
             "pages": [
               "docs/deployment/index",
               "docs/deployment/docker",
+              "docs/deployment/fly",
               "docs/deployment/without-docker",
               "docs/deployment/gateway",
               "docs/deployment/scaling",

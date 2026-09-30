@@ -1,0 +1,36 @@
+---
+title: "Fly.io"
+description: "Run the full airmux platform on one Fly Machine with one managed Postgres database."
+---
+
+The root [fly.toml](https://github.com/michel-tricot/airmux/blob/main/fly.toml) runs the webapp, control plane, and gateway in one Machine. A Fly volume preserves `/state`; one Fly Managed Postgres database holds the control-plane data. No separate worker or proxy app is needed.
+
+## Deploy
+
+From a clone of this repository, install and sign in to [flyctl](https://fly.io/docs/flyctl/install/). Edit `app` and `primary_region` in `fly.toml`. Choose a unique app name and a region that supports Managed Postgres, then use those same values below. Replace `CLUSTER_ID` with the ID printed by `fly mpg create`:
+
+```bash
+APP_NAME=your-unique-app-name
+REGION=iad
+fly apps create "$APP_NAME"
+fly volumes create state --app "$APP_NAME" --region "$REGION" --size 1
+fly mpg create --region "$REGION"
+CLUSTER_ID=replace-with-cluster-id
+fly mpg attach "$CLUSTER_ID" --app "$APP_NAME" --database fly-db --username fly-user
+fly deploy --ha=false
+```
+
+`fly mpg create` asks you to choose a plan and reports the cluster ID. The attach command sets the `DATABASE_URL` secret; do not put the connection string in `fly.toml`. `--ha=false` creates one app Machine rather than a spare. The managed database is one logical database service, though Fly manages its own internal replicas.
+
+Each deploy runs migrations and applies the bundled model catalog before starting the Machine. The release command runs in a temporary Machine without the `/state` volume; it is not another continuously running app container. The app uses `https://<app-name>.fly.dev` as its public origin automatically. For a custom domain, set `AIRMUX_CONSOLE_URL` to its exact HTTPS origin with `fly secrets set AIRMUX_CONSOLE_URL=https://airmux.example.com`.
+
+## Verify and set up
+
+```bash
+curl -fsS "https://${APP_NAME}.fly.dev/healthz"
+fly status --app "$APP_NAME"
+```
+
+Open the URL, create the owner account, then add an organization, provider credential, and inference key. Follow the [webapp guide](/docs/guides/webapp) or run `airmux quickstart --url https://<app-name>.fly.dev` locally. Confirm a test request appears in usage before sending production traffic.
+
+The single Machine and volume are not highly available. Leave auto-stop disabled so the gateway can flush usage in the background. Before an upgrade, preserve both the Managed Postgres backup and `/state` [volume snapshot](https://fly.io/docs/volumes/volume-snapshots/) as one recovery point. Then run `fly deploy --ha=false` again and check `/healthz` and usage. See [operations](/docs/deployment/operations) for recovery.

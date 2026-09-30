@@ -1,6 +1,9 @@
 #!/usr/bin/env sh
 set -eu
 
+if [ -z "${AIRMUX_CONSOLE_URL:-}" ] && [ -n "${FLY_APP_NAME:-}" ]; then
+  AIRMUX_CONSOLE_URL="https://${FLY_APP_NAME}.fly.dev"
+fi
 AIRMUX_CONSOLE_URL=${AIRMUX_CONSOLE_URL:-http://localhost:8080}
 export AIRMUX_CONSOLE_URL
 if [ -f /config/airmux.yml ] && [ -s /config/airmux.yml ]; then
@@ -43,6 +46,10 @@ start_data_plane_after_control_plane() {
 }
 
 case "${1:-}" in
+  release)
+    airmux control-plane migrate --config "$AIRMUX_CONFIG"
+    exec airmux control-plane taxonomy --config "$AIRMUX_CONFIG" --file /app/taxonomy/taxonomy.yml
+    ;;
   migrate)
     exec airmux control-plane migrate --config "$AIRMUX_CONFIG"
     ;;
@@ -67,7 +74,7 @@ case "${1:-}" in
     console_pid=$!
     ;;
   *)
-    echo 'Expected airmux, console, control-plane, data-plane, migrate, or taxonomy' >&2
+    echo 'Expected airmux, console, control-plane, data-plane, release, migrate, or taxonomy' >&2
     exit 2
     ;;
 esac

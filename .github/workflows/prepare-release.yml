@@ -22,8 +22,9 @@ jobs:
     if: github.repository == 'michel-tricot/airmux' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    environment: release
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -65,17 +66,17 @@ jobs:
           echo "branch=release/v$version" >> "$GITHUB_OUTPUT"
       - name: Create the release branch
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.RELEASE_GITHUB_TOKEN }}
           RELEASE_BRANCH: ${{ steps.version.outputs.branch }}
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: |
+          test -n "$GH_TOKEN" || { echo 'RELEASE_GITHUB_TOKEN is required' >&2; exit 1; }
           version_file="VERSION"
           version_sha="$(gh api "repos/$GITHUB_REPOSITORY/contents/$version_file?ref=$GITHUB_SHA" --jq .sha)"
           content="$(base64 -w 0 "$version_file")"
           gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/heads/$RELEASE_BRANCH" -f sha="$GITHUB_SHA"
           gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/$version_file" -f message="Prepare airmux $RELEASE_VERSION" -f content="$content" -f branch="$RELEASE_BRANCH" -f sha="$version_sha"
-          compare_url="https://github.com/$GITHUB_REPOSITORY/compare/main...$RELEASE_BRANCH?expand=1"
+          pr_url="$(gh api --method POST "repos/$GITHUB_REPOSITORY/pulls" -f base=main -f head="$RELEASE_BRANCH" -f title="Prepare airmux $RELEASE_VERSION" -f body="Bump the public version to $RELEASE_VERSION." -F draft=false --jq .html_url)"
           {
-            echo "Release branch \`$RELEASE_BRANCH\` is ready."
-            echo "Open the prefilled pull request: $compare_url"
+            echo "Release pull request: $pr_url"
           } >> "$GITHUB_STEP_SUMMARY"
