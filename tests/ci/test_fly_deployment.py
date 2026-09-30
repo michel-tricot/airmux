@@ -76,13 +76,19 @@ def test_fly_workflow_deploys_and_updates_catalog_on_manual_dispatch():
     workflow = yaml.safe_load((ROOT / ".github/workflows/deploy-fly.yml").read_text())
     assert workflow["name"] == "Deploy - Fly"
     assert set(workflow[True]) == {"workflow_dispatch"}
-    assert workflow[True]["workflow_dispatch"]["inputs"]["app_name"]["required"] is True
+    assert workflow[True]["workflow_dispatch"] is None
+    assert workflow["concurrency"]["group"] == "deploy-fly-${{ vars.FLY_APP_NAME }}"
     assert workflow["concurrency"]["cancel-in-progress"] is False
     job = workflow["jobs"]["deploy"]
     assert job["if"] == "github.ref == 'refs/heads/main'"
     deployment = next(step for step in job["steps"] if step.get("name") == "Deploy and update catalog")
     assert deployment["env"]["FLY_API_TOKEN"] == "${{ secrets.FLY_API_TOKEN }}"
+    assert deployment["env"]["APP_NAME"] == "${{ vars.FLY_APP_NAME }}"
+    assert deployment["env"]["REGION"] == "${{ vars.FLY_REGION }}"
+    assert deployment["env"]["PUBLIC_URL"] == "${{ vars.AIRMUX_CONSOLE_URL }}"
     commands = deployment["run"]
+    assert 'test -n "$APP_NAME"' in commands
+    assert 'test -n "$REGION"' in commands
     assert commands.index("fly deploy") < commands.index("fly ssh console") < commands.index("curl -fsS")
     assert "--config deploy/fly/fly.toml" in commands
     assert '--primary-region "$REGION"' in commands
