@@ -78,6 +78,6 @@ After the first manual deployment, fork this repository. Create an [app-scoped d
 fly tokens create deploy --app "$APP_NAME" -x 720h
 ```
 
-In the fork's **Settings → Secrets and variables → Actions**, save the token as the repository secret `FLY_API_TOKEN`. Set repository variables `FLY_APP_NAME` to the existing app name and `FLY_REGION` to its region. Set `AIRMUX_CONSOLE_URL` only if the public URL differs from `https://<app-name>.fly.dev`.
+In the fork's **Settings → Environments → production**, save the token as the environment secret `FLY_API_TOKEN`. Set environment variables `FLY_APP_NAME` to the existing app name and `FLY_REGION` to its region. Set `AIRMUX_CONSOLE_URL` only if the public URL differs from `https://<app-name>.fly.dev`. The deploy job uses the `production` environment to read these settings.
 
 Before each update, sync the fork's `main` branch and preserve the database backup and volume snapshot described above. In your fork's GitHub Actions, run **Deploy - Fly** from `main`; there are no inputs to fill in. The workflow deploys the published `latest` image, runs migrations through Fly's release command, applies the bundled catalog, and checks the app's health. It does not run on pushes or releases.
