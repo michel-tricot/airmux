@@ -50,6 +50,12 @@ def test_required_gate_accepts_all_successful_jobs(filename, expected):
     assert completed.returncode == 0
 
 
+@pytest.mark.parametrize("filename", ["ci.yml", "security.yml"])
+def test_pr_checks_run_on_commits_without_repeating_for_review_readiness(filename):
+    workflow = yaml.safe_load((ROOT / ".github/workflows" / filename).read_text())
+    assert workflow[True]["pull_request"]["types"] == ["opened", "synchronize", "reopened"]
+
+
 def test_ci_events_and_candidate_coverage():
     pull_request = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())
     main = yaml.safe_load((ROOT / ".github/workflows/main-ci.yml").read_text())

@@ -34,14 +34,14 @@ jobs:
           test -n "$APP_NAME" || { echo 'FLY_APP_NAME is required' >&2; exit 1; }
           test -n "$REGION" || { echo 'FLY_REGION is required' >&2; exit 1; }
           if [ -z "$PUBLIC_URL" ]; then PUBLIC_URL="https://${APP_NAME}.fly.dev"; fi
-          fly deploy \
+          flyctl deploy \
             --app "$APP_NAME" \
             --config deploy/fly/fly.toml \
             --primary-region "$REGION" \
             --env "AIRMUX_CONSOLE_URL=$PUBLIC_URL" \
             --ha=false
-          MACHINE_ID="$(fly machine list --app "$APP_NAME" --json | jq -er '.[] | select(.state == "started") | .id')"
-          fly machine exec --app "$APP_NAME" "$MACHINE_ID" \
+          MACHINE_ID="$(flyctl machine list --app "$APP_NAME" --json | jq -er '.[] | select(.state == "started") | .id')"
+          flyctl machine exec --app "$APP_NAME" "$MACHINE_ID" \
             "runuser -u airmux -- /app/deploy/docker/start.sh taxonomy"
-          fly status --app "$APP_NAME"
+          flyctl status --app "$APP_NAME"
           curl -fsS "$PUBLIC_URL/healthz"
