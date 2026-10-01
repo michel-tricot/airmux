@@ -20,6 +20,10 @@ http {
     default "";
     ~^/(api|inf)/ $api_cache_control;
   }
+  map $host $serve_console {
+    default 0;
+    "${CONSOLE_HOST}" 1;
+  }
   server {
     listen 8080;
     root ${AIRMUX_CONSOLE_ROOT};
@@ -63,6 +67,9 @@ http {
       proxy_buffering off;
       proxy_read_timeout 300s;
     }
-    location / { try_files $uri /index.html; }
+    location / {
+      if ($serve_console = 0) { return 404; }
+      try_files $uri /index.html;
+    }
   }
 }

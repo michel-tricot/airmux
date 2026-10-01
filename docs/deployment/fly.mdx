@@ -45,6 +45,34 @@ Open the URL, create the owner account, then add an organization, provider crede
 
 The single Machine and volume are not highly available. Leave auto-stop disabled so the gateway can flush usage in the background.
 
+## Separate console and API domains
+
+Attach both hostnames to the same Fly app:
+
+```bash
+flyctl certs add console.example.com --app "$APP_NAME"
+flyctl certs add api.example.com --app "$APP_NAME"
+```
+
+Add the DNS and verification records printed by Fly at your DNS provider. Follow the [custom domain setup](https://docs.fly.io/networking/custom-domain/), then check both certificates:
+
+```bash
+flyctl certs check console.example.com --app "$APP_NAME"
+flyctl certs check api.example.com --app "$APP_NAME"
+```
+
+Set `PUBLIC_URL=https://console.example.com` before running the deployment command. For GitHub Actions, set the `production` environment variable `AIRMUX_CONSOLE_URL` to this console origin, then deploy.
+
+The proxy serves console pages and assets only on the hostname in `AIRMUX_CONSOLE_URL`. Other hostnames attached to the app, including its `fly.dev` hostname, expose `/api/`, `/inf/`, and `/healthz`; requests for console pages or assets return 404.
+
+| URL | Purpose |
+| --- | --- |
+| `https://console.example.com` | Console, with its browser requests staying on the same origin |
+| `https://api.example.com/api/v1/...` | Control-plane API with management keys |
+| `https://api.example.com/inf/v1/...` | Inference API with inference keys |
+
+Both API prefixes also remain available on the console hostname for browser requests. API clients use the API hostname directly; no second URL setting is required.
+
 ## Update
 
 From the repository clone, pull the current Fly config. Before deploying, preserve both a Managed Postgres backup and a `/state` [volume snapshot](https://fly.io/docs/volumes/volume-snapshots/) as one recovery point. Use the same app name, region, and public URL as the initial deployment. If you use a custom domain, set `PUBLIC_URL` to its exact HTTPS origin.
