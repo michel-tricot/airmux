@@ -49,11 +49,13 @@ export CONTROL_PLANE_UPSTREAM=127.0.0.1:8000
 export DATA_PLANE_UPSTREAM=127.0.0.1:8081
 export NGINX_RESOLVER=127.0.0.1
 export PUBLIC_SCHEME=http
-envsubst '${AIRMUX_CONSOLE_ROOT} ${CONTROL_PLANE_UPSTREAM} ${DATA_PLANE_UPSTREAM} ${NGINX_RESOLVER} ${PUBLIC_SCHEME}' \
+export CONSOLE_HOST=localhost
+envsubst '${AIRMUX_CONSOLE_ROOT} ${CONTROL_PLANE_UPSTREAM} ${DATA_PLANE_UPSTREAM} ${NGINX_RESOLVER} ${PUBLIC_SCHEME} ${CONSOLE_HOST}' \
   < deploy/docker/nginx.conf.template > deployment/nginx.conf
 nginx -t -c "$PWD/deployment/nginx.conf"
 ```
 
+Set `CONSOLE_HOST` to the hostname in the control plane's `console_url`, without a port. The proxy serves console pages only on this hostname; other hostnames serve `/api/`, `/inf/`, and `/healthz`.
 Set `PUBLIC_SCHEME=https` when TLS terminates before Nginx. If you use a different proxy, serve
 `apps/console/dist/public`, send `/api/` to port 8000 and `/inf/` to port 8081, disable buffering for streaming
 responses, and preserve the security and forwarding headers in the shipped template.

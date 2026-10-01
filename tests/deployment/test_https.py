@@ -54,7 +54,9 @@ def https_deployment(tmp_path_factory):
         capture_output=True,
     )
     caddyfile = directory / "Caddyfile"
-    caddyfile.write_text(f"https://localhost {{\n tls /test/certificate.pem /test/key.pem\n reverse_proxy {gateway}:8080\n}}\n")
+    caddyfile.write_text(
+        f"https://localhost, https://api.example.test {{\n tls /test/certificate.pem /test/key.pem\n reverse_proxy {gateway}:8080\n}}\n"
+    )
     edge = f"{project}-tls"
     upstream = f"{project}-upstream"
     started = False
@@ -220,13 +222,20 @@ def test_https_inference_and_minted_secrets_remain_private(https_deployment):
     )
     payload(client.post(scope + "/provider-credentials", json={"provider": "deployment", "value": "deployment-test-key"}))
     body = {"model": "deployment-echo", "messages": [{"role": "user", "content": "hi"}]}
-    headers = {"Authorization": f"Bearer {key['token']}"}
+    management_key = payload(client.post(scope + "/management-keys", json={"label": "api-hostname", "permissions": ["organizations.read"]}))
+    assert (
+        payload(client.get(scope, headers={"Host": "api.example.test", "Authorization": f"Bearer {management_key['token']}", "Cookie": ""}))["id"]
+        == org["id"]
+    )
+    assert client.get("/healthz", headers={"Host": "api.example.test"}).status_code == 200
     path = "/inf/v1/chat/completions"
-    eventually(lambda: all(client.post(path, headers=headers, json=body).status_code == 200 for _ in range(10)))
-    for stream in (False, True):
-        response = client.post(path, headers=headers, json={**body, "stream": stream})
-        assert response.status_code == 200, response.text
-        assert response.headers.get_list("cache-control") == ["no-store, no-transform" if stream else "no-store"]
-        assert response.headers.get_list("x-content-type-options") == ["nosniff"]
-        assert uuid.UUID(response.headers["x-request-id"]).version == 7
-        assert "deployment ready" in response.text
+    for host in ("localhost", "api.example.test"):
+        headers = {"Host": host, "Authorization": f"Bearer {key['token']}", "Cookie": ""}
+        eventually(lambda headers=headers: all(client.post(path, headers=headers, json=body).status_code == 200 for _ in range(10)))
+        for stream in (False, True):
+            response = client.post(path, headers=headers, json={**body, "stream": stream})
+            assert response.status_code == 200, response.text
+            assert response.headers.get_list("cache-control") == ["no-store, no-transform" if stream else "no-store"]
+            assert response.headers.get_list("x-content-type-options") == ["nosniff"]
+            assert uuid.UUID(response.headers["x-request-id"]).version == 7
+            assert "deployment ready" in response.text
