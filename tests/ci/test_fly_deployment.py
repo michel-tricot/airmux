@@ -101,13 +101,36 @@ def test_fly_workflow_deploys_and_updates_catalog_on_manual_dispatch():
     commands = deployment["run"]
     assert 'test -n "$APP_NAME"' in commands
     assert 'test -n "$REGION"' in commands
-    assert commands.index("fly deploy") < commands.index("fly machine exec") < commands.index("curl -fsS")
-    assert 'fly machine list --app "$APP_NAME" --json' in commands
+    assert commands.index("flyctl deploy") < commands.index("flyctl machine exec") < commands.index("curl -fsS")
+    assert 'flyctl machine list --app "$APP_NAME" --json' in commands
     assert '"runuser -u airmux -- /app/deploy/docker/start.sh taxonomy"' in commands
     assert "fly ssh console" not in commands
     assert "--config deploy/fly/fly.toml" in commands
     assert '--primary-region "$REGION"' in commands
     assert "--ha=false" in commands
+
+
+def test_fly_workflow_runs_with_only_the_setup_action_executable(tmp_path: Path):
+    workflow = yaml.safe_load((ROOT / ".github/workflows/deploy-fly.yml").read_text())
+    deployment = next(step for step in workflow["jobs"]["deploy"]["steps"] if step.get("name") == "Deploy and update catalog")
+    for name, script in {
+        "flyctl": '#!/bin/sh\nif [ "$1 $2" = "machine list" ]; then printf \'[{"state":"started","id":"test-machine"}]\\n\'; fi\n',
+        "jq": "#!/bin/sh\nprintf 'test-machine\\n'\n",
+        "curl": '#!/bin/sh\nprintf \'{"status":"ok"}\\n\'\n',
+    }.items():
+        executable = tmp_path / name
+        executable.write_text(script)
+        executable.chmod(0o755)
+    result = subprocess.run(  # noqa: S603 repository-owned workflow script and temporary stub executables
+        ["/bin/bash", "-e", "-o", "pipefail", "-c", deployment["run"]],
+        env={"PATH": str(tmp_path), "FLY_API_TOKEN": "test-token", "APP_NAME": "example-airmux", "REGION": "iad", "PUBLIC_URL": ""},
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == {"status": "ok"}
 
 
 def test_fly_setup_action_is_allowed_by_repository_policy():
