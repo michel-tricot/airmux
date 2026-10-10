@@ -146,7 +146,7 @@ jobs:
       - uses: ./.github/actions/setup-python
         with:
           cache: 'false'
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: candidate-${{ needs.prepare.outputs.sha }}
           run-id: ${{ needs.prepare.outputs.ci-run-id }}
@@ -156,7 +156,7 @@ jobs:
         with:
           no-cache: 'true'
       - run: uv run --no-sync pytest tests/installation/portable tests/installation/integration --junitxml=installation-results/installation.xml
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: container-${{ needs.prepare.outputs.sha }}
           run-id: ${{ needs.prepare.outputs.ci-run-id }}
@@ -187,7 +187,7 @@ jobs:
       - name: Upload installation results
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: release-installation-${{ matrix.arch }}-${{ needs.prepare.outputs.sha }}
           path: installation-results
@@ -210,7 +210,7 @@ jobs:
       - uses: ./.github/actions/setup-python
         with:
           cache: 'false'
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: candidate-${{ needs.prepare.outputs.sha }}
           run-id: ${{ needs.prepare.outputs.ci-run-id }}
@@ -232,7 +232,7 @@ jobs:
       - name: Upload provider results
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: release-providers-${{ needs.prepare.outputs.sha }}
           path: |
@@ -279,13 +279,13 @@ jobs:
     outputs:
       image: ${{ steps.image.outputs.image }}
     steps:
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: candidate-${{ needs.prepare.outputs.sha }}
           run-id: ${{ needs.prepare.outputs.ci-run-id }}
           github-token: ${{ github.token }}
           path: candidate
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: container-${{ needs.prepare.outputs.sha }}
           run-id: ${{ needs.prepare.outputs.ci-run-id }}
@@ -334,7 +334,7 @@ jobs:
       - uses: ./.github/actions/setup-python
         with:
           cache: 'false'
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: candidate-${{ needs.prepare.outputs.sha }}
           run-id: ${{ needs.prepare.outputs.ci-run-id }}
@@ -362,7 +362,7 @@ jobs:
       - name: Upload PyPI verification results
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: pypi-verification-${{ needs.prepare.outputs.sha }}
           path: |

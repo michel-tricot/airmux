@@ -57,7 +57,7 @@ jobs:
       - name: Upload quality results
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: quality-${{ github.sha }}
           path: quality-results
@@ -81,7 +81,7 @@ jobs:
       - name: Upload unit results
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: python-unit-${{ github.sha }}
           path: unit-results
@@ -103,7 +103,7 @@ jobs:
       - name: Upload integration results
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: python-integration-${{ github.sha }}
           path: integration-results
@@ -138,7 +138,7 @@ jobs:
       - name: Upload frontend results
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: frontend-${{ github.sha }}
           path: |
