@@ -18,8 +18,8 @@ airmux-runtime = { workspace = true }
 [dependency-groups]
 backend = ["airmux"]
 dev = [
-  "ruff>=0.16.8",
-  "ty>=0.0.50",
+  "ruff>=0.17.3",
+  "ty>=0.0.93",
   "pytest", "pytest-asyncio", "httpx2[http2]>=2.13", "aioresponses", "pytest-xdist", "respx", "anyio",
   "jsonschema",
   "openai",
