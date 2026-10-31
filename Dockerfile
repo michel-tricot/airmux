@@ -45,7 +45,7 @@ RUN bun install --frozen-lockfile
 COPY VERSION ./VERSION
 RUN VITE_AIRMUX_VERSION="$(cat VERSION)" bun run --filter '@workspace/gateway-console' build
 
-FROM python:3.13-slim-bookworm AS image
+FROM python:3.15-slim-bookworm AS image
 ARG AIRMUX_VERSION
 ARG AIRMUX_REVISION
 LABEL org.opencontainers.image.source="https://github.com/michel-tricot/airmux" \
